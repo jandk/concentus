@@ -36,7 +36,7 @@ package org.concentus;
 
 public class CodecHelpers {
 
-    static byte gen_toc(OpusMode mode, int framerate, OpusBandwidth bandwidth, int channels) {
+    static byte gen_toc(int framerate, OpusBandwidth bandwidth, int channels) {
         int period;
         short toc;
         period = 0;
@@ -44,22 +44,13 @@ public class CodecHelpers {
             framerate <<= 1;
             period++;
         }
-        if (mode == OpusMode.MODE_SILK_ONLY) {
-            toc = (short) ((OpusBandwidthHelpers.GetOrdinal(bandwidth) - OpusBandwidthHelpers.GetOrdinal(OpusBandwidth.OPUS_BANDWIDTH_NARROWBAND)) << 5);
-            toc |= (short) ((period - 2) << 3);
-        } else if (mode == OpusMode.MODE_CELT_ONLY) {
-            int tmp = OpusBandwidthHelpers.GetOrdinal(bandwidth) - OpusBandwidthHelpers.GetOrdinal(OpusBandwidth.OPUS_BANDWIDTH_MEDIUMBAND);
-            if (tmp < 0) {
-                tmp = 0;
-            }
-            toc = 0x80;
-            toc |= (short) (tmp << 5);
-            toc |= (short) (period << 3);
-        } else /* Hybrid */ {
-            toc = 0x60;
-            toc |= (short) ((OpusBandwidthHelpers.GetOrdinal(bandwidth) - OpusBandwidthHelpers.GetOrdinal(OpusBandwidth.OPUS_BANDWIDTH_SUPERWIDEBAND)) << 4);
-            toc |= (short) ((period - 2) << 3);
+        int tmp = OpusBandwidthHelpers.GetOrdinal(bandwidth) - OpusBandwidthHelpers.GetOrdinal(OpusBandwidth.OPUS_BANDWIDTH_MEDIUMBAND);
+        if (tmp < 0) {
+            tmp = 0;
         }
+        toc = 0x80;
+        toc |= (short) (tmp << 5);
+        toc |= (short) (period << 3);
         toc |= (short) ((channels == 2 ? 1 : 0) << 2);
         return (byte) (0xFF & toc);
     }
@@ -147,40 +138,6 @@ public class CodecHelpers {
             pcm_buf[i * channels] = (short) (pcm_buf[i * channels] - diff);
             pcm_buf[i * channels + 1] = (short) (pcm_buf[i * channels + 1] + diff);
         }
-    }
-
-    static void gain_fade(short[] buffer, int buf_ptr, int g1, int g2,
-                          int overlap48, int frame_size, int channels, int[] window, int Fs) {
-        int i;
-        int inc;
-        int overlap;
-        int c;
-        inc = 48000 / Fs;
-        overlap = overlap48 / inc;
-        if (channels == 1) {
-            for (i = 0; i < overlap; i++) {
-                int g, w;
-                w = Inlines.MULT16_16_Q15(window[i * inc], window[i * inc]);
-                g = Inlines.SHR32(Inlines.MAC16_16(Inlines.MULT16_16(w, g2),
-                        CeltConstants.Q15ONE - w, g1), 15);
-                buffer[buf_ptr + i] = (short) Inlines.MULT16_16_Q15(g, buffer[buf_ptr + i]);
-            }
-        } else {
-            for (i = 0; i < overlap; i++) {
-                int g, w;
-                w = Inlines.MULT16_16_Q15(window[i * inc], window[i * inc]);
-                g = Inlines.SHR32(Inlines.MAC16_16(Inlines.MULT16_16(w, g2),
-                        CeltConstants.Q15ONE - w, g1), 15);
-                buffer[buf_ptr + i * 2] = (short) Inlines.MULT16_16_Q15(g, buffer[buf_ptr + i * 2]);
-                buffer[buf_ptr + i * 2 + 1] = (short) Inlines.MULT16_16_Q15(g, buffer[buf_ptr + i * 2 + 1]);
-            }
-        }
-        c = 0;
-        do {
-            for (i = overlap; i < frame_size; i++) {
-                buffer[buf_ptr + i * channels + c] = (short) Inlines.MULT16_16_Q15(g2, buffer[buf_ptr + i * channels + c]);
-            }
-        } while (++c < channels);
     }
 
     /* Don't use more than 60 ms for the frame size analysis */
@@ -421,96 +378,6 @@ public class CodecHelpers {
             return -1;
         }
         return frame_size;
-    }
-
-    static int compute_stereo_width(short[] pcm, int pcm_ptr, int frame_size, int Fs, StereoWidthState mem) {
-        int corr;
-        int ldiff;
-        int width;
-        int xx, xy, yy;
-        int sqrt_xx, sqrt_yy;
-        int qrrt_xx, qrrt_yy;
-        int frame_rate;
-        int i;
-        int short_alpha;
-
-        frame_rate = Fs / frame_size;
-        short_alpha = CeltConstants.Q15ONE - (25 * CeltConstants.Q15ONE / Inlines.IMAX(50, frame_rate));
-        xx = xy = yy = 0;
-        for (i = 0; i < frame_size - 3; i += 4) {
-            int pxx = 0;
-            int pxy = 0;
-            int pyy = 0;
-            int x, y;
-            int p2i = pcm_ptr + (2 * i);
-            x = pcm[p2i];
-            y = pcm[p2i + 1];
-            pxx = Inlines.SHR32(Inlines.MULT16_16(x, x), 2);
-            pxy = Inlines.SHR32(Inlines.MULT16_16(x, y), 2);
-            pyy = Inlines.SHR32(Inlines.MULT16_16(y, y), 2);
-            x = pcm[p2i + 2];
-            y = pcm[p2i + 3];
-            pxx += Inlines.SHR32(Inlines.MULT16_16(x, x), 2);
-            pxy += Inlines.SHR32(Inlines.MULT16_16(x, y), 2);
-            pyy += Inlines.SHR32(Inlines.MULT16_16(y, y), 2);
-            x = pcm[p2i + 4];
-            y = pcm[p2i + 5];
-            pxx += Inlines.SHR32(Inlines.MULT16_16(x, x), 2);
-            pxy += Inlines.SHR32(Inlines.MULT16_16(x, y), 2);
-            pyy += Inlines.SHR32(Inlines.MULT16_16(y, y), 2);
-            x = pcm[p2i + 6];
-            y = pcm[p2i + 7];
-            pxx += Inlines.SHR32(Inlines.MULT16_16(x, x), 2);
-            pxy += Inlines.SHR32(Inlines.MULT16_16(x, y), 2);
-            pyy += Inlines.SHR32(Inlines.MULT16_16(y, y), 2);
-
-            xx += Inlines.SHR32(pxx, 10);
-            xy += Inlines.SHR32(pxy, 10);
-            yy += Inlines.SHR32(pyy, 10);
-        }
-
-        mem.XX += Inlines.MULT16_32_Q15(short_alpha, xx - mem.XX);
-        mem.XY += Inlines.MULT16_32_Q15(short_alpha, xy - mem.XY);
-        mem.YY += Inlines.MULT16_32_Q15(short_alpha, yy - mem.YY);
-        mem.XX = Inlines.MAX32(0, mem.XX);
-        mem.XY = Inlines.MAX32(0, mem.XY);
-        mem.YY = Inlines.MAX32(0, mem.YY);
-        if (Inlines.MAX32(mem.XX, mem.YY) > ((short) (0.5 + (8e-4f) * (1 << (18))))/*Inlines.QCONST16(8e-4f, 18)*/) {
-            sqrt_xx = Inlines.celt_sqrt(mem.XX);
-            sqrt_yy = Inlines.celt_sqrt(mem.YY);
-            qrrt_xx = Inlines.celt_sqrt(sqrt_xx);
-            qrrt_yy = Inlines.celt_sqrt(sqrt_yy);
-            /* Inter-channel correlation */
-            mem.XY = Inlines.MIN32(mem.XY, sqrt_xx * sqrt_yy);
-            corr = Inlines.SHR32(Inlines.frac_div32(mem.XY, CeltConstants.EPSILON + Inlines.MULT16_16(sqrt_xx, sqrt_yy)), 16);
-            /* Approximate loudness difference */
-            ldiff = CeltConstants.Q15ONE * Inlines.ABS16(qrrt_xx - qrrt_yy) / (CeltConstants.EPSILON + qrrt_xx + qrrt_yy);
-            width = Inlines.MULT16_16_Q15(Inlines.celt_sqrt(((int) (0.5 + (1.0f) * (1 << (30))))/*Inlines.QCONST32(1.0f, 30)*/ - Inlines.MULT16_16(corr, corr)), ldiff);
-            /* Smoothing over one second */
-            mem.smoothed_width += (width - mem.smoothed_width) / frame_rate;
-            /* Peak follower */
-            mem.max_follower = Inlines.MAX16(mem.max_follower - ((short) (0.5 + (.02f) * (1 << (15))))/*Inlines.QCONST16(.02f, 15)*/ / frame_rate, mem.smoothed_width);
-        } else {
-            width = 0;
-            corr = CeltConstants.Q15ONE;
-            ldiff = 0;
-        }
-        /*printf("%f %f %f %f %f ", corr/(float)1.0f, ldiff/(float)1.0f, width/(float)1.0f, mem.smoothed_width/(float)1.0f, mem.max_follower/(float)1.0f);*/
-        return Inlines.EXTRACT16(Inlines.MIN32(CeltConstants.Q15ONE, 20 * mem.max_follower));
-    }
-
-    static void smooth_fade(short[] in1, int in1_ptr, short[] in2, int in2_ptr,
-                            short[] output, int output_ptr, int overlap, int channels,
-                            int[] window, int Fs) {
-        int i, c;
-        int inc = 48000 / Fs;
-        for (c = 0; c < channels; c++) {
-            for (i = 0; i < overlap; i++) {
-                int w = Inlines.MULT16_16_Q15(window[i * inc], window[i * inc]);
-                output[output_ptr + (i * channels) + c] = (short) (Inlines.SHR32(Inlines.MAC16_16(Inlines.MULT16_16(w, in2[in2_ptr + (i * channels) + c]),
-                        CeltConstants.Q15ONE - w, in1[in1_ptr + (i * channels) + c]), 15));
-            }
-        }
     }
 
     //static void opus_pcm_soft_clip(Pointer<float> _x, int N, int C, Pointer<float> declip_mem)

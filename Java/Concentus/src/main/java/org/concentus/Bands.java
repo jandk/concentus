@@ -216,7 +216,7 @@ class Bands {
     }
 
     /* This prevents energy collapse for transients with multiple short MDCTs */
-    static void anti_collapse(CeltMode m, int[][] X_, short[] collapse_masks, int LM, int C, int size,
+    static void anti_collapse(CeltMode m, int[][] X_, short[] collapse_masks, int LM, int C,
                               int start, int end, int[] logE, int[] prev1logE,
                               int[] prev2logE, int[] pulses, int seed) {
         int c, i, j, k;
@@ -292,7 +292,7 @@ class Bands {
         }
     }
 
-    static void intensity_stereo(CeltMode m, int[] X, int X_ptr, int[] Y, int Y_ptr, int[][] bandE, int bandID, int N) {
+    static void intensity_stereo(int[] X, int X_ptr, int[] Y, int Y_ptr, int[][] bandE, int bandID, int N) {
         int i = bandID;
         int j;
         int a1, a2;
@@ -728,7 +728,7 @@ class Bands {
             itheta = Inlines.celt_udiv(itheta * 16384, qn);
             if (encode != 0 && stereo != 0) {
                 if (itheta == 0) {
-                    intensity_stereo(m, X, X_ptr, Y, Y_ptr, bandE, i, N);
+                    intensity_stereo(X, X_ptr, Y, Y_ptr, bandE, i, N);
                 } else {
                     stereo_split(X, X_ptr, Y, Y_ptr, N);
                 }
@@ -742,7 +742,7 @@ class Bands {
                         Y[Y_ptr + j] = (-Y[Y_ptr + j]);
                     }
                 }
-                intensity_stereo(m, X, X_ptr, Y, Y_ptr, bandE, i, N);
+                intensity_stereo(X, X_ptr, Y, Y_ptr, bandE, i, N);
             }
             if (b.Val > 2 << EntropyCoder.BITRES && ctx.remaining_bits > 2 << EntropyCoder.BITRES) {
                 if (encode != 0) {

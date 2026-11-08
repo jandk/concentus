@@ -49,7 +49,6 @@ class CeltMode {
     short[] eBands = null;
 
     int maxLM = 0;
-    int nbShortMdcts = 0;
     int shortMdctSize = 0;
 
     /// <summary>
@@ -80,7 +79,6 @@ class CeltMode {
         mode48000_960_120.preemph = new int[]{27853, 0, 4096, 8192};
         mode48000_960_120.eBands = CeltTables.eband5ms;
         mode48000_960_120.maxLM = 3;
-        mode48000_960_120.nbShortMdcts = 8;
         mode48000_960_120.shortMdctSize = 120;
         mode48000_960_120.nbAllocVectors = 11;
         mode48000_960_120.allocVectors = CeltTables.band_allocation;
@@ -89,7 +87,6 @@ class CeltMode {
         mode48000_960_120.mdct = new MDCTLookup();
 
         mode48000_960_120.mdct.n = 1920;
-        mode48000_960_120.mdct.maxshift = 3;
         mode48000_960_120.mdct.kfft = new FFTState[]{
                 CeltTables.fft_state48000_960_0,
                 CeltTables.fft_state48000_960_1,

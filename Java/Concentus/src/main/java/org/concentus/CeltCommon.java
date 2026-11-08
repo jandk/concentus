@@ -156,7 +156,7 @@ class CeltCommon {
         int i;
         int[] tmp;
         int mem0, mem1;
-        int is_transient = 0;
+        int is_transient;
         int mask_metric = 0;
         int c;
         int tf_max;
@@ -167,7 +167,7 @@ class CeltCommon {
         len2 = len / 2;
         for (c = 0; c < C; c++) {
             int mean;
-            int unmask = 0;
+            int unmask;
             int norm;
             int maxE;
             mem0 = 0;
@@ -188,7 +188,7 @@ class CeltCommon {
 
             /* Normalize tmp to max range */
             {
-                int shift = 0;
+                int shift;
                 shift = 14 - Inlines.celt_ilog2(1 + Inlines.celt_maxabs32(tmp, 0, len));
                 if (shift != 0) {
                     for (i = 0; i < len; i++) {
@@ -259,7 +259,7 @@ class CeltCommon {
 
     /* Looks for sudden increases of energy to decide whether we need to patch
        the transient decision */
-    static int patch_transient_decision(int[][] newE, int[][] oldE, int nbEBands,
+    static int patch_transient_decision(int[][] newE, int[][] oldE,
                                         int start, int end, int C) {
         int i, c;
         int mean_diff = 0;
@@ -448,7 +448,7 @@ class CeltCommon {
     }
 
     static int tf_analysis(CeltMode m, int len, int isTransient,
-                           int[] tf_res, int lambda, int[][] X, int N0, int LM,
+                           int[] tf_res, int lambda, int[][] X, int LM,
                            BoxedValueInt tf_sum, int tf_estimate, int tf_chan) {
         int i;
         int[] metric;
@@ -460,7 +460,7 @@ class CeltCommon {
         int[] tmp_1;
         int sel;
         int[] selcost = new int[2];
-        int tf_select = 0;
+        int tf_select;
         int bias;
 
         bias = Inlines.MULT16_16_Q14(((short) (0.5 + (.04f) * (1 << (15))))/*Inlines.QCONST16(.04f, 15)*/, Inlines.MAX16((short) (-((short) (0.5 + (.25f) * (1 << (14))))/*Inlines.QCONST16(.25f, 14)*/), (((short) (0.5 + (.5f) * (1 << (14))))/*Inlines.QCONST16(.5f, 14)*/ - tf_estimate)));
@@ -918,7 +918,7 @@ class CeltCommon {
     }
 
     static void deemphasis(int[][] input, int[] input_ptrs, short[] pcm, int pcm_ptr, int N, int C, int downsample, int[] coef,
-                           int[] mem, int accum) {
+                           int[] mem) {
         int c;
         int Nd;
         int apply_downsampling = 0;
@@ -943,13 +943,6 @@ class CeltCommon {
                     scratch[j] = tmp;
                 }
                 apply_downsampling = 1;
-            } else /* Shortcut for the standard (non-custom modes) case */ if (accum != 0) // should never hit this branch?
-            {
-                for (j = 0; j < N; j++) {
-                    int tmp = x[x_ptr + j] + m + CeltConstants.VERY_SMALL;
-                    m = Inlines.MULT16_32_Q15(coef0, tmp);
-                    pcm[y + (j * C)] = Inlines.SAT16(Inlines.ADD32(pcm[y + (j * C)], Inlines.SIG2WORD16(tmp)));
-                }
             } else {
                 for (j = 0; j < N; j++) {
                     int tmp = (x[x_ptr + j] + m + CeltConstants.VERY_SMALL); // Opus bug: This can overflow.
@@ -995,9 +988,6 @@ class CeltCommon {
         nbEBands = mode.nbEBands;
         N = mode.shortMdctSize << LM;
         freq = new int[N];
-        /**
-         * < Interleaved signal MDCTs
-         */
         M = 1 << LM;
 
         if (isTransient != 0) {
@@ -1211,12 +1201,6 @@ class CeltCommon {
         /* Compute the part with the constant filter. */
         comb_filter_const(y, y_ptr + i, x, x_ptr + i, T1, N - i, g10, g11, g12);
     }
-
-    private static final byte[][] tf_select_table = {
-            new byte[]{0, -1, 0, -1, 0, -1, 0, -1},
-            new byte[]{0, -1, 0, -2, 1, 0, 1, -1},
-            new byte[]{0, -2, 0, -3, 2, 0, 1, -1},
-            new byte[]{0, -2, 0, -3, 3, 0, 1, -1},};
 
     static void init_caps(CeltMode m, int[] cap, int LM, int C) {
         int i;

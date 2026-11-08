@@ -42,8 +42,6 @@ class Analysis {
     private static final float cC = 0.08595542f;
     private static final float cE = ((float) M_PI / 2);
 
-    private static final int NB_TONAL_SKIP_BANDS = 9;
-
     static float fast_atan2f(float y, float x) {
         float x2, y2;
         /* Should avoid underflow on the values we'll get */

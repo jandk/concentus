@@ -34,8 +34,6 @@
  */
 package org.concentus;
 
-import java.util.Arrays;
-
 class ChannelLayout {
 
     int nb_channels;
@@ -43,10 +41,4 @@ class ChannelLayout {
     int nb_coupled_streams;
     final short[] mapping = new short[256];
 
-    void Reset() {
-        nb_channels = 0;
-        nb_streams = 0;
-        nb_coupled_streams = 0;
-        Arrays.fill(mapping, (short) 0);
-    }
 }

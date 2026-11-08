@@ -194,7 +194,6 @@ class OpusTables {
     static final MLPState net = new MLPState();
 
     static {
-        net.layers = 3;
         net.topo = topo;
         net.weights = weights;
     }
@@ -271,9 +270,4 @@ class OpusTables {
     public static final int stereo_voice_threshold = 30000;
     public static final int stereo_music_threshold = 30000;
 
-    /* Threshold bit-rate for switching between SILK/hybrid and CELT-only */
-    static final int[][] mode_thresholds = {
-            /* voice */ /* music */
-            new int[]{64000, 16000}, /* mono */
-            new int[]{36000, 16000}, /* stereo */};
 }

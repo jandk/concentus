@@ -108,8 +108,6 @@ public class OpusDecoder {
             return OpusError.OPUS_INTERNAL_ERROR;
         }
 
-        celt_dec.SetSignalling(0);
-
         this.frame_size = Fs / 400;
         return OpusError.OPUS_OK;
     }
@@ -234,11 +232,9 @@ public class OpusDecoder {
             celt_dec.SetChannels(stream_channels);
         }
 
-        celt_dec.SetStartBand(0);
-
         /* Decode CELT */
         celt_ret = celt_dec.celt_decode_with_ec(decode_fec != 0 ? null : data, data_ptr,
-                len, pcm, pcm_ptr, Inlines.IMIN(F20, frame_size), dec, 0);
+                len, pcm, pcm_ptr, Inlines.IMIN(F20, frame_size), dec);
 
         if (decode_gain != 0) {
             int gain;

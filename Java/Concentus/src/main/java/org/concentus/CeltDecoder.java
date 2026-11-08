@@ -47,9 +47,7 @@ class CeltDecoder {
     int stream_channels = 0;
 
     int downsample = 0;
-    int start = 0;
     int end = 0;
-    int signalling = 0;
 
     /* Everything beyond this point gets cleared on a reset */
     int rng = 0;
@@ -90,9 +88,7 @@ class CeltDecoder {
         channels = 0;
         stream_channels = 0;
         downsample = 0;
-        start = 0;
         end = 0;
-        signalling = 0;
         PartialReset();
     }
 
@@ -157,10 +153,6 @@ class CeltDecoder {
             return OpusError.OPUS_BAD_ARG;
         }
 
-        if (this == null) {
-            return OpusError.OPUS_ALLOC_FAIL;
-        }
-
         Reset();
 
         this.mode = mode;
@@ -168,9 +160,7 @@ class CeltDecoder {
         this.stream_channels = this.channels = channels;
 
         this.downsample = 1;
-        this.start = 0;
         this.end = this.mode.effEBands;
-        this.signalling = 1;
 
         this.loss_count = 0;
 
@@ -208,7 +198,7 @@ class CeltDecoder {
             out_syn_ptrs[c] = CeltConstants.DECODE_BUFFER_SIZE - N;
         } while (++c < C);
 
-        noise_based = (loss_count >= 5 || start != 0) ? 1 : 0;
+        noise_based = loss_count >= 5 ? 1 : 0;
         if (noise_based != 0) {
             /* Noise-based PLC/CNG */
             int[][] X;
@@ -217,24 +207,21 @@ class CeltDecoder {
             int effEnd;
             int decay;
             end = this.end;
-            effEnd = Inlines.IMAX(start, Inlines.IMIN(end, mode.effEBands));
+            effEnd = Inlines.IMAX(0, Inlines.IMIN(end, mode.effEBands));
 
             X = new int[C][N];
-            /**
-             * < Interleaved normalised MDCTs
-             */
 
             /* Energy decay */
-            decay = loss_count == 0 ? ((short) (0.5 + (1.5f) * (1 << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(1.5f, CeltConstants.DB_SHIFT)*/ : ((short) (0.5 + (0.5f) * (1 << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(0.5f, CeltConstants.DB_SHIFT)*/;
+            decay = ((short) (0.5 + (0.5f) * (1 << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(0.5f, CeltConstants.DB_SHIFT)*/;
             c = 0;
             do {
-                for (i = start; i < end; i++) {
+                for (i = 0; i < end; i++) {
                     oldEBands[c * nbEBands + i] = Inlines.MAX16(backgroundLogE[c * nbEBands + i], oldEBands[c * nbEBands + i] - decay);
                 }
             } while (++c < C);
             seed = rng;
             for (c = 0; c < C; c++) {
-                for (i = start; i < effEnd; i++) {
+                for (i = 0; i < effEnd; i++) {
                     int j;
                     int boffs;
                     int blen;
@@ -255,7 +242,7 @@ class CeltDecoder {
                 System.arraycopy(decode_mem[c], N, decode_mem[c], 0, CeltConstants.DECODE_BUFFER_SIZE - N + (overlap >> 1));
             } while (++c < C);
 
-            CeltCommon.celt_synthesis(mode, X, out_syn, out_syn_ptrs, oldEBands, start, effEnd, C, C, 0, LM, downsample, 0);
+            CeltCommon.celt_synthesis(mode, X, out_syn, out_syn_ptrs, oldEBands, 0, effEnd, C, C, 0, LM, downsample, 0);
         } else {
             /* Pitch-based PLC */
             int[] window;
@@ -437,7 +424,7 @@ class CeltDecoder {
     }
 
     int celt_decode_with_ec(byte[] data, int data_ptr,
-                            int len, short[] pcm, int pcm_ptr, int frame_size, EntropyCoder dec, int accum) {
+                            int len, short[] pcm, int pcm_ptr, int frame_size, EntropyCoder dec) {
         int c, i, N;
         int spread_decision;
         int bits;
@@ -458,7 +445,6 @@ class CeltDecoder {
         int intra_ener;
         int CC = channels;
         int LM, M;
-        int start;
         int end;
         int effEnd;
         int codedBands;
@@ -485,7 +471,6 @@ class CeltDecoder {
         nbEBands = mode.nbEBands;
         overlap = mode.overlap;
         eBands = mode.eBands;
-        start = this.start;
         end = this.end;
         frame_size *= downsample;
 
@@ -524,7 +509,7 @@ class CeltDecoder {
 
         if (data == null || len <= 1) {
             celt_decode_lost(N, LM);
-            CeltCommon.deemphasis(out_syn, out_syn_ptrs, pcm, pcm_ptr, N, CC, downsample, mode.preemph, preemph_memD, accum);
+            CeltCommon.deemphasis(out_syn, out_syn_ptrs, pcm, pcm_ptr, N, CC, downsample, mode.preemph, preemph_memD);
 
             return frame_size / downsample;
         }
@@ -562,7 +547,7 @@ class CeltDecoder {
         postfilter_gain = 0;
         postfilter_pitch = 0;
         postfilter_tapset = 0;
-        if (start == 0 && tell + 16 <= total_bits) {
+        if (tell + 16 <= total_bits) {
             if (dec.dec_bit_logp(1) != 0) {
                 int qg, octave;
                 octave = (int) dec.dec_uint(6);
@@ -592,11 +577,11 @@ class CeltDecoder {
         /* Decode the global flags (first symbols in the stream) */
         intra_ener = tell + 3 <= total_bits ? dec.dec_bit_logp(3) : 0;
         /* Get band energies */
-        QuantizeBands.unquant_coarse_energy(mode, start, end, oldBandE,
+        QuantizeBands.unquant_coarse_energy(mode, 0, end, oldBandE,
                 intra_ener, dec, C, LM);
 
         tf_res = new int[nbEBands];
-        CeltCommon.tf_decode(start, end, isTransient, tf_res, LM, dec);
+        CeltCommon.tf_decode(0, end, isTransient, tf_res, LM, dec);
 
         tell = dec.tell();
         spread_decision = Spread.SPREAD_NORMAL;
@@ -613,7 +598,7 @@ class CeltDecoder {
         dynalloc_logp = 6;
         total_bits <<= EntropyCoder.BITRES;
         tell = dec.tell_frac();
-        for (i = start; i < end; i++) {
+        for (i = 0; i < end; i++) {
             int width, quanta;
             int dynalloc_loop_logp;
             int boost;
@@ -655,14 +640,14 @@ class CeltDecoder {
         BoxedValueInt boxed_intensity = new BoxedValueInt(intensity);
         BoxedValueInt boxed_dual_stereo = new BoxedValueInt(dual_stereo);
         BoxedValueInt boxed_balance = new BoxedValueInt(0);
-        codedBands = Rate.compute_allocation(mode, start, end, offsets, cap,
+        codedBands = Rate.compute_allocation(mode, 0, end, offsets, cap,
                 alloc_trim, boxed_intensity, boxed_dual_stereo, bits, boxed_balance, pulses,
                 fine_quant, fine_priority, C, LM, dec, 0, 0, 0);
         intensity = boxed_intensity.Val;
         dual_stereo = boxed_dual_stereo.Val;
         balance = boxed_balance.Val;
 
-        QuantizeBands.unquant_fine_energy(mode, start, end, oldBandE, fine_quant, dec, C);
+        QuantizeBands.unquant_fine_energy(mode, 0, end, oldBandE, fine_quant, dec, C);
 
         c = 0;
         do {
@@ -673,12 +658,9 @@ class CeltDecoder {
         collapse_masks = new short[C * nbEBands];
 
         X = new int[C][N];
-        /**
-         * < Interleaved normalised MDCTs
-         */
 
         BoxedValueInt boxed_rng = new BoxedValueInt(rng);
-        Bands.quant_all_bands(0, mode, start, end, X[0], C == 2 ? X[1] : null, collapse_masks,
+        Bands.quant_all_bands(0, mode, 0, end, X[0], C == 2 ? X[1] : null, collapse_masks,
                 null, pulses, shortBlocks, spread_decision, dual_stereo, intensity, tf_res,
                 len * (8 << EntropyCoder.BITRES) - anti_collapse_rsv, balance, dec, LM, codedBands, boxed_rng);
         this.rng = boxed_rng.Val;
@@ -687,12 +669,12 @@ class CeltDecoder {
             anti_collapse_on = dec.dec_bits(1);
         }
 
-        QuantizeBands.unquant_energy_finalise(mode, start, end, oldBandE,
+        QuantizeBands.unquant_energy_finalise(mode, 0, end, oldBandE,
                 fine_quant, fine_priority, len * 8 - dec.tell(), dec, C);
 
         if (anti_collapse_on != 0) {
-            Bands.anti_collapse(mode, X, collapse_masks, LM, C, N,
-                    start, end, oldBandE, oldLogE, oldLogE2, pulses, rng);
+            Bands.anti_collapse(mode, X, collapse_masks, LM, C,
+                    0, end, oldBandE, oldLogE, oldLogE2, pulses, rng);
         }
 
         if (silence != 0) {
@@ -701,7 +683,7 @@ class CeltDecoder {
             }
         }
 
-        CeltCommon.celt_synthesis(mode, X, out_syn, out_syn_ptrs, oldBandE, start, effEnd,
+        CeltCommon.celt_synthesis(mode, X, out_syn, out_syn_ptrs, oldBandE, 0, effEnd,
                 C, CC, isTransient, LM, downsample, silence);
 
         c = 0;
@@ -737,7 +719,6 @@ class CeltDecoder {
             System.arraycopy(oldBandE, 0, oldBandE, nbEBands, nbEBands);
         }
 
-        /* In case start or end were to change */
         if (isTransient == 0) {
             int max_background_increase;
             System.arraycopy(oldLogE, 0, oldLogE2, 0, 2 * nbEBands);
@@ -760,10 +741,6 @@ class CeltDecoder {
         }
         c = 0;
         do {
-            for (i = 0; i < start; i++) {
-                oldBandE[c * nbEBands + i] = 0;
-                oldLogE[c * nbEBands + i] = oldLogE2[c * nbEBands + i] = -((short) (0.5 + (28.0f) * (1 << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(28.0f, CeltConstants.DB_SHIFT)*/;
-            }
             for (i = end; i < nbEBands; i++) {
                 oldBandE[c * nbEBands + i] = 0;
                 oldLogE[c * nbEBands + i] = oldLogE2[c * nbEBands + i] = -((short) (0.5 + (28.0f) * (1 << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(28.0f, CeltConstants.DB_SHIFT)*/;
@@ -771,7 +748,7 @@ class CeltDecoder {
         } while (++c < 2);
         this.rng = (int) dec.rng;
 
-        CeltCommon.deemphasis(out_syn, out_syn_ptrs, pcm, pcm_ptr, N, CC, downsample, mode.preemph, preemph_memD, accum);
+        CeltCommon.deemphasis(out_syn, out_syn_ptrs, pcm, pcm_ptr, N, CC, downsample, mode.preemph, preemph_memD);
         this.loss_count = 0;
 
         if (dec.tell() > 8 * len) {
@@ -781,13 +758,6 @@ class CeltDecoder {
             this.error = 1;
         }
         return frame_size / downsample;
-    }
-
-    void SetStartBand(int value) {
-        if (value < 0 || value >= mode.nbEBands) {
-            throw new IllegalArgumentException("Start band above max number of ebands (or negative)");
-        }
-        this.start = value;
     }
 
     void SetEndBand(int value) {
@@ -820,10 +790,6 @@ class CeltDecoder {
 
     public CeltMode GetMode() {
         return mode;
-    }
-
-    public void SetSignalling(int value) {
-        this.signalling = value;
     }
 
     public int GetFinalRange() {

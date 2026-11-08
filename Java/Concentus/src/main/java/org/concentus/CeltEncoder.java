@@ -47,16 +47,13 @@ class CeltEncoder {
     int stream_channels = 0;
 
     int force_intra = 0;
-    int clip = 0;
     int disable_pf = 0;
     int complexity = 0;
     int upsample = 0;
-    int start = 0;
     int end = 0;
 
     int bitrate = 0;
     int vbr = 0;
-    int signalling = 0;
 
     /* If zero, VBR can do whatever it likes with the rate */
     int constrained_vbr = 0;
@@ -116,15 +113,12 @@ class CeltEncoder {
         channels = 0;
         stream_channels = 0;
         force_intra = 0;
-        clip = 0;
         disable_pf = 0;
         complexity = 0;
         upsample = 0;
-        start = 0;
         end = 0;
         bitrate = 0;
         vbr = 0;
-        signalling = 0;
         constrained_vbr = 0;
         loss_rate = 0;
         lsb_depth = 0;
@@ -200,7 +194,7 @@ class CeltEncoder {
             return OpusError.OPUS_BAD_ARG;
         }
 
-        if (this == null || mode == null) {
+        if (mode == null) {
             return OpusError.OPUS_ALLOC_FAIL;
         }
 
@@ -210,12 +204,9 @@ class CeltEncoder {
         this.stream_channels = this.channels = channels;
 
         this.upsample = 1;
-        this.start = 0;
         this.end = this.mode.effEBands;
-        this.signalling = 1;
 
         this.constrained_vbr = 1;
-        this.clip = 1;
 
         this.bitrate = OpusConstants.OPUS_BITRATE_MAX;
         this.vbr = 0;
@@ -385,21 +376,19 @@ class CeltEncoder {
         int[] fine_priority;
         int[] tf_res;
         short[] collapse_masks;
-        int shortBlocks = 0;
-        int isTransient = 0;
+        int shortBlocks;
+        int isTransient;
         int CC = channels;
         int C = stream_channels;
         int LM, M;
         int tf_select;
         int nbFilledBytes, nbAvailableBytes;
-        int start;
         int end;
         int effEnd;
         int codedBands;
-        int tf_sum;
         int alloc_trim;
-        int pitch_index = CeltConstants.COMBFILTER_MINPERIOD;
-        int gain1 = 0;
+        int pitch_index;
+        int gain1;
         int dual_stereo = 0;
         int effectiveBytes;
         int dynalloc_logp;
@@ -408,11 +397,11 @@ class CeltEncoder {
         int total_boost;
         int balance;
         int tell;
-        int prefilter_tapset = 0;
+        int prefilter_tapset;
         int pf_on;
         int anti_collapse_rsv;
-        int anti_collapse_on = 0;
-        int silence = 0;
+        int anti_collapse_on;
+        int silence;
         int tf_chan = 0;
         int tf_estimate;
         int pitch_change = 0;
@@ -436,7 +425,6 @@ class CeltEncoder {
         nbEBands = mode.nbEBands;
         overlap = mode.overlap;
         eBands = mode.eBands;
-        start = this.start;
         end = this.end;
         tf_estimate = 0;
         if (nbCompressedBytes < 2 || pcm == null) {
@@ -463,7 +451,7 @@ class CeltEncoder {
             nbFilledBytes = (tell + 4) >> 3;
         }
 
-        Inlines.OpusAssert(signalling == 0);
+        Inlines.OpusAssert(0 == 0);
 
         /* Can't produce more than 1275 output bytes */
         nbCompressedBytes = Inlines.IMIN(nbCompressedBytes, 1275);
@@ -482,7 +470,7 @@ class CeltEncoder {
             }
             if (bitrate != OpusConstants.OPUS_BITRATE_MAX) {
                 nbCompressedBytes = Inlines.IMAX(2, Inlines.IMIN(nbCompressedBytes,
-                        (tmp + 4 * mode.Fs) / (8 * mode.Fs) - (signalling != 0 ? 1 : 0)));
+                        (tmp + 4 * mode.Fs) / (8 * mode.Fs)));
             }
             effectiveBytes = nbCompressedBytes;
         }
@@ -563,7 +551,7 @@ class CeltEncoder {
         {
             int enabled;
             int qg;
-            enabled = (((lfe != 0 && nbAvailableBytes > 3) || nbAvailableBytes > 12 * C) && start == 0 && silence == 0 && disable_pf == 0
+            enabled = (((lfe != 0 && nbAvailableBytes > 3) || nbAvailableBytes > 12 * C) && silence == 0 && disable_pf == 0
                     && complexity >= 5 && !(consec_transient != 0 && LM != 3 && variable_duration == OpusFramesize.OPUS_FRAMESIZE_VARIABLE)) ? 1 : 0;
 
             prefilter_tapset = tapset_decision;
@@ -580,7 +568,7 @@ class CeltEncoder {
                 pitch_change = 1;
             }
             if (pf_on == 0) {
-                if (start == 0 && tell + 16 <= total_bits) {
+                if (tell + 16 <= total_bits) {
                     enc.enc_bit_logp(0, 1);
                 }
             } else {
@@ -619,9 +607,6 @@ class CeltEncoder {
         }
 
         freq = new int[CC][N];
-        /**
-         * < Interleaved signal MDCTs
-         */
         bandE = new int[CC][nbEBands];
         bandLogE = new int[CC][nbEBands];
 
@@ -660,7 +645,7 @@ class CeltEncoder {
         surround_dynalloc = new int[C * nbEBands];
         //Arrays.MemSet(surround_dynalloc, 0, end); // not strictly needed
         /* This computes how much masking takes place between surround channels */
-        if (start == 0 && energy_mask != null && lfe == 0) {
+        if (energy_mask != null && lfe == 0) {
             int mask_end;
             int midband;
             int count_dynalloc;
@@ -735,14 +720,14 @@ class CeltEncoder {
             int follow = -((short) (0.5 + (10.0f) * (1 << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(10.0f, CeltConstants.DB_SHIFT)*/;
             int frame_avg = 0;
             int offset = shortBlocks != 0 ? Inlines.HALF16(Inlines.SHL16(LM, CeltConstants.DB_SHIFT)) : 0;
-            for (i = start; i < end; i++) {
+            for (i = 0; i < end; i++) {
                 follow = Inlines.MAX16(follow - ((short) (0.5 + (1.0f) * (1 << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(1.0f, CeltConstants.DB_SHIFT)*/, bandLogE[0][i] - offset);
                 if (C == 2) {
                     follow = Inlines.MAX16(follow, bandLogE[1][i] - offset);
                 }
                 frame_avg += follow;
             }
-            frame_avg /= (end - start);
+            frame_avg /= end;
             temporal_vbr = Inlines.SUB16(frame_avg, spec_avg);
             temporal_vbr = Inlines.MIN16(((short) (0.5 + (3.0f) * (1 << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(3.0f, CeltConstants.DB_SHIFT)*/, Inlines.MAX16(-((short) (0.5 + (1.5f) * (1 << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(1.5f, CeltConstants.DB_SHIFT)*/, temporal_vbr));
             this.spec_avg += (short) (Inlines.MULT16_16_Q15(((short) (0.5 + (.02f) * (1 << (15))))/*Inlines.QCONST16(.02f, 15)*/, temporal_vbr));
@@ -761,7 +746,7 @@ class CeltEncoder {
         /* Last chance to catch any transient we might have missed in the
            time-domain analysis */
         if (LM > 0 && enc.tell() + 3 <= total_bits && isTransient == 0 && complexity >= 5 && lfe == 0) {
-            if (CeltCommon.patch_transient_decision(bandLogE, oldBandE, nbEBands, start, end, C) != 0) {
+            if (CeltCommon.patch_transient_decision(bandLogE, oldBandE, 0, end, C) != 0) {
                 isTransient = 1;
                 shortBlocks = M;
                 CeltCommon.compute_mdcts(mode, shortBlocks, input, freq, C, CC, LM, upsample);
@@ -785,16 +770,13 @@ class CeltEncoder {
         }
 
         X = new int[C][N];
-        /**
-         * < Interleaved normalised MDCTs
-         */
 
         /* Band normalisation */
         Bands.normalise_bands(mode, freq, X, bandE, effEnd, C, M);
 
         tf_res = new int[nbEBands];
         /* Disable variable tf resolution for hybrid and at very low bitrate */
-        if (effectiveBytes >= 15 * C && start == 0 && complexity >= 2 && lfe == 0) {
+        if (effectiveBytes >= 15 * C && complexity >= 2 && lfe == 0) {
             int lambda;
             if (effectiveBytes < 40) {
                 lambda = 12;
@@ -807,14 +789,12 @@ class CeltEncoder {
             }
             lambda *= 2;
             BoxedValueInt boxed_tf_sum = new BoxedValueInt(0);
-            tf_select = CeltCommon.tf_analysis(mode, effEnd, isTransient, tf_res, lambda, X, N, LM, boxed_tf_sum, tf_estimate, tf_chan);
-            tf_sum = boxed_tf_sum.Val;
+            tf_select = CeltCommon.tf_analysis(mode, effEnd, isTransient, tf_res, lambda, X, LM, boxed_tf_sum, tf_estimate, tf_chan);
 
             for (i = effEnd; i < end; i++) {
                 tf_res[i] = tf_res[effEnd - 1];
             }
         } else {
-            tf_sum = 0;
             for (i = 0; i < end; i++) {
                 tf_res[i] = isTransient;
             }
@@ -823,19 +803,19 @@ class CeltEncoder {
 
         error = new int[C][nbEBands];
         BoxedValueInt boxed_delayedintra = new BoxedValueInt(delayedIntra);
-        QuantizeBands.quant_coarse_energy(mode, start, end, effEnd, bandLogE,
+        QuantizeBands.quant_coarse_energy(mode, 0, end, effEnd, bandLogE,
                 oldBandE, total_bits, error, enc,
                 C, LM, nbAvailableBytes, force_intra,
                 boxed_delayedintra, complexity >= 4 ? 1 : 0, loss_rate, lfe);
         this.delayedIntra = boxed_delayedintra.Val;
 
-        CeltCommon.tf_encode(start, end, isTransient, tf_res, LM, tf_select, enc);
+        CeltCommon.tf_encode(0, end, isTransient, tf_res, LM, tf_select, enc);
 
         if (enc.tell() + 4 <= total_bits) {
             if (lfe != 0) {
                 this.tapset_decision = 0;
                 this.spread_decision = Spread.SPREAD_NORMAL;
-            } else if (shortBlocks != 0 || complexity < 3 || nbAvailableBytes < 10 * C || start != 0) {
+            } else if (shortBlocks != 0 || complexity < 3 || nbAvailableBytes < 10 * C) {
                 if (complexity == 0) {
                     this.spread_decision = Spread.SPREAD_NONE;
                 } else {
@@ -861,7 +841,7 @@ class CeltEncoder {
         offsets = new int[nbEBands];
 
         BoxedValueInt boxed_tot_boost = new BoxedValueInt(0);
-        maxDepth = CeltCommon.dynalloc_analysis(bandLogE, bandLogE2, nbEBands, start, end, C, offsets,
+        maxDepth = CeltCommon.dynalloc_analysis(bandLogE, bandLogE2, nbEBands, 0, end, C, offsets,
                 lsb_depth, mode.logN, isTransient, vbr, constrained_vbr,
                 eBands, LM, effectiveBytes, boxed_tot_boost, lfe, surround_dynalloc);
         tot_boost = boxed_tot_boost.Val;
@@ -877,7 +857,7 @@ class CeltEncoder {
         total_bits <<= EntropyCoder.BITRES;
         total_boost = 0;
         tell = enc.tell_frac();
-        for (i = start; i < end; i++) {
+        for (i = 0; i < end; i++) {
             int width, quanta;
             int dynalloc_loop_logp;
             int boost;
@@ -916,7 +896,7 @@ class CeltEncoder {
 
             this.intensity = Bands.hysteresis_decision(equiv_rate / 1000,
                     CeltTables.intensity_thresholds, CeltTables.intensity_histeresis, 21, intensity);
-            this.intensity = Inlines.IMIN(end, Inlines.IMAX(start, intensity));
+            this.intensity = Inlines.IMIN(end, Inlines.IMAX(0, intensity));
         }
 
         alloc_trim = 5;
@@ -1054,7 +1034,7 @@ class CeltEncoder {
         BoxedValueInt boxed_intensity = new BoxedValueInt(intensity);
         BoxedValueInt boxed_balance = new BoxedValueInt(0);
         BoxedValueInt boxed_dual_stereo = new BoxedValueInt(dual_stereo);
-        codedBands = Rate.compute_allocation(mode, start, end, offsets, cap,
+        codedBands = Rate.compute_allocation(mode, 0, end, offsets, cap,
                 alloc_trim, boxed_intensity, boxed_dual_stereo, bits, boxed_balance, pulses,
                 fine_quant, fine_priority, C, LM, enc, 1, lastCodedBands, signalBandwidth);
         this.intensity = boxed_intensity.Val;
@@ -1067,12 +1047,12 @@ class CeltEncoder {
             this.lastCodedBands = codedBands;
         }
 
-        QuantizeBands.quant_fine_energy(mode, start, end, oldBandE, error, fine_quant, enc, C);
+        QuantizeBands.quant_fine_energy(mode, 0, end, oldBandE, error, fine_quant, enc, C);
 
         /* Residual quantisation */
         collapse_masks = new short[C * nbEBands];
         BoxedValueInt boxed_rng = new BoxedValueInt(rng);
-        Bands.quant_all_bands(1, mode, start, end, X[0], C == 2 ? X[1] : null, collapse_masks,
+        Bands.quant_all_bands(1, mode, 0, end, X[0], C == 2 ? X[1] : null, collapse_masks,
                 bandE, pulses, shortBlocks, spread_decision,
                 dual_stereo, intensity, tf_res, nbCompressedBytes * (8 << EntropyCoder.BITRES) - anti_collapse_rsv,
                 balance, enc, LM, codedBands, boxed_rng);
@@ -1083,7 +1063,7 @@ class CeltEncoder {
             enc.enc_bits(anti_collapse_on, 1);
         }
 
-        QuantizeBands.quant_energy_finalise(mode, start, end, oldBandE, error, fine_quant, fine_priority, nbCompressedBytes * 8 - enc.tell(), enc, C);
+        QuantizeBands.quant_energy_finalise(mode, 0, end, oldBandE, error, fine_quant, fine_priority, nbCompressedBytes * 8 - enc.tell(), enc, C);
 
         if (silence != 0) {
             for (i = 0; i < nbEBands; i++) {
@@ -1125,7 +1105,7 @@ class CeltEncoder {
         /* In case start or end were to change */
         c = 0;
         do {
-            for (i = 0; i < start; i++) {
+            for (i = 0; i < 0; i++) {
                 oldBandE[c][i] = 0;
                 oldLogE[c][i] = oldLogE2[c][i] = -((short) (0.5 + (28.0f) * (1 << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(28.0f, CeltConstants.DB_SHIFT)*/;
             }
@@ -1158,13 +1138,6 @@ class CeltEncoder {
             throw new IllegalArgumentException("Complexity must be between 0 and 10 inclusive");
         }
         this.complexity = value;
-    }
-
-    void SetStartBand(int value) {
-        if (value < 0 || value >= mode.nbEBands) {
-            throw new IllegalArgumentException("Start band above max number of ebands (or negative)");
-        }
-        this.start = value;
     }
 
     void SetEndBand(int value) {
@@ -1225,10 +1198,6 @@ class CeltEncoder {
 
     void SetExpertFrameDuration(OpusFramesize value) {
         this.variable_duration = value;
-    }
-
-    void SetSignalling(int value) {
-        this.signalling = value;
     }
 
     void SetAnalysis(AnalysisInfo value) {

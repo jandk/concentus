@@ -232,11 +232,6 @@ final class Inlines {
         return a / b;
     }
 
-    // identical to silk_SAT16 - saturate operation
-    static short SAT16(int x) {
-        return (short) (x > 32767 ? 32767 : x < -32768 ? -32768 : (short) x);
-    }
-
     static short SIG2WORD16(int x) {
         x = PSHR32(x, 12);
         x = MAX32(x, -32768);
@@ -298,10 +293,6 @@ final class Inlines {
 
     static float MAX32(float a, float b) {
         return (Math.max((a), (b)));
-    }
-
-    static int ABS16(int x) {
-        return ((x) < 0 ? (-(x)) : (x));
     }
 
     static float ABS16(float x) {
@@ -624,38 +615,6 @@ final class Inlines {
         return ret;
     }
 
-    static int silk_SMULTT(int a32, int b32) {
-        return ((a32 >> 16) * (b32 >> 16));
-    }
-
-    static long silk_SMLALBB(long a64, short b16, short c16) {
-        return silk_ADD64((a64), (int) (b16) * (int) (c16));
-    }
-
-    static long silk_SMULL(int a32, int b32) {
-        return (long) a32 * (long) b32;
-    }
-
-    static int silk_ADD32_ovflw(int a, int b) {
-        return (int) ((long) a + b);
-    }
-
-    static int silk_ADD32_ovflw(long a, long b) {
-        return ((int) (a + b));
-    }
-
-    static int silk_SUB32_ovflw(int a, int b) {
-        return (int) ((long) a - b);
-    }
-
-    static int silk_MLA_ovflw(int a32, int b32, int c32) {
-        return silk_ADD32_ovflw(a32, (long) b32 * c32);
-    }
-
-    static int silk_SMLABB_ovflw(int a32, int b32, int c32) {
-        return ((silk_ADD32_ovflw((a32), ((int) ((short) (b32))) * (int) ((short) (c32)))));
-    }
-
     static int silk_SMULBB(int a32, int b32) {
         return ((int) ((short) a32) * (int) ((short) b32));
     }
@@ -664,151 +623,24 @@ final class Inlines {
         return ((int) (((a32 * (long) (((short) b32))) >> 16)));
     }
 
-    static int silk_SMLABB(int a32, int b32, int c32) {
-        return ((a32) + ((int) ((short) b32)) * (int) ((short) c32));
-    }
-
     static int silk_DIV32_16(int a32, int b32) {
         return a32 / b32;
-    }
-
-    static int silk_DIV32(int a32, int b32) {
-        return a32 / b32;
-    }
-
-    static short silk_ADD16(short a, short b) {
-        return (short) (a + b);
     }
 
     static int silk_ADD32(int a, int b) {
         return a + b;
     }
 
-    static long silk_ADD64(long a, long b) {
-        long ret = a + b;
-        Inlines.OpusAssert(ret == silk_ADD_SAT64(a, b));
-        return ret;
-    }
-
-    static short silk_SUB16(short a, short b) {
-        short ret = (short) (a - b);
-        Inlines.OpusAssert(ret == silk_SUB_SAT16(a, b));
-        return ret;
-    }
-
-    static int silk_SUB32(int a, int b) {
-        int ret = a - b;
-        Inlines.OpusAssert(ret == silk_SUB_SAT32(a, b));
-        return ret;
-    }
-
     static int silk_SAT16(int a) {
         return a > Short.MAX_VALUE ? Short.MAX_VALUE : ((a) < Short.MIN_VALUE ? Short.MIN_VALUE : (a));
-    }
-
-    static int silk_SAT32(long a) {
-        return a > Integer.MAX_VALUE ? Integer.MAX_VALUE : ((a) < Integer.MIN_VALUE ? Integer.MIN_VALUE : (int) (a));
-    }
-
-    static short silk_ADD_SAT16(short a16, short b16) {
-        short res = (short) silk_SAT16(silk_ADD32(a16, (b16)));
-        Inlines.OpusAssert(res == silk_SAT16((int) a16 + (int) b16));
-        return res;
-    }
-
-    static int silk_ADD_SAT32(int a32, int b32) {
-        int res = ((((long) (a32) + (long) (b32)) & 0x80000000L) == 0
-                ? ((((a32) & (b32)) & 0x80000000) != 0 ? Integer.MIN_VALUE : (a32) + (b32))
-                : ((((a32) | (b32)) & 0x80000000) == 0 ? Integer.MAX_VALUE : (a32) + (b32)));
-        Inlines.OpusAssert(res == silk_SAT32((long) a32 + (long) b32));
-        return res;
-    }
-
-    static long silk_ADD_SAT64(long a64, long b64) {
-        long res;
-        res = (((a64 + b64) & Long.MIN_VALUE) == 0
-                ? (((a64 & b64) & Long.MIN_VALUE) != 0 ? Long.MIN_VALUE : a64 + b64)
-                : (((a64 | b64) & Long.MIN_VALUE) == 0 ? Long.MAX_VALUE : a64 + b64));
-        return res;
-    }
-
-    static short silk_SUB_SAT16(short a16, short b16) {
-        short res = (short) silk_SAT16(silk_SUB32(a16, (b16)));
-        Inlines.OpusAssert(res == silk_SAT16((int) a16 - (int) b16));
-        return res;
-    }
-
-    static int silk_SUB_SAT32(int a32, int b32) {
-        int res = ((((long) a32 - b32) & 0x80000000L) == 0
-                ? (((a32) & ((b32) ^ 0x80000000) & 0x80000000) != 0 ? Integer.MIN_VALUE : (a32) - (b32))
-                : ((((a32) ^ 0x80000000) & (b32) & 0x80000000) != 0 ? Integer.MAX_VALUE : (a32) - (b32)));
-        Inlines.OpusAssert(res == silk_SAT32((long) a32 - (long) b32));
-        return res;
-    }
-
-    ///* Saturation for positive input values */
-
-    static int silk_ADD_POS_SAT32(int a, int b) {
-        return ((((a + b) & 0x80000000) != 0) ? Integer.MAX_VALUE : (a + b));
-    }
-
-    static short silk_LSHIFT16(short a, int shift) {
-        return (short) (a << shift);
-    }
-
-    static int silk_LSHIFT32(int a, int shift) {
-        return a << shift;
-    }
-
-    static long silk_LSHIFT64(long a, int shift) {
-        return a << shift;
     }
 
     static int silk_LSHIFT(int a, int shift) {
         return a << shift;
     }
 
-    static int silk_LSHIFT_ovflw(int a, int shift) {
-        return a << shift;
-    }
-
-    static int silk_LSHIFT_SAT32(int a, int shift) {
-        return (silk_LSHIFT32(silk_LIMIT((a), silk_RSHIFT32(Integer.MIN_VALUE, (shift)), silk_RSHIFT32(Integer.MAX_VALUE, (shift))), (shift)));
-    }
-
-    static short silk_RSHIFT16(short a, int shift) {
-        return (short) (a >> shift);
-    }
-
-    static int silk_RSHIFT32(int a, int shift) {
-        return a >> shift;
-    }
-
     static int silk_RSHIFT(int a, int shift) {
         return a >> shift;
-    }
-
-    static long silk_RSHIFT64(long a, int shift) {
-        return a >> shift;
-    }
-
-    static long silk_RSHIFT_uint(long a, int shift) {
-        return CapToUInt32(a) >> shift;
-    }
-
-    static int silk_ADD_LSHIFT(int a, int b, int shift) {
-        return a + (b << shift);
-        /* shift >= 0 */
-    }
-
-    static int silk_ADD_LSHIFT32(int a, int b, int shift) {
-        return a + (b << shift);
-        /* shift >= 0 */
-    }
-
-    static int silk_ADD_RSHIFT(int a, int b, int shift) {
-        return a + (b >> shift);
-        /* shift  > 0 */
     }
 
     static int silk_ADD_RSHIFT32(int a, int b, int shift) {
@@ -816,183 +648,10 @@ final class Inlines {
         /* shift  > 0 */
     }
 
-    static long silk_ADD_RSHIFT_uint(long a, long b, int shift) {
-        return CapToUInt32(a + (CapToUInt32(b) >> shift));
-        /* shift  > 0 */
-    }
-
-    static int silk_SUB_LSHIFT32(int a, int b, int shift) {
-        int ret;
-        ret = a - (b << shift);
-        return ret;
-        /* shift >= 0 */
-    }
-
-    static int silk_SUB_RSHIFT32(int a, int b, int shift) {
-        int ret;
-        ret = a - (b >> shift);
-        return ret;
-        /* shift  > 0 */
-    }
-
     static int silk_RSHIFT_ROUND(int a, int shift) {
         int ret;
         ret = shift == 1 ? (a >> 1) + (a & 1) : ((a >> (shift - 1)) + 1) >> 1;
         return ret;
-    }
-
-    static long silk_RSHIFT_ROUND64(long a, int shift) {
-        long ret;
-        ret = shift == 1 ? (a >> 1) + (a & 1) : ((a >> (shift - 1)) + 1) >> 1;
-        return ret;
-    }
-
-    static int silk_min(int a, int b) {
-        return Math.min((a), (b));
-    }
-
-    static int silk_max(int a, int b) {
-        return Math.max((a), (b));
-    }
-
-    /* silk_min() versions with typecast in the function call */
-    static int silk_min_int(int a, int b) {
-        return (Math.min((a), (b)));
-    }
-
-    static int silk_min_32(int a, int b) {
-        return (Math.min((a), (b)));
-    }
-
-    /* silk_min() versions with typecast in the function call */
-    static int silk_max_int(int a, int b) {
-        return (Math.max((a), (b)));
-    }
-
-    static short silk_max_16(short a, short b) {
-        return (((a) > (b)) ? (a) : (b));
-    }
-
-    static int silk_max_32(int a, int b) {
-        return (Math.max((a), (b)));
-    }
-
-    static int silk_LIMIT(int a, int limit1, int limit2) {
-        return silk_LIMIT_32(a, limit1, limit2);
-    }
-
-    static int silk_LIMIT_int(int a, int limit1, int limit2) {
-        return silk_LIMIT_32(a, limit1, limit2);
-    }
-
-    static int silk_LIMIT_32(int a, int limit1, int limit2) {
-        return ((limit1) > (limit2) ? ((a) > (limit1) ? (limit1) : (Math.max((a), (limit2)))) : ((a) > (limit2) ? (limit2) : (Math.max((a), (limit1)))));
-    }
-
-    static int silk_abs(int a) {
-        // Be careful, silk_abs returns wrong when input equals to silk_intXX_MIN
-        return ((a) > 0) ? (a) : -(a);
-    }
-
-    static int silk_abs_int32(int a) {
-        return (a ^ (a >> 31)) - (a >> 31);
-    }
-
-    static int silk_RAND(int seed) {
-        return silk_MLA_ovflw(907633515, seed, 196314165);
-    }
-
-    static int silk_SMMUL(int a32, int b32) {
-        return (int) silk_RSHIFT64(silk_SMULL((a32), (b32)), 32);
-    }
-
-    /* a32 + (b32 * (c32 >> 16)) >> 16 */
-    static int silk_SMLAWT(int a32, int b32, int c32) {
-        return a32 + ((b32 >> 16) * (c32 >> 16)) + (((b32 & 0x0000FFFF) * ((c32 >> 16)) >> 16));
-    }
-
-    static int silk_DIV32_varQ(int a32, int b32, int Qres) {
-        int a_headrm, b_headrm, lshift;
-        int b32_inv, a32_nrm, b32_nrm, result;
-
-        Inlines.OpusAssert(b32 != 0);
-        Inlines.OpusAssert(Qres >= 0);
-
-        /* Compute number of bits head room and normalize inputs */
-        a_headrm = silk_CLZ32(silk_abs(a32)) - 1;
-        a32_nrm = silk_LSHIFT(a32, a_headrm);
-        /* Q: a_headrm                  */
-        b_headrm = silk_CLZ32(silk_abs(b32)) - 1;
-        b32_nrm = silk_LSHIFT(b32, b_headrm);
-        /* Q: b_headrm                  */
-
-        /* Inverse of b32, with 14 bits of precision */
-        b32_inv = silk_DIV32_16(Integer.MAX_VALUE >> 2, silk_RSHIFT(b32_nrm, 16));
-        /* Q: 29 + 16 - b_headrm        */
-
-        /* First approximation */
-        result = silk_SMULWB(a32_nrm, b32_inv);
-        /* Q: 29 + a_headrm - b_headrm  */
-
-        /* Compute residual by subtracting product of denominator and first approximation */
-        /* It's OK to overflow because the final value of a32_nrm should always be small */
-        a32_nrm = silk_SUB32_ovflw(a32_nrm, silk_LSHIFT_ovflw(silk_SMMUL(b32_nrm, result), 3));
-        /* Q: a_headrm   */
-
-        /* Refinement */
-        result = silk_SMLAWB(result, a32_nrm, b32_inv);
-        /* Q: 29 + a_headrm - b_headrm  */
-
-        /* Convert to Qres domain */
-        lshift = 29 + a_headrm - b_headrm - Qres;
-        if (lshift < 0) {
-            return silk_LSHIFT_SAT32(result, -lshift);
-        } else if (lshift < 32) {
-            return silk_RSHIFT(result, lshift);
-        } else {
-            /* Avoid undefined result */
-            return 0;
-        }
-    }
-
-    static int silk_INVERSE32_varQ(int b32, int Qres) {
-        int b_headrm, lshift;
-        int b32_inv, b32_nrm, err_Q32, result;
-
-        Inlines.OpusAssert(b32 != 0);
-        Inlines.OpusAssert(Qres > 0);
-
-        /* Compute number of bits head room and normalize input */
-        b_headrm = silk_CLZ32(silk_abs(b32)) - 1;
-        b32_nrm = silk_LSHIFT(b32, b_headrm);
-        /* Q: b_headrm                */
-
-        /* Inverse of b32, with 14 bits of precision */
-        b32_inv = silk_DIV32_16(Integer.MAX_VALUE >> 2, (short) (silk_RSHIFT(b32_nrm, 16)));
-        /* Q: 29 + 16 - b_headrm    */
-
-        /* First approximation */
-        result = silk_LSHIFT(b32_inv, 16);
-        /* Q: 61 - b_headrm            */
-
-        /* Compute residual by subtracting product of denominator and first approximation from one */
-        err_Q32 = silk_LSHIFT((1 << 29) - silk_SMULWB(b32_nrm, b32_inv), 3);
-        /* Q32                        */
-
-        /* Refinement */
-        result = silk_SMLAWW(result, err_Q32, b32_inv);
-        /* Q: 61 - b_headrm            */
-
-        /* Convert to Qres domain */
-        lshift = 61 - b_headrm - Qres;
-        if (lshift <= 0) {
-            return silk_LSHIFT_SAT32(result, -lshift);
-        } else if (lshift < 32) {
-            return silk_RSHIFT(result, lshift);
-        } else {
-            /* Avoid undefined result */
-            return 0;
-        }
     }
 
     // fixme: This method should be as optimized as possible
@@ -1003,64 +662,9 @@ final class Inlines {
         return ret;
     }
 
-    static int silk_SMULWT(int a32, int b32) {
-        return (((a32) >> 16) * ((b32) >> 16) + ((((a32) & 0x0000FFFF) * ((b32) >> 16)) >> 16));
-    }
-
-    static int silk_SMLABT(int a32, int b32, int c32) {
-        return ((a32) + ((int) ((short) (b32))) * ((c32) >> 16));
-    }
-
-    static int MatrixGetPointer(int row, int column, int N) {
-        return (row * N) + column;
-    }
-
-    static short MatrixGet(short[] Matrix_base_adr, int row, int column, int N) {
-        return Matrix_base_adr[((row) * (N)) + (column)];
-    }
-
-    static PitchAnalysisCore.silk_pe_stage3_vals MatrixGet(PitchAnalysisCore.silk_pe_stage3_vals[] Matrix_base_adr, int row, int column, int N) {
-        return Matrix_base_adr[((row) * (N)) + (column)];
-    }
-
-    static int MatrixGet(int[] Matrix_base_adr, int matrix_ptr, int row, int column, int N) {
-        return Matrix_base_adr[matrix_ptr + (row * N) + column];
-    }
-
-    static void MatrixSet(int[] Matrix_base_adr, int matrix_ptr, int row, int column, int N, int value) {
-        Matrix_base_adr[matrix_ptr + (row * N) + column] = value;
-    }
-
-    static void MatrixSet(int[] Matrix_base_adr, int row, int column, int N, int value) {
-        Matrix_base_adr[((row) * (N)) + (column)] = value;
-    }
-
-    static void MatrixSet(short[] Matrix_base_adr, int row, int column, int N, short value) {
-        Matrix_base_adr[((row) * (N)) + (column)] = value;
-    }
-
     static int silk_SMULWW(int a32, int b32) {
         //return CHOP32(((long)(a32) * (b32)) >> 16);
         return silk_MLA(silk_SMULWB((a32), (b32)), (a32), silk_RSHIFT_ROUND((b32), 16));
-    }
-
-    static int silk_SMLAWW(int a32, int b32, int c32) {
-        //return CHOP32(((a32) + (((long)(b32) * (c32)) >> 16)));
-        return silk_MLA(silk_SMLAWB((a32), (b32), (c32)), (b32), silk_RSHIFT_ROUND((c32), 16));
-    }
-
-    /* count leading zeros of opus_int64 */
-    static int silk_CLZ64(long input) {
-        int in_upper;
-
-        in_upper = (int) silk_RSHIFT64(input, 32);
-        if (in_upper == 0) {
-            /* Search in the lower 32 bits */
-            return 32 + silk_CLZ32(((int) input));
-        } else {
-            /* Search in the upper 32 bits */
-            return silk_CLZ32(in_upper);
-        }
     }
 
     static int silk_CLZ32(int in32) {
@@ -1072,40 +676,6 @@ final class Inlines {
 
         lz.Val = lzeros;
         frac_Q7.Val = silk_ROR32(input, 24 - lzeros) & 0x7f;
-    }
-
-    static int silk_SQRT_APPROX(int x) {
-        int y;
-        int lz;
-        int frac_Q7;
-
-        if (x <= 0) {
-            return 0;
-        }
-
-        BoxedValueInt boxed_lz = new BoxedValueInt(0);
-        BoxedValueInt boxed_frac_Q7 = new BoxedValueInt(0);
-        silk_CLZ_FRAC(x, boxed_lz, boxed_frac_Q7);
-        lz = boxed_lz.Val;
-        frac_Q7 = boxed_frac_Q7.Val;
-
-        if ((lz & 1) != 0) {
-            y = 32768;
-        } else {
-            y = 46214;        // 46214 = sqrt(2) * 32768
-        }
-
-        // get scaling right
-        y >>= silk_RSHIFT(lz, 1);
-
-        // increment using fractional part of input
-        y = silk_SMLAWB(y, y, silk_SMULBB(213, frac_Q7));
-
-        return y;
-    }
-
-    static int MUL32_FRAC_Q(int a32, int b32, int Q) {
-        return ((int) (silk_RSHIFT_ROUND64(silk_SMULL(a32, b32), Q)));
     }
 
     static int silk_lin2log(int inLin) {
@@ -1139,106 +709,6 @@ final class Inlines {
         }
 
         return output;
-    }
-
-    static void silk_interpolate(
-            short[] xi,
-            short[] x0,
-            short[] x1,
-            int ifact_Q2,
-            int d) {
-        int i;
-
-        Inlines.OpusAssert(ifact_Q2 >= 0);
-        Inlines.OpusAssert(ifact_Q2 <= 4);
-
-        for (i = 0; i < d; i++) {
-            xi[i] = (short) silk_ADD_RSHIFT(x0[i], silk_SMULBB(x1[i] - x0[i], ifact_Q2), 2);
-        }
-    }
-
-    static int silk_inner_prod_aligned_scale(
-            short[] inVec1,
-            short[] inVec2,
-            int scale,
-            int len) {
-        int i, sum = 0;
-        for (i = 0; i < len; i++) {
-            sum = silk_ADD_RSHIFT32(sum, silk_SMULBB(inVec1[i], inVec2[i]), scale);
-        }
-
-        return sum;
-    }
-
-    /* Copy and multiply a vector by a constant */
-    static void silk_scale_copy_vector16(
-            short[] data_out,
-            int data_out_ptr,
-            short[] data_in,
-            int data_in_ptr,
-            int gain_Q16, /* I    Gain in Q16                                                 */
-            int dataSize /* I    Length                                                      */
-    ) {
-        for (int i = 0; i < dataSize; i++) {
-            data_out[data_out_ptr + i] = (short) (silk_SMULWB(gain_Q16, data_in[data_in_ptr + i]));
-        }
-    }
-
-    /* Multiply a vector by a constant */
-    static void silk_scale_vector32_Q26_lshift_18(
-            int[] data1, /* I/O  Q0/Q18                                                      */
-            int data1_ptr,
-            int gain_Q26, /* I    Q26                                                         */
-            int dataSize /* I    length                                                      */
-    ) {
-        for (int i = data1_ptr; i < data1_ptr + dataSize; i++) {
-            data1[i] = (int) (silk_RSHIFT64(silk_SMULL(data1[i], gain_Q26), 8));
-            /* OUTPUT: Q18 */
-        }
-    }
-
-    /* sum = for(i=0;i<len;i++)inVec1[i]*inVec2[i];      ---        inner product   */
-    static int silk_inner_prod(
-            short[] inVec1, /*    I input vector 1                                              */
-            int inVec1_ptr,
-            short[] inVec2, /*    I input vector 2                                              */
-            int inVec2_ptr,
-            int len /*    I vector lengths                                              */
-    ) {
-        int i;
-        int xy = 0;
-        for (i = 0; i < len; i++) {
-            xy = Inlines.MAC16_16(xy, inVec1[inVec1_ptr + i], inVec2[inVec2_ptr + i]);
-        }
-        return xy;
-    }
-
-    static int silk_inner_prod_self(
-            short[] inVec, /*    I input vector 1 (will be crossed with itself)                                             */
-            int inVec_ptr,
-            int len /*    I vector lengths                                              */
-    ) {
-        int i;
-        int xy = 0;
-        for (i = inVec_ptr; i < inVec_ptr + len; i++) {
-            xy = Inlines.MAC16_16(xy, inVec[i], inVec[i]);
-        }
-        return xy;
-    }
-
-    static long silk_inner_prod16_aligned_64(
-            short[] inVec1, /*    I input vector 1                                              */
-            int inVec1_ptr,
-            short[] inVec2, /*    I input vector 2                                              */
-            int inVec2_ptr,
-            int len /*    I vector lengths                                              */
-    ) {
-        int i;
-        long sum = 0;
-        for (i = 0; i < len; i++) {
-            sum = silk_SMLALBB(sum, inVec1[inVec1_ptr + i], inVec2[inVec2_ptr + i]);
-        }
-        return sum;
     }
 
     static long EC_MINI(long a, long b) {

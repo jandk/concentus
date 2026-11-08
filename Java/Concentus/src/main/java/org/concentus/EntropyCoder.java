@@ -340,22 +340,6 @@ class EntropyCoder {
         return ret;
     }
 
-    int dec_icdf(short[] _icdf, int _icdf_offset, int _ftb) {
-        long t;
-        long s = rng;
-        long d = val;
-        long r = s >> _ftb;
-        int ret = _icdf_offset - 1;
-        do {
-            t = s;
-            s = Inlines.CapToUInt32(r * _icdf[++ret]);
-        } while (d < s);
-        this.val = Inlines.CapToUInt32(d - s);
-        this.rng = Inlines.CapToUInt32(t - s);
-        dec_normalize();
-        return ret - _icdf_offset;
-    }
-
     long dec_uint(long _ft) {
         _ft = Inlines.CapToUInt32(_ft);
         long ft;
@@ -528,17 +512,6 @@ class EntropyCoder {
         enc_normalize();
     }
 
-    void enc_icdf(int _s, short[] _icdf, int icdf_ptr, int _ftb) {
-        long r = Inlines.CapToUInt32(rng >> _ftb);
-        if (_s > 0) {
-            this.val = val + Inlines.CapToUInt32(rng - Inlines.CapToUInt32(r * _icdf[icdf_ptr + _s - 1]));
-            this.rng = Inlines.CapToUInt32(r * Inlines.CapToUInt32(_icdf[icdf_ptr + _s - 1] - _icdf[icdf_ptr + _s]));
-        } else {
-            this.rng = Inlines.CapToUInt32(rng - (r * _icdf[icdf_ptr + _s]));
-        }
-        enc_normalize();
-    }
-
     void enc_uint(long _fl, long _ft) {
         _fl = Inlines.CapToUInt32(_fl);
         _ft = Inlines.CapToUInt32(_ft);
@@ -582,29 +555,6 @@ class EntropyCoder {
         this.end_window = window;
         this.nend_bits = used;
         this.nbits_total += _bits;
-    }
-
-    void enc_patch_initial_bits(long _val, int _nbits) {
-        int shift;
-        long mask;
-        Inlines.OpusAssert(_nbits <= EC_SYM_BITS);
-        shift = EC_SYM_BITS - _nbits;
-        mask = ((1 << _nbits) - 1) << shift;
-
-        if (offs > 0) {
-            /*The first byte has been finalized.*/
-            buf[buf_ptr] = (byte) ((buf[buf_ptr] & ~mask) | Inlines.CapToUInt32(_val << shift));
-        } else if (rem >= 0) {
-            /*The first byte is still awaiting carry propagation.*/
-            this.rem = (int) Inlines.CapToUInt32((Inlines.CapToUInt32((rem & ~mask) | _val)) << shift);
-        } else if (rng <= (EC_CODE_TOP >> _nbits)) {
-            /*The renormalization loop has never been run.*/
-            this.val = Inlines.CapToUInt32((val & ~(mask << EC_CODE_SHIFT))
-                    | Inlines.CapToUInt32(Inlines.CapToUInt32(_val) << (EC_CODE_SHIFT + shift)));
-        } else {
-            /*The encoder hasn't even encoded _nbits of data yet.*/
-            this.error = -1;
-        }
     }
 
     void enc_shrink(int _size) {

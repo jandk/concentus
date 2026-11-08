@@ -644,7 +644,6 @@ public class OpusMSEncoder {
                 }
                 if (s < layout.nb_coupled_streams) {
                     /* To preserve the spatial image, force stereo CELT on coupled streams */
-                    enc.setForceMode(OpusMode.MODE_CELT_ONLY);
                     enc.setForceChannels(2);
                 }
             }
@@ -813,16 +812,6 @@ public class OpusMSEncoder {
         }
     }
 
-    public boolean getUseDTX() {
-        return encoders[0].getUseDTX();
-    }
-
-    public void setUseDTX(boolean value) {
-        for (int encoder_ptr = 0; encoder_ptr < layout.nb_streams; encoder_ptr++) {
-            encoders[encoder_ptr].setUseDTX(value);
-        }
-    }
-
     public int getComplexity() {
         return encoders[0].getComplexity();
     }
@@ -830,26 +819,6 @@ public class OpusMSEncoder {
     public void setComplexity(int value) {
         for (int encoder_ptr = 0; encoder_ptr < layout.nb_streams; encoder_ptr++) {
             encoders[encoder_ptr].setComplexity(value);
-        }
-    }
-
-    public OpusMode getForceMode() {
-        return encoders[0].getForceMode();
-    }
-
-    public void setForceMode(OpusMode value) {
-        for (int encoder_ptr = 0; encoder_ptr < layout.nb_streams; encoder_ptr++) {
-            encoders[encoder_ptr].setForceMode(value);
-        }
-    }
-
-    public boolean getUseInbandFEC() {
-        return encoders[0].getUseInbandFEC();
-    }
-
-    public void setUseInbandFEC(boolean value) {
-        for (int encoder_ptr = 0; encoder_ptr < layout.nb_streams; encoder_ptr++) {
-            encoders[encoder_ptr].setUseInbandFEC(value);
         }
     }
 

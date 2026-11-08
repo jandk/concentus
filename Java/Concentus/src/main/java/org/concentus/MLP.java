@@ -37,7 +37,6 @@ package org.concentus;
 /// </summary>
 class MLPState {
 
-    int layers;
     int[] topo;
     float[] weights;
 }

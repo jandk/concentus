@@ -49,7 +49,6 @@ public class OpusEncoder {
     OpusSignal signal_type;
     OpusBandwidth user_bandwidth;
     OpusBandwidth max_bandwidth;
-    OpusMode user_forced_mode;
     int voice_ratio;
     int Fs;
     int use_vbr;
@@ -67,7 +66,6 @@ public class OpusEncoder {
     short hybrid_stereo_width_Q14;
     int variable_HP_smth2_Q15;
     final int[] hp_mem = new int[4];
-    final OpusMode mode = OpusMode.MODE_CELT_ONLY;
     int prev_framesize;
     OpusBandwidth bandwidth;
     int first;
@@ -93,7 +91,6 @@ public class OpusEncoder {
         signal_type = OpusSignal.OPUS_SIGNAL_UNKNOWN;
         user_bandwidth = OpusBandwidth.OPUS_BANDWIDTH_UNKNOWN;
         max_bandwidth = OpusBandwidth.OPUS_BANDWIDTH_UNKNOWN;
-        user_forced_mode = OpusMode.MODE_UNKNOWN;
         voice_ratio = 0;
         Fs = 0;
         use_vbr = 0;
@@ -135,7 +132,7 @@ public class OpusEncoder {
         hybrid_stereo_width_Q14 = 1 << 14;
         first = 1;
         bandwidth = OpusBandwidth.OPUS_BANDWIDTH_FULLBAND;
-        variable_HP_smth2_Q15 = Inlines.silk_LSHIFT(Inlines.silk_lin2log(TuningParameters.VARIABLE_HP_MIN_CUTOFF_HZ), 8);
+        variable_HP_smth2_Q15 = 193536;
     }
 
     /**
@@ -203,19 +200,8 @@ public class OpusEncoder {
         this.Fs = Fs;
 
         /* default SILK parameters */
-        silk_mode.nChannelsAPI = channels;
-        silk_mode.nChannelsInternal = channels;
-        silk_mode.API_sampleRate = this.Fs;
-        silk_mode.maxInternalSampleRate = 16000;
-        silk_mode.minInternalSampleRate = 8000;
-        silk_mode.desiredInternalSampleRate = 16000;
-        silk_mode.payloadSize_ms = 20;
-        silk_mode.bitRate = 25000;
         silk_mode.packetLossPercentage = 0;
         silk_mode.complexity = 9;
-        silk_mode.useInBandFEC = 0;
-        silk_mode.useDTX = 0;
-        silk_mode.useCBR = 0;
         silk_mode.reducedDependency = 0;
 
         /* Create CELT encoder */
@@ -225,7 +211,6 @@ public class OpusEncoder {
             return OpusError.OPUS_INTERNAL_ERROR;
         }
 
-        celt_enc.SetSignalling(0);
         celt_enc.SetComplexity(silk_mode.complexity);
 
         this.use_vbr = 1;
@@ -238,7 +223,6 @@ public class OpusEncoder {
         this.user_bandwidth = OpusBandwidth.OPUS_BANDWIDTH_AUTO;
         this.max_bandwidth = OpusBandwidth.OPUS_BANDWIDTH_FULLBAND;
         this.force_channels = OpusConstants.OPUS_AUTO;
-        this.user_forced_mode = OpusMode.MODE_AUTO;
         this.voice_ratio = -1;
         this.encoder_buffer = this.Fs / 100;
         this.lsb_depth = 24;
@@ -403,11 +387,11 @@ public class OpusEncoder {
                 if (max_data_bytes < 2) {
                     return OpusError.OPUS_BUFFER_TOO_SMALL;
                 }
-                data[data_ptr] = (byte) (CodecHelpers.gen_toc(OpusMode.MODE_CELT_ONLY, 50, bw, stream_channels) | 0x03);
+                data[data_ptr] = (byte) (CodecHelpers.gen_toc(50, bw, stream_channels) | 0x03);
                 data[data_ptr + 1] = (byte) (50 / frame_rate);
                 ret = 2;
             } else {
-                data[data_ptr] = CodecHelpers.gen_toc(OpusMode.MODE_CELT_ONLY, frame_rate, bw, stream_channels);
+                data[data_ptr] = CodecHelpers.gen_toc(frame_rate, bw, stream_channels);
                 ret = 1;
             }
             if (use_vbr == 0) {
@@ -702,8 +686,6 @@ public class OpusEncoder {
         analysis_info.enabled = analysis.enabled;
         celt_enc.SetAnalysis(analysis_info);
 
-        celt_enc.SetStartBand(0);
-
         /* If false, we already busted the budget and we'll end up with a "PLC packet" */
         if (enc.tell() <= 8 * nb_compr_bytes) {
             ret = celt_enc.celt_encode_with_ec(pcm_buf, 0, frame_size, null, 0, nb_compr_bytes, enc);
@@ -714,7 +696,7 @@ public class OpusEncoder {
 
         /* Signalling the mode in the first byte */
         data_ptr -= 1;
-        data[data_ptr] = CodecHelpers.gen_toc(mode, Fs / frame_size, curr_bandwidth, stream_channels);
+        data[data_ptr] = CodecHelpers.gen_toc(Fs / frame_size, curr_bandwidth, stream_channels);
 
         this.rangeFinal = (int) enc.rng;
 
@@ -882,13 +864,6 @@ public class OpusEncoder {
 
     public void setMaxBandwidth(OpusBandwidth value) {
         max_bandwidth = value;
-        if (max_bandwidth == OpusBandwidth.OPUS_BANDWIDTH_NARROWBAND) {
-            silk_mode.maxInternalSampleRate = 8000;
-        } else if (max_bandwidth == OpusBandwidth.OPUS_BANDWIDTH_MEDIUMBAND) {
-            silk_mode.maxInternalSampleRate = 12000;
-        } else {
-            silk_mode.maxInternalSampleRate = 16000;
-        }
     }
 
     /// <summary>
@@ -900,26 +875,6 @@ public class OpusEncoder {
 
     public void setBandwidth(OpusBandwidth value) {
         user_bandwidth = value;
-        if (user_bandwidth == OpusBandwidth.OPUS_BANDWIDTH_NARROWBAND) {
-            silk_mode.maxInternalSampleRate = 8000;
-        } else if (user_bandwidth == OpusBandwidth.OPUS_BANDWIDTH_MEDIUMBAND) {
-            silk_mode.maxInternalSampleRate = 12000;
-        } else {
-            silk_mode.maxInternalSampleRate = 16000;
-        }
-    }
-
-    /// <summary>
-    /// Gets or sets a flag to enable Discontinuous Transmission mode. This mode is only available in the SILK encoder
-    /// (Bitrate &lt; 40Kbit/s and/or ForceMode == SILK). When enabled, the encoder detects silence and background noise
-    /// and reduces the number of output packets, with up to 600ms in between separate packet transmissions.
-    /// </summary>
-    public boolean getUseDTX() {
-        return silk_mode.useDTX != 0;
-    }
-
-    public void setUseDTX(boolean value) {
-        silk_mode.useDTX = value ? 1 : 0;
     }
 
     /// <summary>
@@ -935,19 +890,6 @@ public class OpusEncoder {
         }
         silk_mode.complexity = value;
         Celt_Encoder.SetComplexity(value);
-    }
-
-    /// <summary>
-    /// Gets or sets a flag to enable Forward Error Correction. This mode is only available in the SILK encoder
-    /// (Bitrate &lt; 40Kbit/s and/or ForceMode == SILK). When enabled, lost packets can be partially recovered
-    /// by decoding data stored in the following packet.
-    /// </summary>
-    public boolean getUseInbandFEC() {
-        return silk_mode.useInBandFEC != 0;
-    }
-
-    public void setUseInbandFEC(boolean value) {
-        silk_mode.useInBandFEC = value ? 1 : 0;
     }
 
     /// <summary>
@@ -976,7 +918,6 @@ public class OpusEncoder {
 
     public void setUseVBR(boolean value) {
         use_vbr = value ? 1 : 0;
-        silk_mode.useCBR = value ? 0 : 1;
     }
 
     /// <summary>
@@ -1051,20 +992,6 @@ public class OpusEncoder {
     public void setExpertFrameDuration(OpusFramesize value) {
         variable_duration = value;
         Celt_Encoder.SetExpertFrameDuration(value);
-    }
-
-    /// <summary>
-    /// Gets or sets a user-forced mode for the encoder. There are three modes, SILK, HYBRID, and CELT. Silk can only encode below 40Kbit/s and is best suited
-    /// for speech. Silk also has modes such as FEC which may be desirable. Celt sounds better at higher bandwidth and is comparable to AAC.
-    /// Hybrid is used to create a smooth transition between the two modes. Note that this value may not always be honored due to other factors such
-    /// as frame size and bitrate.
-    /// </summary>
-    public OpusMode getForceMode() {
-        return user_forced_mode;
-    }
-
-    public void setForceMode(OpusMode value) {
-        user_forced_mode = value;
     }
 
     /// <summary>

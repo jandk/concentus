@@ -69,9 +69,7 @@ public class Program {
             fileIn.close();
             //fileOut.close();
             System.out.println("Done!");
-        } catch (IOException e) {
-            System.out.println(e.getMessage());
-        } catch (OpusException e) {
+        } catch (IOException | OpusException e) {
             System.out.println(e.getMessage());
         }
     }
@@ -82,7 +80,6 @@ public class Program {
             FileInputStream fileIn = new FileInputStream("C:\\Users\\lostromb\\Documents\\Visual Studio 2015\\Projects\\Concentus-git\\AudioData\\48Khz Stereo.raw");
             OpusEncoder encoder = new OpusEncoder(48000, 2, OpusApplication.OPUS_APPLICATION_AUDIO);
             encoder.setBitrate(96000);
-            encoder.setForceMode(OpusMode.MODE_CELT_ONLY);
             encoder.setSignalType(OpusSignal.OPUS_SIGNAL_MUSIC);
             encoder.setComplexity(0);
             
@@ -110,9 +107,7 @@ public class Program {
             fileIn.close();
             fileOut.close();
             System.out.println("Done!");
-        } catch (IOException e) {
-            System.out.println(e.getMessage());
-        } catch (OpusException e) {
+        } catch (IOException | OpusException e) {
             System.out.println(e.getMessage());
         }
     }

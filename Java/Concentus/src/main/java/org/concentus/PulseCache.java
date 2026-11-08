@@ -41,10 +41,4 @@ class PulseCache {
     short[] bits = null;
     short[] caps = null;
 
-    void Reset() {
-        size = 0;
-        index = null;
-        bits = null;
-        caps = null;
-    }
 }

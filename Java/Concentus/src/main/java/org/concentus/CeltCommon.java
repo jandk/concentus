@@ -89,7 +89,7 @@ class CeltCommon {
 
     }
 
-    static void celt_synthesis(CeltMode mode, int[][] X, int[][] out_syn, int[] out_syn_ptrs,
+    static void celt_synthesis(CeltMode mode, CeltImdct imdct, int[][] X, int[][] out_syn, int[] out_syn_ptrs,
                                int[] oldBandE, int start, int effEnd, int C, int CC,
                                int isTransient, int LM, int downsample,
                                int silence) {
@@ -120,32 +120,27 @@ class CeltCommon {
         }
 
         if (CC == 2 && C == 1) {
-            /* Copying a mono streams to two channels */
-            int freq2;
+            /* Copying a mono stream to two channels. The IMDCT leaves its input intact, so both
+               channels can be synthesized from the same coefficients. */
             Bands.denormalise_bands(mode, X[0], freq, 0, oldBandE, 0, start, effEnd, M,
                     downsample, silence);
-            /* Store a temporary copy in the output buffer because the IMDCT destroys its input. */
-            freq2 = out_syn_ptrs[1] + (overlap / 2);
-            System.arraycopy(freq, 0, out_syn[1], freq2, N);
-            for (b = 0; b < B; b++) {
-                MDCT.clt_mdct_backward(mode.mdct, out_syn[1], freq2 + b, out_syn[0], out_syn_ptrs[0] + (NB * b), mode.window, overlap, shift, B);
-            }
-            for (b = 0; b < B; b++) {
-                MDCT.clt_mdct_backward(mode.mdct, freq, b, out_syn[1], out_syn_ptrs[1] + (NB * b), mode.window, overlap, shift, B);
+            for (c = 0; c < 2; c++) {
+                for (b = 0; b < B; b++) {
+                    imdct.backward(freq, b, out_syn[c], out_syn_ptrs[c] + (NB * b), CeltTablesF.window120, overlap, shift, B);
+                }
             }
         } else if (CC == 1 && C == 2) {
             /* Downmixing a stereo stream to mono */
-            int freq2 = out_syn_ptrs[0] + (overlap / 2);
+            int[] freq2 = new int[N];
             Bands.denormalise_bands(mode, X[0], freq, 0, oldBandE, 0, start, effEnd, M,
                     downsample, silence);
-            /* Use the output buffer as temp array before downmixing. */
-            Bands.denormalise_bands(mode, X[1], out_syn[0], freq2, oldBandE, nbEBands, start, effEnd, M,
+            Bands.denormalise_bands(mode, X[1], freq2, 0, oldBandE, nbEBands, start, effEnd, M,
                     downsample, silence);
             for (i = 0; i < N; i++) {
-                freq[i] = Inlines.HALF32(Inlines.ADD32(freq[i], out_syn[0][freq2 + i]));
+                freq[i] = Inlines.HALF32(Inlines.ADD32(freq[i], freq2[i]));
             }
             for (b = 0; b < B; b++) {
-                MDCT.clt_mdct_backward(mode.mdct, freq, b, out_syn[0], out_syn_ptrs[0] + (NB * b), mode.window, overlap, shift, B);
+                imdct.backward(freq, b, out_syn[0], out_syn_ptrs[0] + (NB * b), CeltTablesF.window120, overlap, shift, B);
             }
         } else {
             /* Normal case (mono or stereo) */
@@ -154,7 +149,7 @@ class CeltCommon {
                 Bands.denormalise_bands(mode, X[c], freq, 0, oldBandE, c * nbEBands, start, effEnd, M,
                         downsample, silence);
                 for (b = 0; b < B; b++) {
-                    MDCT.clt_mdct_backward(mode.mdct, freq, b, out_syn[c], out_syn_ptrs[c] + (NB * b), mode.window, overlap, shift, B);
+                    imdct.backward(freq, b, out_syn[c], out_syn_ptrs[c] + (NB * b), CeltTablesF.window120, overlap, shift, B);
                 }
             } while (++c < CC);
         }

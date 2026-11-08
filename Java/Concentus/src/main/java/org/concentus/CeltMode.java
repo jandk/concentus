@@ -63,7 +63,6 @@ class CeltMode {
     short[] logN = null;
 
     int[] window = null;
-    MDCTLookup mdct = new MDCTLookup();
     PulseCache cache = new PulseCache();
 
     private CeltMode() {
@@ -84,16 +83,6 @@ class CeltMode {
         mode48000_960_120.allocVectors = CeltTables.band_allocation;
         mode48000_960_120.logN = CeltTables.logN400;
         mode48000_960_120.window = CeltTables.window120;
-        mode48000_960_120.mdct = new MDCTLookup();
-
-        mode48000_960_120.mdct.n = 1920;
-        mode48000_960_120.mdct.kfft = new FFTState[]{
-                CeltTables.fft_state48000_960_0,
-                CeltTables.fft_state48000_960_1,
-                CeltTables.fft_state48000_960_2,
-                CeltTables.fft_state48000_960_3,};
-
-        mode48000_960_120.mdct.trig = CeltTables.mdct_twiddles960;
         mode48000_960_120.cache = new PulseCache();
         mode48000_960_120.cache.size = 392;
         mode48000_960_120.cache.index = CeltTables.cache_index50;

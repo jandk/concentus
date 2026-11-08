@@ -72,6 +72,8 @@ class CeltDecoder {
     /// val16 oldLogE2[],       Size = 2*mode.nbEBands
     /// </summary>
     int[][] decode_mem = null;
+
+    CeltImdct imdct = null;
     int[] oldEBands = null;
     int[] oldLogE = null;
     int[] oldLogE2 = null;
@@ -144,6 +146,7 @@ class CeltDecoder {
 
         this.mode = mode;
         this.overlap = mode.overlap;
+        this.imdct = new CeltImdct(mode);
         this.stream_channels = this.channels = channels;
 
         this.downsample = 1;
@@ -378,7 +381,8 @@ class CeltDecoder {
 
         c = 0;
         do {
-            System.arraycopy(decode_mem[c], N, decode_mem[c], 0, CeltConstants.DECODE_BUFFER_SIZE - N + overlap / 2);
+            /* Keep the history plus the previous frame's windowed overlap tail */
+            System.arraycopy(decode_mem[c], N, decode_mem[c], 0, CeltConstants.DECODE_BUFFER_SIZE - N + overlap);
         } while (++c < CC);
 
         /* Decode fixed codebook */
@@ -410,7 +414,7 @@ class CeltDecoder {
             }
         }
 
-        CeltCommon.celt_synthesis(mode, X, out_syn, out_syn_ptrs, oldBandE, 0, effEnd,
+        CeltCommon.celt_synthesis(mode, imdct, X, out_syn, out_syn_ptrs, oldBandE, 0, effEnd,
                 C, CC, isTransient, LM, downsample, silence);
 
         c = 0;

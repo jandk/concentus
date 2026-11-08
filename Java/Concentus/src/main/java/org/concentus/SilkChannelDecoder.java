@@ -31,6 +31,8 @@
  */
 package org.concentus;
 
+import java.util.Arrays;
+
 /// <summary>
 /// Decoder state
 /// </summary>
@@ -99,9 +101,9 @@ class SilkChannelDecoder {
 
     void Reset() {
         prev_gain_Q16 = 0;
-        Arrays.MemSet(exc_Q14, 0, SilkConstants.MAX_FRAME_LENGTH);
-        Arrays.MemSet(sLPC_Q14_buf, 0, SilkConstants.MAX_LPC_ORDER);
-        Arrays.MemSet(outBuf, (short) 0, SilkConstants.MAX_FRAME_LENGTH + 2 * SilkConstants.MAX_SUB_FRAME_LENGTH);
+        Arrays.fill(exc_Q14, 0, SilkConstants.MAX_FRAME_LENGTH, 0);
+        Arrays.fill(sLPC_Q14_buf, 0, SilkConstants.MAX_LPC_ORDER, 0);
+        Arrays.fill(outBuf, 0, SilkConstants.MAX_FRAME_LENGTH + 2 * SilkConstants.MAX_SUB_FRAME_LENGTH, (short) 0);
         lagPrev = 0;
         LastGainIndex = 0;
         fs_kHz = 0;
@@ -111,7 +113,7 @@ class SilkChannelDecoder {
         subfr_length = 0;
         ltp_mem_length = 0;
         LPC_order = 0;
-        Arrays.MemSet(prevNLSF_Q15, (short) 0, SilkConstants.MAX_LPC_ORDER);
+        Arrays.fill(prevNLSF_Q15, 0, SilkConstants.MAX_LPC_ORDER, (short) 0);
         first_frame_after_reset = 0;
         pitch_lag_low_bits_iCDF = null;
         pitch_contour_iCDF = null;
@@ -119,9 +121,9 @@ class SilkChannelDecoder {
         nFramesPerPacket = 0;
         ec_prevSignalType = 0;
         ec_prevLagIndex = 0;
-        Arrays.MemSet(VAD_flags, 0, SilkConstants.MAX_FRAMES_PER_PACKET);
+        Arrays.fill(VAD_flags, 0, SilkConstants.MAX_FRAMES_PER_PACKET, 0);
         LBRR_flag = 0;
-        Arrays.MemSet(LBRR_flags, 0, SilkConstants.MAX_FRAMES_PER_PACKET);
+        Arrays.fill(LBRR_flags, 0, SilkConstants.MAX_FRAMES_PER_PACKET, 0);
         resampler_state.Reset();
         psNLSF_CB = null;
         indices.Reset();
@@ -239,8 +241,8 @@ class SilkChannelDecoder {
                 this.lagPrev = 100;
                 this.LastGainIndex = 10;
                 this.prevSignalType = SilkConstants.TYPE_NO_VOICE_ACTIVITY;
-                Arrays.MemSet(outBuf, (short) 0, SilkConstants.MAX_FRAME_LENGTH + 2 * SilkConstants.MAX_SUB_FRAME_LENGTH);
-                Arrays.MemSet(sLPC_Q14_buf, 0, SilkConstants.MAX_LPC_ORDER);
+                Arrays.fill(outBuf, 0, SilkConstants.MAX_FRAME_LENGTH + 2 * SilkConstants.MAX_SUB_FRAME_LENGTH, (short) 0);
+                Arrays.fill(sLPC_Q14_buf, 0, SilkConstants.MAX_LPC_ORDER, 0);
             }
 
             this.fs_kHz = fs_kHz;
@@ -347,7 +349,7 @@ class SilkChannelDecoder {
          */
         Inlines.OpusAssert(ltp_mem_length >= frame_length);
         mv_len = ltp_mem_length - frame_length;
-        Arrays.MemMove(outBuf, frame_length, 0, mv_len);
+        System.arraycopy(outBuf, frame_length, outBuf, 0, mv_len);
         System.arraycopy(pOut, pOut_ptr, outBuf, mv_len, frame_length);
 
         /**

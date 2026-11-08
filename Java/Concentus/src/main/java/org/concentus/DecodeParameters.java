@@ -31,6 +31,8 @@
  */
 package org.concentus;
 
+import java.util.Arrays;
+
 class DecodeParameters {
 
     /* Decode parameters from payload */
@@ -124,8 +126,8 @@ class DecodeParameters {
             Ix = psDec.indices.LTP_scaleIndex;
             psDecCtrl.LTP_scale_Q14 = SilkTables.silk_LTPScales_table_Q14[Ix];
         } else {
-            Arrays.MemSet(psDecCtrl.pitchL, 0, psDec.nb_subfr);
-            Arrays.MemSet(psDecCtrl.LTPCoef_Q14, (short) 0, SilkConstants.LTP_ORDER * psDec.nb_subfr);
+            Arrays.fill(psDecCtrl.pitchL, 0, psDec.nb_subfr, 0);
+            Arrays.fill(psDecCtrl.LTPCoef_Q14, 0, SilkConstants.LTP_ORDER * psDec.nb_subfr, (short) 0);
             psDec.indices.PERIndex = 0;
             psDecCtrl.LTP_scale_Q14 = 0;
         }

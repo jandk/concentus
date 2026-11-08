@@ -112,7 +112,7 @@ class LPCInversePredGain {
             int order /* I   Prediction order                                             */
     ) {
         int k;
-        int[][] Atmp_QA = Arrays.InitTwoDimensionalArrayInt(2, SilkConstants.SILK_MAX_ORDER_LPC);
+        int[][] Atmp_QA = new int[2][SilkConstants.SILK_MAX_ORDER_LPC];
         int[] Anew_QA;
         int DC_resp = 0;
 
@@ -135,7 +135,7 @@ class LPCInversePredGain {
             int order /* I    Prediction order                                            */
     ) {
         int k;
-        int[][] Atmp_QA = Arrays.InitTwoDimensionalArrayInt(2, SilkConstants.SILK_MAX_ORDER_LPC);
+        int[][] Atmp_QA = new int[2][SilkConstants.SILK_MAX_ORDER_LPC];
         int[] Anew_QA;
 
         Anew_QA = Atmp_QA[order & 1];

@@ -31,6 +31,8 @@
  */
 package org.concentus;
 
+import java.util.Arrays;
+
 class FindPitchLags {
 
     /* Find pitch lags */
@@ -156,7 +158,7 @@ class FindPitchLags {
             psEnc.indices.contourIndex = boxed_contourIndex.Val;
             psEnc.LTPCorr_Q15 = boxed_LTPcorr.Val;
         } else {
-            Arrays.MemSet(psEncCtrl.pitchL, 0, SilkConstants.MAX_NB_SUBFR);
+            Arrays.fill(psEncCtrl.pitchL, 0, SilkConstants.MAX_NB_SUBFR, 0);
             psEnc.indices.lagIndex = 0;
             psEnc.indices.contourIndex = 0;
             psEnc.LTPCorr_Q15 = 0;

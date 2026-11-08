@@ -31,6 +31,8 @@
  */
 package org.concentus;
 
+import java.util.Arrays;
+
 class SideInfoIndices {
 
     final byte[] GainsIndices = new byte[SilkConstants.MAX_NB_SUBFR];
@@ -46,9 +48,9 @@ class SideInfoIndices {
     byte Seed = 0;
 
     void Reset() {
-        Arrays.MemSet(GainsIndices, (byte) 0, SilkConstants.MAX_NB_SUBFR);
-        Arrays.MemSet(LTPIndex, (byte) 0, SilkConstants.MAX_NB_SUBFR);
-        Arrays.MemSet(NLSFIndices, (byte) 0, SilkConstants.MAX_LPC_ORDER + 1);
+        Arrays.fill(GainsIndices, 0, SilkConstants.MAX_NB_SUBFR, (byte) 0);
+        Arrays.fill(LTPIndex, 0, SilkConstants.MAX_NB_SUBFR, (byte) 0);
+        Arrays.fill(NLSFIndices, 0, SilkConstants.MAX_LPC_ORDER + 1, (byte) 0);
         lagIndex = 0;
         contourIndex = 0;
         signalType = 0;

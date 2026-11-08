@@ -34,6 +34,8 @@
  */
 package org.concentus;
 
+import java.util.Arrays;
+
 class Bands {
 
     static int hysteresis_decision(
@@ -210,7 +212,7 @@ class Bands {
         }
 
         Inlines.OpusAssert(start <= end);
-        Arrays.MemSetWithOffset(freq, 0, freq_ptr + bound, N - bound);
+        Arrays.fill(freq, freq_ptr + bound, freq_ptr + bound + N - bound, 0);
     }
 
     /* This prevents energy collapse for transients with multiple short MDCTs */
@@ -960,7 +962,7 @@ class Bands {
                     fill = fill & cm_mask;
 
                     if (fill == 0) {
-                        Arrays.MemSetWithOffset(X, 0, X_ptr, N);
+                        Arrays.fill(X, X_ptr, X_ptr + N, 0);
                     } else {
                         if (lowband == null) {
                             /* Noise */

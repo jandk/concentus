@@ -31,6 +31,8 @@
  */
 package org.concentus;
 
+import java.util.Arrays;
+
 /// <summary>
 /// Encoder state
 /// </summary>
@@ -182,7 +184,7 @@ class SilkChannelEncoder {
     int LBRR_GainIncreases = 0;
     /* Gains increment for coding LBRR frames                           */
     final SideInfoIndices[] indices_LBRR = new SideInfoIndices[SilkConstants.MAX_FRAMES_PER_PACKET];
-    final byte[][] pulses_LBRR = Arrays.InitTwoDimensionalArrayByte(SilkConstants.MAX_FRAMES_PER_PACKET, SilkConstants.MAX_FRAME_LENGTH);
+    final byte[][] pulses_LBRR = new byte[SilkConstants.MAX_FRAMES_PER_PACKET][SilkConstants.MAX_FRAME_LENGTH];
 
     /* Noise shaping state */
     final SilkShapeState sShape = new SilkShapeState();
@@ -203,13 +205,13 @@ class SilkChannelEncoder {
     }
 
     void Reset() {
-        Arrays.MemSet(In_HP_State, 0, 2);
+        Arrays.fill(In_HP_State, 0, 2, 0);
         variable_HP_smth1_Q15 = 0;
         variable_HP_smth2_Q15 = 0;
         sLP.Reset();
         sVAD.Reset();
         sNSQ.Reset();
-        Arrays.MemSet(prev_NLSFq_Q15, (short) 0, SilkConstants.MAX_LPC_ORDER);
+        Arrays.fill(prev_NLSFq_Q15, 0, SilkConstants.MAX_LPC_ORDER, (short) 0);
         speech_activity_Q8 = 0;
         allow_bandwidth_switch = 0;
         LBRRprevLastGainIndex = 0;
@@ -254,15 +256,15 @@ class SilkChannelEncoder {
         pitch_lag_low_bits_iCDF = null;
         pitch_contour_iCDF = null;
         psNLSF_CB = null;
-        Arrays.MemSet(input_quality_bands_Q15, 0, SilkConstants.VAD_N_BANDS);
+        Arrays.fill(input_quality_bands_Q15, 0, SilkConstants.VAD_N_BANDS, 0);
         input_tilt_Q15 = 0;
         SNR_dB_Q7 = 0;
-        Arrays.MemSet(VAD_flags, (byte) 0, SilkConstants.MAX_FRAMES_PER_PACKET);
+        Arrays.fill(VAD_flags, 0, SilkConstants.MAX_FRAMES_PER_PACKET, (byte) 0);
         LBRR_flag = 0;
-        Arrays.MemSet(LBRR_flags, 0, SilkConstants.MAX_FRAMES_PER_PACKET);
+        Arrays.fill(LBRR_flags, 0, SilkConstants.MAX_FRAMES_PER_PACKET, 0);
         indices.Reset();
-        Arrays.MemSet(pulses, (byte) 0, SilkConstants.MAX_FRAME_LENGTH);
-        Arrays.MemSet(inputBuf, (short) 0, SilkConstants.MAX_FRAME_LENGTH + 2);
+        Arrays.fill(pulses, 0, SilkConstants.MAX_FRAME_LENGTH, (byte) 0);
+        Arrays.fill(inputBuf, 0, SilkConstants.MAX_FRAME_LENGTH + 2, (short) 0);
         inputBufIx = 0;
         nFramesPerPacket = 0;
         nFramesEncoded = 0;
@@ -281,11 +283,11 @@ class SilkChannelEncoder {
         LBRR_GainIncreases = 0;
         for (int c = 0; c < SilkConstants.MAX_FRAMES_PER_PACKET; c++) {
             indices_LBRR[c].Reset();
-            Arrays.MemSet(pulses_LBRR[c], (byte) 0, SilkConstants.MAX_FRAME_LENGTH);
+            Arrays.fill(pulses_LBRR[c], 0, SilkConstants.MAX_FRAME_LENGTH, (byte) 0);
         }
         sShape.Reset();
         sPrefilt.Reset();
-        Arrays.MemSet(x_buf, (short) 0, 2 * SilkConstants.MAX_FRAME_LENGTH + SilkConstants.LA_SHAPE_MAX);
+        Arrays.fill(x_buf, 0, 2 * SilkConstants.MAX_FRAME_LENGTH + SilkConstants.LA_SHAPE_MAX, (short) 0);
         LTPCorr_Q15 = 0;
     }
 
@@ -492,8 +494,8 @@ class SilkChannelEncoder {
             sShape.Reset();
             sPrefilt.Reset();
             sNSQ.Reset();
-            Arrays.MemSet(prev_NLSFq_Q15, (short) 0, SilkConstants.MAX_LPC_ORDER);
-            Arrays.MemSet(sLP.In_LP_State, 0, 2);
+            Arrays.fill(prev_NLSFq_Q15, 0, SilkConstants.MAX_LPC_ORDER, (short) 0);
+            Arrays.fill(sLP.In_LP_State, 0, 2, 0);
             this.inputBufIx = 0;
             this.nFramesEncoded = 0;
             this.TargetRate_bps = 0;
@@ -721,7 +723,7 @@ class SilkChannelEncoder {
                         sLP.transition_frame_no = SilkConstants.TRANSITION_FRAMES;
 
                         /* Reset transition filter state */
-                        Arrays.MemSet(sLP.In_LP_State, 0, 2);
+                        Arrays.fill(sLP.In_LP_State, 0, 2, 0);
                     }
 
                     if (encControl.opusCanSwitch != 0) {
@@ -748,7 +750,7 @@ class SilkChannelEncoder {
                         sLP.transition_frame_no = 0;
 
                         /* Reset transition filter state */
-                        Arrays.MemSet(sLP.In_LP_State, 0, 2);
+                        Arrays.fill(sLP.In_LP_State, 0, 2, 0);
 
                         /* Direction: up */
                         sLP.mode = 1;
@@ -1151,7 +1153,7 @@ class SilkChannelEncoder {
         }
 
         /* Update input buffer */
-        Arrays.MemMove(x_buf, frame_length, 0, ltp_mem_length + SilkConstants.LA_SHAPE_MS * fs_kHz);
+        System.arraycopy(x_buf, frame_length, x_buf, 0, ltp_mem_length + SilkConstants.LA_SHAPE_MS * fs_kHz);
 
         /* Exit without entropy coding */
         if (prefillFlag != 0) {

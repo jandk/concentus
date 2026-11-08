@@ -31,6 +31,8 @@
  */
 package org.concentus;
 
+import java.util.Arrays;
+
 /*A range decoder.
 This is an entropy decoder based upon \cite{Mar79}, which is itself a
 rediscovery of the FIFO arithmetic code introduced by \cite{Pas76}.
@@ -607,7 +609,7 @@ class EntropyCoder {
 
     void enc_shrink(int _size) {
         Inlines.OpusAssert(offs + end_offs <= _size);
-        Arrays.MemMove(buf, buf_ptr + _size - end_offs, buf_ptr + storage - end_offs, end_offs);
+        System.arraycopy(buf, buf_ptr + _size - end_offs, buf, buf_ptr + storage - end_offs, end_offs);
         this.storage = _size;
     }
 
@@ -697,7 +699,7 @@ class EntropyCoder {
 
         /*Clear any excess space and add any remaining extra bits to the last byte.*/
         if (error == 0) {
-            Arrays.MemSetWithOffset(buf, (byte) 0, buf_ptr + offs, storage - offs - end_offs);
+            Arrays.fill(buf, buf_ptr + offs, buf_ptr + offs + storage - offs - end_offs, (byte) 0);
             if (used > 0) {
                 /*If there's no range coder data at all, give up.*/
                 if (end_offs >= storage) {

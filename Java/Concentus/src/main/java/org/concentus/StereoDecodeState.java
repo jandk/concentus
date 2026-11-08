@@ -31,6 +31,8 @@
  */
 package org.concentus;
 
+import java.util.Arrays;
+
 class StereoDecodeState {
 
     final short[] pred_prev_Q13 = new short[2];
@@ -38,8 +40,8 @@ class StereoDecodeState {
     final short[] sSide = new short[2];
 
     void Reset() {
-        Arrays.MemSet(pred_prev_Q13, (short) 0, 2);
-        Arrays.MemSet(sMid, (short) 0, 2);
-        Arrays.MemSet(sSide, (short) 0, 2);
+        Arrays.fill(pred_prev_Q13, 0, 2, (short) 0);
+        Arrays.fill(sMid, 0, 2, (short) 0);
+        Arrays.fill(sSide, 0, 2, (short) 0);
     }
 }

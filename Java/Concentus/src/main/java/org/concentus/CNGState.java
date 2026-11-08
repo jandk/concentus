@@ -31,6 +31,8 @@
  */
 package org.concentus;
 
+import java.util.Arrays;
+
 /// <summary>
 /// Struct for CNG
 /// </summary>
@@ -44,9 +46,9 @@ class CNGState {
     int fs_kHz = 0;
 
     void Reset() {
-        Arrays.MemSet(CNG_exc_buf_Q14, 0, SilkConstants.MAX_FRAME_LENGTH);
-        Arrays.MemSet(CNG_smth_NLSF_Q15, (short) 0, SilkConstants.MAX_LPC_ORDER);
-        Arrays.MemSet(CNG_synth_state, 0, SilkConstants.MAX_LPC_ORDER);
+        Arrays.fill(CNG_exc_buf_Q14, 0, SilkConstants.MAX_FRAME_LENGTH, 0);
+        Arrays.fill(CNG_smth_NLSF_Q15, 0, SilkConstants.MAX_LPC_ORDER, (short) 0);
+        Arrays.fill(CNG_synth_state, 0, SilkConstants.MAX_LPC_ORDER, 0);
         CNG_smth_Gain_Q16 = 0;
         rand_seed = 0;
         fs_kHz = 0;

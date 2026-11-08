@@ -34,6 +34,8 @@
  */
 package org.concentus;
 
+import java.util.Arrays;
+
 /**
  * The Opus decoder structure.
  * <p>
@@ -350,7 +352,7 @@ public class OpusDecoder {
                     if (lost_flag != 0) {
                         /* PLC failure should not be fatal */
                         silk_frame_size = frame_size;
-                        Arrays.MemSetWithOffset(pcm_ptr2, (short) 0, pcm_ptr2_ptr, frame_size * channels);
+                        Arrays.fill(pcm_ptr2, pcm_ptr2_ptr, pcm_ptr2_ptr + frame_size * channels, (short) 0);
                     } else {
 
                         return OpusError.OPUS_INTERNAL_ERROR;

@@ -31,6 +31,8 @@
  */
 package org.concentus;
 
+import java.util.Arrays;
+
 class SilkResamplerState {
 
     final int[] sIIR = new int[SilkConstants.SILK_RESAMPLER_MAX_IIR_ORDER];
@@ -54,10 +56,10 @@ class SilkResamplerState {
     short[] Coefs = null;
 
     void Reset() {
-        Arrays.MemSet(sIIR, 0, SilkConstants.SILK_RESAMPLER_MAX_IIR_ORDER);
-        Arrays.MemSet(sFIR_i32, 0, SilkConstants.SILK_RESAMPLER_MAX_FIR_ORDER);
-        Arrays.MemSet(sFIR_i16, (short) 0, SilkConstants.SILK_RESAMPLER_MAX_FIR_ORDER);
-        Arrays.MemSet(delayBuf, (short) 0, 48);
+        Arrays.fill(sIIR, 0, SilkConstants.SILK_RESAMPLER_MAX_IIR_ORDER, 0);
+        Arrays.fill(sFIR_i32, 0, SilkConstants.SILK_RESAMPLER_MAX_FIR_ORDER, 0);
+        Arrays.fill(sFIR_i16, 0, SilkConstants.SILK_RESAMPLER_MAX_FIR_ORDER, (short) 0);
+        Arrays.fill(delayBuf, 0, 48, (short) 0);
         resampler_function = 0;
         batchSize = 0;
         invRatio_Q16 = 0;

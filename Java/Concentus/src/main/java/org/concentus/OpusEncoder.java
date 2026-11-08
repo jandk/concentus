@@ -34,6 +34,8 @@
  */
 package org.concentus;
 
+import java.util.Arrays;
+
 /// <summary>
 /// The Opus encoder structure
 /// </summary>
@@ -121,7 +123,7 @@ public class OpusEncoder {
         hybrid_stereo_width_Q14 = 0;
         variable_HP_smth2_Q15 = 0;
         prev_HB_gain = 0;
-        Arrays.MemSet(hp_mem, 0, 4);
+        Arrays.fill(hp_mem, 0, 4, 0);
         mode = OpusMode.MODE_UNKNOWN;
         prev_mode = OpusMode.MODE_UNKNOWN;
         prev_channels = 0;
@@ -131,7 +133,7 @@ public class OpusEncoder {
         first = 0;
         energy_masking = null;
         width_mem.Reset();
-        Arrays.MemSet(delay_buffer, (short) 0, OpusConstants.MAX_ENCODER_BUFFER * 2);
+        Arrays.fill(delay_buffer, 0, OpusConstants.MAX_ENCODER_BUFFER * 2, (short) 0);
         detected_bandwidth = OpusBandwidth.OPUS_BANDWIDTH_UNKNOWN;
         rangeFinal = 0;
         //SilkEncoder.Reset();
@@ -975,7 +977,7 @@ public class OpusEncoder {
                 prefill_offset = channels * (encoder_buffer - this.delay_compensation - Fs / 400);
                 CodecHelpers.gain_fade(delay_buffer, prefill_offset,
                         0, CeltConstants.Q15ONE, celt_mode.overlap, Fs / 400, channels, celt_mode.window, Fs);
-                Arrays.MemSet(delay_buffer, (short) 0, prefill_offset);
+                Arrays.fill(delay_buffer, 0, prefill_offset, (short) 0);
                 System.arraycopy(delay_buffer, 0, pcm_silk, 0, encoder_buffer * channels);
 
                 EncodeAPI.silk_Encode(silk_enc, silk_mode, pcm_silk, encoder_buffer, null, zero, 1);
@@ -1091,7 +1093,7 @@ public class OpusEncoder {
         }
 
         if (channels * (encoder_buffer - (frame_size + total_buffer)) > 0) {
-            Arrays.MemMove(delay_buffer, channels * frame_size, 0, channels * (encoder_buffer - frame_size - total_buffer));
+            System.arraycopy(delay_buffer, channels * frame_size, delay_buffer, 0, channels * (encoder_buffer - frame_size - total_buffer));
             System.arraycopy(pcm_buf, 0, delay_buffer, (channels * (encoder_buffer - frame_size - total_buffer)), (frame_size + total_buffer) * channels);
         } else {
             System.arraycopy(pcm_buf, (frame_size + total_buffer - encoder_buffer) * channels, delay_buffer, 0, encoder_buffer * channels);

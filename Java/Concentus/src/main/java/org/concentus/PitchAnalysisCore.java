@@ -31,6 +31,8 @@
  */
 package org.concentus;
 
+import java.util.Arrays;
+
 class PitchAnalysisCore {
 
     private static final int SCRATCH_SIZE = 22;
@@ -125,10 +127,10 @@ class PitchAnalysisCore {
         /* Resample from input sampled at Fs_kHz to 8 kHz */
         frame_8kHz = new short[frame_length_8kHz];
         if (Fs_kHz == 16) {
-            Arrays.MemSet(filt_state, 0, 2);
+            Arrays.fill(filt_state, 0, 2, 0);
             Resampler.silk_resampler_down2(filt_state, frame_8kHz, frame, frame_length);
         } else if (Fs_kHz == 12) {
-            Arrays.MemSet(filt_state, 0, 6);
+            Arrays.fill(filt_state, 0, 6, 0);
             Resampler.silk_resampler_down2_3(filt_state, frame_8kHz, frame, frame_length);
         } else {
             Inlines.OpusAssert(Fs_kHz == 8);
@@ -136,7 +138,7 @@ class PitchAnalysisCore {
         }
 
         /* Decimate again to 4 kHz */
-        Arrays.MemSet(filt_state, 0, 2);
+        Arrays.fill(filt_state, 0, 2, 0);
         /* Set state to zero */
         frame_4kHz = new short[frame_length_4kHz];
         Resampler.silk_resampler_down2(filt_state, frame_4kHz, frame_8kHz, frame_length_8kHz);
@@ -174,7 +176,7 @@ class PitchAnalysisCore {
          */
         C = new short[nb_subfr * CSTRIDE_8KHZ];
         xcorr32 = new int[MAX_LAG_4KHZ - MIN_LAG_4KHZ + 1];
-        Arrays.MemSet(C, (short) 0, (nb_subfr >> 1) * CSTRIDE_4KHZ);
+        Arrays.fill(C, 0, (nb_subfr >> 1) * CSTRIDE_4KHZ, (short) 0);
         target = frame_4kHz;
         target_ptr = Inlines.silk_LSHIFT(SF_LENGTH_4KHZ, 2);
         for (k = 0; k < nb_subfr >> 1; k++) {
@@ -244,7 +246,7 @@ class PitchAnalysisCore {
         Cmax = C[0];
         /* Q14 */
         if (Cmax < ((int) ((0.2f) * ((long) 1 << (14)) + 0.5))/*Inlines.SILK_CONST(0.2f, 14)*/) {
-            Arrays.MemSet(pitch_out, 0, nb_subfr);
+            Arrays.fill(pitch_out, 0, nb_subfr, 0);
             LTPCorr_Q15.Val = 0;
             lagIndex.Val = 0;
             contourIndex.Val = 0;
@@ -329,7 +331,7 @@ class PitchAnalysisCore {
          * of delays
          ********************************************************************************
          */
-        Arrays.MemSet(C, (short) 0, nb_subfr * CSTRIDE_8KHZ);
+        Arrays.fill(C, 0, nb_subfr * CSTRIDE_8KHZ, (short) 0);
 
         target = frame_8kHz;
         target_ptr = SilkConstants.PE_LTP_MEM_LENGTH_MS * 8;
@@ -449,7 +451,7 @@ class PitchAnalysisCore {
 
         if (lag == -1) {
             /* No suitable candidate found */
-            Arrays.MemSet(pitch_out, 0, nb_subfr);
+            Arrays.fill(pitch_out, 0, nb_subfr, 0);
             LTPCorr_Q15.Val = 0;
             lagIndex.Val = 0;
             contourIndex.Val = 0;

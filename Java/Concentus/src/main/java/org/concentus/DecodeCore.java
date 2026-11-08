@@ -31,6 +31,8 @@
  */
 package org.concentus;
 
+import java.util.Arrays;
+
 class DecodeCore {
 
     /**
@@ -135,7 +137,7 @@ class DecodeCore {
             if (psDec.lossCnt != 0 && psDec.prevSignalType == SilkConstants.TYPE_VOICED
                     && psDec.indices.signalType != SilkConstants.TYPE_VOICED && k < SilkConstants.MAX_NB_SUBFR / 2) {
 
-                Arrays.MemSetWithOffset(B_Q14, (short) 0, B_Q14_ptr, SilkConstants.LTP_ORDER);
+                Arrays.fill(B_Q14, B_Q14_ptr, B_Q14_ptr + SilkConstants.LTP_ORDER, (short) 0);
                 B_Q14[B_Q14_ptr + (SilkConstants.LTP_ORDER / 2)] = (short) (((int) ((0.25f) * ((long) 1 << (14)) + 0.5))/*Inlines.SILK_CONST(0.25f, 14)*/);
 
                 signalType = SilkConstants.TYPE_VOICED;

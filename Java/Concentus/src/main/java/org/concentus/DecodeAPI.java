@@ -31,6 +31,8 @@
  */
 package org.concentus;
 
+import java.util.Arrays;
+
 class DecodeAPI {
 
     /// <summary>
@@ -142,8 +144,8 @@ class DecodeAPI {
         }
 
         if (decControl.nChannelsAPI == 2 && decControl.nChannelsInternal == 2 && (psDec.nChannelsAPI == 1 || psDec.nChannelsInternal == 1)) {
-            Arrays.MemSet(psDec.sStereo.pred_prev_Q13, (short) 0, 2);
-            Arrays.MemSet(psDec.sStereo.sSide, (short) 0, 2);
+            Arrays.fill(psDec.sStereo.pred_prev_Q13, 0, 2, (short) 0);
+            Arrays.fill(psDec.sStereo.sSide, 0, 2, (short) 0);
             channel_state[1].resampler_state.Assign(channel_state[0].resampler_state);
         }
         psDec.nChannelsAPI = decControl.nChannelsAPI;
@@ -165,7 +167,7 @@ class DecodeAPI {
             }
             /* Decode LBRR flags */
             for (n = 0; n < decControl.nChannelsInternal; n++) {
-                Arrays.MemSet(channel_state[n].LBRR_flags, 0, SilkConstants.MAX_FRAMES_PER_PACKET);
+                Arrays.fill(channel_state[n].LBRR_flags, 0, SilkConstants.MAX_FRAMES_PER_PACKET, 0);
                 if (channel_state[n].LBRR_flag != 0) {
                     if (channel_state[n].nFramesPerPacket == 1) {
                         channel_state[n].LBRR_flags[0] = 1;
@@ -232,8 +234,8 @@ class DecodeAPI {
 
         /* Reset side channel decoder prediction memory for first frame with side coding */
         if (decControl.nChannelsInternal == 2 && decode_only_middle == 0 && psDec.prev_decode_only_middle == 1) {
-            Arrays.MemSet(psDec.channel_state[1].outBuf, (short) 0, SilkConstants.MAX_FRAME_LENGTH + 2 * SilkConstants.MAX_SUB_FRAME_LENGTH);
-            Arrays.MemSet(psDec.channel_state[1].sLPC_Q14_buf, 0, SilkConstants.MAX_LPC_ORDER);
+            Arrays.fill(psDec.channel_state[1].outBuf, 0, SilkConstants.MAX_FRAME_LENGTH + 2 * SilkConstants.MAX_SUB_FRAME_LENGTH, (short) 0);
+            Arrays.fill(psDec.channel_state[1].sLPC_Q14_buf, 0, SilkConstants.MAX_LPC_ORDER, 0);
             psDec.channel_state[1].lagPrev = 100;
             psDec.channel_state[1].LastGainIndex = 10;
             psDec.channel_state[1].prevSignalType = SilkConstants.TYPE_NO_VOICE_ACTIVITY;
@@ -286,7 +288,7 @@ class DecodeAPI {
                 }
                 ret += channel_state[n].silk_decode_frame(psRangeDec, samplesOut_tmp, samplesOut_tmp_ptrs[n] + 2, nSamplesOutDec, lostFlag, condCoding);
             } else {
-                Arrays.MemSetWithOffset(samplesOut_tmp, (short) 0, samplesOut_tmp_ptrs[n] + 2, nSamplesOutDec.Val);
+                Arrays.fill(samplesOut_tmp, samplesOut_tmp_ptrs[n] + 2, samplesOut_tmp_ptrs[n] + 2 + nSamplesOutDec.Val, (short) 0);
             }
             channel_state[n].nFramesDecoded++;
         }

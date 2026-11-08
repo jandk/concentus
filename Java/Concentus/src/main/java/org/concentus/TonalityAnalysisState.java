@@ -34,6 +34,8 @@
  */
 package org.concentus;
 
+import java.util.Arrays;
+
 class TonalityAnalysisState {
 
     boolean enabled = false;
@@ -45,7 +47,7 @@ class TonalityAnalysisState {
     /* number of usable samples in the buffer */
     final float[] prev_band_tonality = new float[OpusConstants.NB_TBANDS];
     float prev_tonality;
-    final float[][] E = Arrays.InitTwoDimensionalArrayFloat(OpusConstants.NB_FRAMES, OpusConstants.NB_TBANDS);
+    final float[][] E = new float[OpusConstants.NB_FRAMES][OpusConstants.NB_TBANDS];
     final float[] lowE = new float[OpusConstants.NB_TBANDS];
     final float[] highE = new float[OpusConstants.NB_TBANDS];
     final float[] meanE = new float[OpusConstants.NB_TOT_BANDS];
@@ -89,22 +91,22 @@ class TonalityAnalysisState {
     }
 
     void Reset() {
-        Arrays.MemSet(angle, 0f, 240);
-        Arrays.MemSet(d_angle, 0f, 240);
-        Arrays.MemSet(d2_angle, 0f, 240);
-        Arrays.MemSet(inmem, 0, OpusConstants.ANALYSIS_BUF_SIZE);
+        Arrays.fill(angle, 0, 240, 0f);
+        Arrays.fill(d_angle, 0, 240, 0f);
+        Arrays.fill(d2_angle, 0, 240, 0f);
+        Arrays.fill(inmem, 0, OpusConstants.ANALYSIS_BUF_SIZE, 0);
         mem_fill = 0;
-        Arrays.MemSet(prev_band_tonality, 0f, OpusConstants.NB_TBANDS);
+        Arrays.fill(prev_band_tonality, 0, OpusConstants.NB_TBANDS, 0f);
         prev_tonality = 0;
         for (int c = 0; c < OpusConstants.NB_FRAMES; c++) {
-            Arrays.MemSet(E[c], 0f, OpusConstants.NB_TBANDS);
+            Arrays.fill(E[c], 0, OpusConstants.NB_TBANDS, 0f);
         }
-        Arrays.MemSet(lowE, 0f, OpusConstants.NB_TBANDS);
-        Arrays.MemSet(highE, 0f, OpusConstants.NB_TBANDS);
-        Arrays.MemSet(meanE, 0f, OpusConstants.NB_TOT_BANDS);
-        Arrays.MemSet(mem, 0f, 32);
-        Arrays.MemSet(cmean, 0f, 8);
-        Arrays.MemSet(std, 0f, 9);
+        Arrays.fill(lowE, 0, OpusConstants.NB_TBANDS, 0f);
+        Arrays.fill(highE, 0, OpusConstants.NB_TBANDS, 0f);
+        Arrays.fill(meanE, 0, OpusConstants.NB_TOT_BANDS, 0f);
+        Arrays.fill(mem, 0, 32, 0f);
+        Arrays.fill(cmean, 0, 8, 0f);
+        Arrays.fill(std, 0, 9, 0f);
         music_prob = 0;
         Etracker = 0;
         lowECount = 0;
@@ -112,10 +114,10 @@ class TonalityAnalysisState {
         last_music = 0;
         last_transition = 0;
         count = 0;
-        Arrays.MemSet(subframe_mem, 0f, 3);
+        Arrays.fill(subframe_mem, 0, 3, 0f);
         analysis_offset = 0;
-        Arrays.MemSet(pspeech, 0f, OpusConstants.DETECT_SIZE);
-        Arrays.MemSet(pmusic, 0f, OpusConstants.DETECT_SIZE);
+        Arrays.fill(pspeech, 0, OpusConstants.DETECT_SIZE, 0f);
+        Arrays.fill(pmusic, 0, OpusConstants.DETECT_SIZE, 0f);
         speech_confidence = 0;
         music_confidence = 0;
         speech_confidence_count = 0;

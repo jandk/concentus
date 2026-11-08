@@ -228,8 +228,8 @@ public class CodecHelpers {
      */
     static int transient_viterbi(float[] E, float[] E_1, int N, int frame_cost, int rate) {
         int i;
-        float[][] cost = Arrays.InitTwoDimensionalArrayFloat(MAX_DYNAMIC_FRAMESIZE, 16);
-        int[][] states = Arrays.InitTwoDimensionalArrayInt(MAX_DYNAMIC_FRAMESIZE, 16);
+        float[][] cost = new float[MAX_DYNAMIC_FRAMESIZE][16];
+        int[][] states = new int[MAX_DYNAMIC_FRAMESIZE][16];
         float best_cost;
         int best_state;
         float factor;

@@ -34,6 +34,8 @@
  */
 package org.concentus;
 
+import java.util.Arrays;
+
 public class OpusMSEncoder {
 
     final ChannelLayout layout = new ChannelLayout();
@@ -66,8 +68,8 @@ public class OpusMSEncoder {
         int s;
         subframe_mem[0] = subframe_mem[1] = subframe_mem[2] = 0;
         if (surround != 0) {
-            Arrays.MemSet(preemph_mem, 0, layout.nb_channels);
-            Arrays.MemSet(window_mem, 0, layout.nb_channels * 120);
+            Arrays.fill(preemph_mem, 0, layout.nb_channels, 0);
+            Arrays.fill(window_mem, 0, layout.nb_channels * 120, 0);
         }
         int encoder_ptr = 0;
         for (s = 0; s < layout.nb_streams; s++) {
@@ -171,8 +173,8 @@ public class OpusMSEncoder {
         int upsample;
         int frame_size;
         int channel_offset;
-        int[][] bandE = Arrays.InitTwoDimensionalArrayInt(1, 21);
-        int[][] maskLogE = Arrays.InitTwoDimensionalArrayInt(3, 21);
+        int[][] bandE = new int[1][21];
+        int[][] maskLogE = new int[3][21];
         int[] input;
         short[] x;
         int[][] freq;
@@ -188,7 +190,7 @@ public class OpusMSEncoder {
 
         input = new int[frame_size + overlap];
         x = new short[len];
-        freq = Arrays.InitTwoDimensionalArrayInt(1, frame_size);
+        freq = new int[1][frame_size];
 
         channel_pos(channels, pos);
 
@@ -332,8 +334,8 @@ public class OpusMSEncoder {
             encoder_ptr += 1;
         }
         if (surround != 0) {
-            Arrays.MemSet(preemph_mem, 0, channels);
-            Arrays.MemSet(window_mem, 0, channels * 120);
+            Arrays.fill(preemph_mem, 0, channels, 0);
+            Arrays.fill(window_mem, 0, channels * 120, 0);
         }
         this.surround = surround;
         return OpusError.OPUS_OK;

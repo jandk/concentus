@@ -31,6 +31,8 @@
  */
 package org.concentus;
 
+import java.util.Arrays;
+
 /// <summary>
 /// Noise shaping quantization state
 /// </summary>
@@ -52,10 +54,10 @@ class SilkNSQState {
     int rewhite_flag = 0;
 
     void Reset() {
-        Arrays.MemSet(xq, (short) 0, 2 * SilkConstants.MAX_FRAME_LENGTH);
-        Arrays.MemSet(sLTP_shp_Q14, 0, 2 * SilkConstants.MAX_FRAME_LENGTH);
-        Arrays.MemSet(sLPC_Q14, 0, SilkConstants.MAX_SUB_FRAME_LENGTH + SilkConstants.NSQ_LPC_BUF_LENGTH);
-        Arrays.MemSet(sAR2_Q14, 0, SilkConstants.MAX_SHAPE_LPC_ORDER);
+        Arrays.fill(xq, 0, 2 * SilkConstants.MAX_FRAME_LENGTH, (short) 0);
+        Arrays.fill(sLTP_shp_Q14, 0, 2 * SilkConstants.MAX_FRAME_LENGTH, 0);
+        Arrays.fill(sLPC_Q14, 0, SilkConstants.MAX_SUB_FRAME_LENGTH + SilkConstants.NSQ_LPC_BUF_LENGTH, 0);
+        Arrays.fill(sAR2_Q14, 0, SilkConstants.MAX_SHAPE_LPC_ORDER, 0);
         sLF_AR_shp_Q14 = 0;
         lagPrev = 0;
         sLTP_buf_idx = 0;
@@ -249,8 +251,8 @@ class SilkNSQState {
         this.lagPrev = pitchL[psEncC.nb_subfr - 1];
 
         /* Save quantized speech and noise shaping signals */
-        Arrays.MemMove(xq, psEncC.frame_length, 0, psEncC.ltp_mem_length);
-        Arrays.MemMove(sLTP_shp_Q14, psEncC.frame_length, 0, psEncC.ltp_mem_length);
+        System.arraycopy(xq, psEncC.frame_length, xq, 0, psEncC.ltp_mem_length);
+        System.arraycopy(sLTP_shp_Q14, psEncC.frame_length, sLTP_shp_Q14, 0, psEncC.ltp_mem_length);
     }
 
     /**
@@ -775,8 +777,8 @@ class SilkNSQState {
         this.lagPrev = pitchL[psEncC.nb_subfr - 1];
 
         /* Save quantized speech signal */
-        Arrays.MemMove(xq, psEncC.frame_length, 0, psEncC.ltp_mem_length);
-        Arrays.MemMove(sLTP_shp_Q14, psEncC.frame_length, 0, psEncC.ltp_mem_length);
+        System.arraycopy(xq, psEncC.frame_length, xq, 0, psEncC.ltp_mem_length);
+        System.arraycopy(sLTP_shp_Q14, psEncC.frame_length, sLTP_shp_Q14, 0, psEncC.ltp_mem_length);
     }
 
     /**

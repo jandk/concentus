@@ -31,6 +31,8 @@
  */
 package org.concentus;
 
+import java.util.Arrays;
+
 class Schur {
 
     /* Faster than schur64(), but much less accurate.                       */
@@ -41,7 +43,7 @@ class Schur {
             int order /* I    prediction order                                            */
     ) {
         int k, n, lz;
-        int[][] C = Arrays.InitTwoDimensionalArrayInt(SilkConstants.SILK_MAX_ORDER_LPC + 1, 2);
+        int[][] C = new int[SilkConstants.SILK_MAX_ORDER_LPC + 1][2];
         int Ctmp1, Ctmp2, rc_tmp_Q15;
 
         Inlines.OpusAssert(order == 6 || order == 8 || order == 10 || order == 12 || order == 14 || order == 16);
@@ -114,14 +116,14 @@ class Schur {
             int order /* I    Prediction order                                            */
     ) {
         int k, n;
-        int[][] C = Arrays.InitTwoDimensionalArrayInt(SilkConstants.SILK_MAX_ORDER_LPC + 1, 2);
+        int[][] C = new int[SilkConstants.SILK_MAX_ORDER_LPC + 1][2];
         int Ctmp1_Q30, Ctmp2_Q30, rc_tmp_Q31;
 
         Inlines.OpusAssert(order == 6 || order == 8 || order == 10 || order == 12 || order == 14 || order == 16);
 
         /* Check for invalid input */
         if (c[0] <= 0) {
-            Arrays.MemSet(rc_Q16, 0, order);
+            Arrays.fill(rc_Q16, 0, order, 0);
             return 0;
         }
 

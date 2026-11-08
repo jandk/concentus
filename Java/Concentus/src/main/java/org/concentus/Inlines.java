@@ -33,20 +33,16 @@
  */
 package org.concentus;
 
-class Inlines {
+final class Inlines {
+    private Inlines() {
+    }
 
     static void OpusAssert(boolean condition) {
-        if (!condition) {
-            throw new AssertionError();
-        }
-        //Debug.Assert(condition);
+        assert condition;
     }
 
     static void OpusAssert(boolean condition, String message) {
-        if (!condition) {
-            throw new AssertionError(message);
-        }
-        //Debug.Assert(condition, message);
+        assert condition : message;
     }
 
     static long CapToUInt32(long val) {
@@ -58,14 +54,10 @@ class Inlines {
     }
 
     // CELT-SPECIFIC INLINES
-    //        /** Multiply a 16-bit signed value by a 16-bit unsigned value. The result is a 32-bit signed value */
-    //#define MULT16_16SU(a,b) ((opus_val32)(opus_val16)(a)*(opus_val32)(opus_uint16)(b))
     static int MULT16_16SU(int a, int b) {
         return ((int) (short) (a) * (b & 0xFFFF));
     }
 
-    //        /** 16x32 multiplication, followed by a 16-bit shift right. Results fits in 32 bits */
-    //#define MULT16_32_Q16(a,b) ADD32(MULT16_16((a),SHR((b),16)), SHR(MULT16_16SU((a),((b)&0x0000ffff)),16))
     static int MULT16_32_Q16(short a, int b) {
         return ADD32(MULT16_16((a), SHR((b), 16)), SHR(MULT16_16SU((a), ((b) & 0x0000ffff)), 16));
     }
@@ -74,17 +66,10 @@ class Inlines {
         return ADD32(MULT16_16((a), SHR((b), 16)), SHR(MULT16_16SU((a), ((b) & 0x0000ffff)), 16));
     }
 
-    //        /** 16x32 multiplication, followed by a 16-bit shift right (round-to-nearest). Results fits in 32 bits */
-    //#define MULT16_32_P16(a,b) ADD32(MULT16_16((a),SHR((b),16)), PSHR(MULT16_16SU((a),((b)&0x0000ffff)),16))
     static int MULT16_32_P16(short a, int b) {
         return ADD32(MULT16_16((a), SHR((b), 16)), PSHR(MULT16_16SU((a), ((b) & 0x0000ffff)), 16));
     }
 
-    static int MULT16_32_P16(int a, int b) {
-        return ADD32(MULT16_16((a), SHR((b), 16)), PSHR(MULT16_16SU((a), ((b) & 0x0000ffff)), 16));
-    }
-
-    //        /** 16x32 multiplication, followed by a 15-bit shift right. Results fits in 32 bits */
     static int MULT16_32_Q15(short a, int b) {
         return ((a * (b >> 16)) << 1) + ((a * (b & 0xFFFF)) >> 15);
         //return ADD32(SHL(MULT16_16((a), SHR((b), 16)), 1), SHR(MULT16_16SU((a), (ushort)((b) & 0x0000ffff)), 15));
@@ -95,23 +80,10 @@ class Inlines {
         //return ADD32(SHL(MULT16_16((a), SHR((b), 16)), 1), SHR(MULT16_16SU((a), (uint)((b) & 0x0000ffff)), 15));
     }
 
-    //        /** 32x32 multiplication, followed by a 31-bit shift right. Results fits in 32 bits */
-    //#define MULT32_32_Q31(a,b) ADD32(ADD32(SHL(MULT16_16(SHR((a),16),SHR((b),16)),1), SHR(MULT16_16SU(SHR((a),16),((b)&0x0000ffff)),15)), SHR(MULT16_16SU(SHR((b),16),((a)&0x0000ffff)),15))
     static int MULT32_32_Q31(int a, int b) {
         return ADD32(ADD32(SHL(MULT16_16(SHR((a), 16), SHR((b), 16)), 1), SHR(MULT16_16SU(SHR((a), 16), ((b) & 0x0000ffff)), 15)), SHR(MULT16_16SU(SHR((b), 16), ((a) & 0x0000ffff)), 15));
     }
 
-    // "Compile-time" (not really) conversion of float constant to 16-bit value
-    static short QCONST16(float x, int bits) {
-        return ((short) (0.5 + (x) * (1 << (bits))));
-    }
-
-    // "Compile-time" (not really) conversion of float constant to 32-bit value
-    static int QCONST32(float x, int bits) {
-        return ((int) (0.5 + (x) * (1 << (bits))));
-    }
-
-    //        /** Negate a 16-bit value */
     static short NEG16(short x) {
         return (short) (-x);
     }
@@ -120,17 +92,14 @@ class Inlines {
         return -x;
     }
 
-    //        /** Negate a 32-bit value */
     static int NEG32(int x) {
         return -x;
     }
 
-    //        /** Change a 32-bit value into a 16-bit value. The value is assumed to fit in 16-bit, otherwise the result is undefined */
     static short EXTRACT16(int x) {
         return ((short) x);
     }
 
-    //        /** Change a 16-bit value into a 32-bit value */
     static int EXTEND32(short x) {
         return x;
     }
@@ -139,16 +108,10 @@ class Inlines {
         return x;
     }
 
-    //        /** Arithmetic shift-right of a 16-bit value */
-    static short SHR16(short a, int shift) {
-        return (short) ((a) >> (shift));
-    }
-
     static int SHR16(int a, int shift) {
         return ((a) >> (shift));
     }
 
-    //        /** Arithmetic shift-left of a 16-bit value */
     static short SHL16(short a, int shift) {
         return ((short) ((a & 0xFFFF) << shift));
     }
@@ -157,48 +120,27 @@ class Inlines {
         return (int) (0xFFFFFFFFL & ((long) a << shift));
     }
 
-    //        /** Arithmetic shift-right of a 32-bit value */
     static int SHR32(int a, int shift) {
         return a >> shift;
     }
 
-    //        /** Arithmetic shift-left of a 32-bit value */
     static int SHL32(int a, int shift) {
         return (int) (0xFFFFFFFFL & ((long) a << shift));
     }
 
-    //        /** 32-bit arithmetic shift right with rounding-to-nearest instead of rounding down */
     static int PSHR32(int a, int shift) {
         return (SHR32((a) + ((EXTEND32(1) << ((shift)) >> 1)), shift));
     }
 
-    static short PSHR16(short a, int shift) {
-        return SHR16((short) (a + (1 << (shift) >> 1)), shift);
-    }
-
-    static int PSHR16(int a, int shift) {
-        return SHR32((a + (1 << (shift) >> 1)), shift);
-    }
-
-    //        /** 32-bit arithmetic shift right where the argument can be negative */
     static int VSHR32(int a, int shift) {
         return (((shift) > 0) ? SHR32(a, shift) : SHL32(a, -(shift)));
     }
 
-    //        /** "RAW" macros, should not be used outside of this header file */
     private static int SHR(int a, int shift) {
         return ((a) >> (shift));
     }
 
     private static int SHL(int a, int shift) {
-        return SHL32(a, shift);
-    }
-
-    private static int SHR(short a, int shift) {
-        return ((a) >> (shift));
-    }
-
-    private static int SHL(short a, int shift) {
         return SHL32(a, shift);
     }
 
@@ -214,23 +156,8 @@ class Inlines {
         return (EXTRACT16((x) > 32767 ? 32767 : Math.max((x), -32768)));
     }
 
-    //        /** Shift by a and round-to-neareast 32-bit value. Result is a 16-bit value */
-    static short ROUND16(short x, short a) {
-        return (EXTRACT16(PSHR32((x), (a))));
-    }
-
     static int ROUND16(int x, int a) {
         return PSHR32((x), (a));
-    }
-
-    static int PDIV32(int a, int b) {
-        return a / b;
-    }
-
-    //        /** Divide by two */
-    // fixme: can this be optimized?
-    static short HALF16(short x) {
-        return (SHR16(x, 1));
     }
 
     static int HALF16(int x) {
@@ -241,7 +168,6 @@ class Inlines {
         return (SHR32(x, 1));
     }
 
-    //        /** Add two 16-bit values */
     static short ADD16(short a, short b) {
         return ((short) (a + b));
     }
@@ -250,50 +176,24 @@ class Inlines {
         return (a + b);
     }
 
-    //        /** Subtract two 16-bit values */
-    static short SUB16(short a, short b) {
-        return ((short) (a - b));
-    }
-
     static int SUB16(int a, int b) {
         return (a - b);
     }
 
-    //        /** Add two 32-bit values */
     static int ADD32(int a, int b) {
         return (a + b);
     }
 
-    //        /** Subtract two 32-bit values */
     static int SUB32(int a, int b) {
         return (a - b);
     }
 
-    //        /** 16x16 multiplication where the result fits in 16 bits */
-    //#define MULT16_16_16(a,b)     ((((opus_val16)(a))*((opus_val16)(b))))
-    static short MULT16_16_16(short a, short b) {
-        return (short) (((a * b)));
-    }
-
-    static int MULT16_16_16(int a, int b) {
-        return (a * b);
-    }
-
-    //        /* (opus_val32)(opus_val16) gives TI compiler a hint that it's 16x16->32 multiply */
-    //        /** 16x16 multiplication where the result fits in 32 bits */
-    //#define MULT16_16(a,b)     (((opus_val32)(opus_val16)(a))*((opus_val32)(opus_val16)(b)))
     static int MULT16_16(int a, int b) {
         return a * b;
     }
 
     static int MULT16_16(short a, short b) {
         return a * b;
-    }
-
-    //        /** 16x16 multiply-add where the result fits in 32 bits */
-    //#define MAC16_16(c,a,b) (ADD32((c),MULT16_16((a),(b))))
-    static int MAC16_16(short c, short a, short b) {
-        return c + (a * b);
     }
 
     static int MAC16_16(int c, short a, short b) {
@@ -304,66 +204,14 @@ class Inlines {
         return c + (a * b);
     }
 
-    //        /** 16x32 multiply, followed by a 15-bit shift right and 32-bit add.
-    //            b must fit in 31 bits.
-    //            Result fits in 32 bits. */
-    //#define MAC16_32_Q15(c,a,b) ADD32((c),ADD32(MULT16_16((a),SHR((b),15)), SHR(MULT16_16((a),((b)&0x00007fff)),15)))
-    static int MAC16_32_Q15(int c, short a, short b) {
-        return ADD32((c), ADD32(MULT16_16((a), SHR((b), 15)), SHR(MULT16_16((a), ((b) & 0x00007fff)), 15)));
-    }
-
     static int MAC16_32_Q15(int c, int a, int b) {
         return ADD32((c), ADD32(MULT16_16((a), SHR((b), 15)), SHR(MULT16_16((a), ((b) & 0x00007fff)), 15)));
-    }
-
-    //        /** 16x32 multiplication, followed by a 16-bit shift right and 32-bit add.
-    //            Results fits in 32 bits */
-    //#define MAC16_32_Q16(c,a,b) ADD32((c),ADD32(MULT16_16((a),SHR((b),16)), SHR(MULT16_16SU((a),((b)&0x0000ffff)),16)))
-    static int MAC16_32_Q16(int c, short a, short b) {
-        return ADD32((c), ADD32(MULT16_16((a), SHR((b), 16)), SHR(MULT16_16SU((a), ((b) & 0x0000ffff)), 16)));
-    }
-
-    static int MAC16_32_Q16(int c, int a, int b) {
-        return ADD32((c), ADD32(MULT16_16((a), SHR((b), 16)), SHR(MULT16_16SU((a), ((b) & 0x0000ffff)), 16)));
-    }
-
-    //#define MULT16_16_Q11_32(a,b) (SHR(MULT16_16((a),(b)),11))
-    static int MULT16_16_Q11_32(short a, short b) {
-        return (SHR(MULT16_16((a), (b)), 11));
-    }
-
-    static int MULT16_16_Q11_32(int a, int b) {
-        return (SHR(MULT16_16((a), (b)), 11));
-    }
-
-    //#define MULT16_16_Q11(a,b) (SHR(MULT16_16((a),(b)),11))
-    static short MULT16_16_Q11(short a, short b) {
-        return (short) ((SHR(MULT16_16((a), (b)), 11)));
-    }
-
-    static int MULT16_16_Q11(int a, int b) {
-        return (SHR(MULT16_16((a), (b)), 11));
-    }
-
-    //#define MULT16_16_Q13(a,b) (SHR(MULT16_16((a),(b)),13))
-    static short MULT16_16_Q13(short a, short b) {
-        return (short) ((SHR(MULT16_16((a), (b)), 13)));
-    }
-
-    static int MULT16_16_Q13(int a, int b) {
-        return (SHR(MULT16_16((a), (b)), 13));
-    }
-
-    //#define MULT16_16_Q14(a,b) (SHR(MULT16_16((a),(b)),14))
-    static short MULT16_16_Q14(short a, short b) {
-        return (short) ((SHR(MULT16_16((a), (b)), 14)));
     }
 
     static int MULT16_16_Q14(int a, int b) {
         return (SHR(MULT16_16((a), (b)), 14));
     }
 
-    //#define MULT16_16_Q15(a,b) (SHR(MULT16_16((a),(b)),15))
     static short MULT16_16_Q15(short a, short b) {
         return (short) ((SHR(MULT16_16((a), (b)), 15)));
     }
@@ -372,45 +220,14 @@ class Inlines {
         return (SHR(MULT16_16((a), (b)), 15));
     }
 
-    //#define MULT16_16_P13(a,b) (SHR(ADD32(4096,MULT16_16((a),(b))),13))
-    static short MULT16_16_P13(short a, short b) {
-        return (short) ((SHR(ADD32(4096, MULT16_16((a), (b))), 13)));
-    }
-
-    static int MULT16_16_P13(int a, int b) {
-        return (SHR(ADD32(4096, MULT16_16((a), (b))), 13));
-    }
-
-    //#define MULT16_16_P14(a,b) (SHR(ADD32(8192,MULT16_16((a),(b))),14))
-    static short MULT16_16_P14(short a, short b) {
-        return (short) ((SHR(ADD32(8192, MULT16_16((a), (b))), 14)));
-    }
-
-    static int MULT16_16_P14(int a, int b) {
-        return (SHR(ADD32(8192, MULT16_16((a), (b))), 14));
-    }
-
-    //#define MULT16_16_P15(a,b) (SHR(ADD32(16384,MULT16_16((a),(b))),15))
-    static short MULT16_16_P15(short a, short b) {
-        return (short) ((SHR(ADD32(16384, MULT16_16((a), (b))), 15)));
-    }
-
     static int MULT16_16_P15(int a, int b) {
         return (SHR(ADD32(16384, MULT16_16((a), (b))), 15));
-    }
-
-    //        /** Divide a 32-bit value by a 16-bit value. Result fits in 16 bits */
-    //#define DIV32_16(a,b) ((opus_val16)(((opus_val32)(a))/((opus_val16)(b))))
-    static short DIV32_16(int a, short b) {
-        return (short) (((short) (a / b)));
     }
 
     static int DIV32_16(int a, int b) {
         return a / b;
     }
 
-    //        /** Divide a 32-bit value by a 32-bit value. Result fits in 32 bits */
-    //#define DIV32(a,b) (((opus_val32)(a))/((opus_val32)(b)))
     static int DIV32(int a, int b) {
         return a / b;
     }
@@ -425,10 +242,6 @@ class Inlines {
         x = MAX32(x, -32768);
         x = MIN32(x, 32767);
         return EXTRACT16(x);
-    }
-
-    static short MIN(short a, short b) {
-        return ((a) < (b) ? (a) : (b));
     }
 
     static short MAX(short a, short b) {
@@ -456,14 +269,6 @@ class Inlines {
     }
 
     static float MAX16(float a, float b) {
-        return (Math.max((a), (b)));
-    }
-
-    static int MIN(int a, int b) {
-        return (Math.min((a), (b)));
-    }
-
-    static int MAX(int a, int b) {
         return (Math.max((a), (b)));
     }
 
@@ -520,7 +325,6 @@ class Inlines {
         return celt_udiv(n, d);
     }
 
-    //#define celt_div(a,b) MULT32_32_Q31((opus_val32)(a),celt_rcp(b))
     static int celt_div(int a, int b) {
         return MULT32_32_Q31(a, celt_rcp(b));
     }
@@ -573,22 +377,10 @@ class Inlines {
         return MAX(maxval, (short) (-minval));
     }
 
-    /// <summary>
-    /// Multiplies two 16-bit fractional values. Bit-exactness of this macro is important
-    /// </summary>
-    /// <param name="a"></param>
-    /// <param name="b"></param>
-    /// <returns></returns>
     static int FRAC_MUL16(int a, int b) {
         return ((16384 + ((short) a * (short) b)) >> 15);
     }
 
-    /// <summary>
-    /// Compute floor(sqrt(_val)) with exact arithmetic.
-    /// This has been tested on all possible 32-bit inputs.
-    /// </summary>
-    /// <param name="_val"></param>
-    /// <returns></returns>
     static int isqrt32(long _val) {
         int b;
         int g;
@@ -809,26 +601,8 @@ class Inlines {
         return ADD32(1, MIN32(32766, ADD32(SUB16(32767, x2), MULT16_16_P15(x2, ADD32(-7651, MULT16_16_P15(x2, ADD32(8277, MULT16_16_P15(-626, x2))))))));
     }
 
-    static short FLOAT2INT16(float x) {
-        x = x * CeltConstants.CELT_SIG_SCALE;
-        if (x < Short.MIN_VALUE) {
-            x = Short.MIN_VALUE;
-        }
-        if (x > Short.MAX_VALUE) {
-            x = Short.MAX_VALUE;
-        }
-        return (short) x;
-    }
-
     // SILK-SPECIFIC INLINES
 
-    /// <summary>
-    /// Rotate a32 right by 'rot' bits. Negative rot values result in rotating
-    /// left. Output is 32bit int.
-    /// </summary>
-    /// <param name="a32"></param>
-    /// <param name="rot"></param>
-    /// <returns></returns>
     static int silk_ROR32(int a32, int rot) {
         int m = (-rot);
         if (rot == 0) {
@@ -841,8 +615,7 @@ class Inlines {
     }
 
     static int silk_MUL(int a32, int b32) {
-        int ret = a32 * b32;
-        return ret;
+        return a32 * b32;
     }
 
     static int silk_MLA(int a32, int b32, int c32) {
@@ -851,18 +624,8 @@ class Inlines {
         return ret;
     }
 
-    /// <summary>
-    /// ((a32 >> 16)  * (b32 >> 16))
-    /// </summary>
-    /// <param name="a32"></param>
-    /// <param name="b32"></param>
-    /// <returns></returns>
     static int silk_SMULTT(int a32, int b32) {
         return ((a32 >> 16) * (b32 >> 16));
-    }
-
-    static int silk_SMLATT(int a32, int b32, int c32) {
-        return silk_ADD32((a32), ((b32) >> 16) * ((c32) >> 16));
     }
 
     static long silk_SMLALBB(long a64, short b16, short c16) {
@@ -873,13 +636,6 @@ class Inlines {
         return (long) a32 * (long) b32;
     }
 
-    /// <summary>
-    /// Adds two signed 32-bit values in a way that can overflow, while not relying on undefined behaviour
-    /// (just standard two's complement implementation-specific behaviour)
-    /// </summary>
-    /// <param name="a"></param>
-    /// <param name="b"></param>
-    /// <returns></returns>
     static int silk_ADD32_ovflw(int a, int b) {
         return (int) ((long) a + b);
     }
@@ -888,24 +644,10 @@ class Inlines {
         return ((int) (a + b));
     }
 
-    /// <summary>
-    /// Subtracts two signed 32-bit values in a way that can overflow, while not relying on undefined behaviour
-    /// (just standard two's complement implementation-specific behaviour)
-    /// </summary>
-    /// <param name="a"></param>
-    /// <param name="b"></param>
-    /// <returns></returns>
     static int silk_SUB32_ovflw(int a, int b) {
         return (int) ((long) a - b);
     }
 
-    /// <summary>
-    /// Multiply-accumulate macros that allow overflow in the addition (ie, no asserts in debug mode)
-    /// </summary>
-    /// <param name="a32"></param>
-    /// <param name="b32"></param>
-    /// <param name="c32"></param>
-    /// <returns></returns>
     static int silk_MLA_ovflw(int a32, int b32, int c32) {
         return silk_ADD32_ovflw(a32, (long) b32 * c32);
     }
@@ -918,12 +660,6 @@ class Inlines {
         return ((int) ((short) a32) * (int) ((short) b32));
     }
 
-    /// <summary>
-    /// (a32 * (int)((short)(b32))) >> 16 output have to be 32bit int
-    /// </summary>
-    /// <param name="a32"></param>
-    /// <param name="b32"></param>
-    /// <returns></returns>
     static int silk_SMULWB(int a32, int b32) {
         return ((int) (((a32 * (long) (((short) b32))) >> 16)));
     }
@@ -941,13 +677,11 @@ class Inlines {
     }
 
     static short silk_ADD16(short a, short b) {
-        short ret = (short) (a + b);
-        return ret;
+        return (short) (a + b);
     }
 
     static int silk_ADD32(int a, int b) {
-        int ret = a + b;
-        return ret;
+        return a + b;
     }
 
     static long silk_ADD64(long a, long b) {
@@ -968,16 +702,6 @@ class Inlines {
         return ret;
     }
 
-    static long silk_SUB64(long a, long b) {
-        long ret = a - b;
-        Inlines.OpusAssert(ret == silk_SUB_SAT64(a, b));
-        return ret;
-    }
-
-    static int silk_SAT8(int a) {
-        return a > Byte.MAX_VALUE ? Byte.MAX_VALUE : ((a) < Byte.MIN_VALUE ? Byte.MIN_VALUE : (a));
-    }
-
     static int silk_SAT16(int a) {
         return a > Short.MAX_VALUE ? Short.MAX_VALUE : ((a) < Short.MIN_VALUE ? Short.MIN_VALUE : (a));
     }
@@ -986,12 +710,6 @@ class Inlines {
         return a > Integer.MAX_VALUE ? Integer.MAX_VALUE : ((a) < Integer.MIN_VALUE ? Integer.MIN_VALUE : (int) (a));
     }
 
-    /// <summary>
-    /// //////////////////
-    /// </summary>
-    /// <param name="a16"></param>
-    /// <param name="b16"></param>
-    /// <returns></returns>
     static short silk_ADD_SAT16(short a16, short b16) {
         short res = (short) silk_SAT16(silk_ADD32(a16, (b16)));
         Inlines.OpusAssert(res == silk_SAT16((int) a16 + (int) b16));
@@ -1028,98 +746,34 @@ class Inlines {
         return res;
     }
 
-    static long silk_SUB_SAT64(long a64, long b64) {
-        long res;
-        res = ((((a64) - (b64)) & Long.MIN_VALUE) == 0
-                ? ((a64 & (b64 ^ Long.MIN_VALUE) & Long.MIN_VALUE) != 0 ? Long.MIN_VALUE : (a64) - (b64))
-                : (((a64 ^ Long.MIN_VALUE) & b64 & Long.MIN_VALUE) != 0 ? Long.MAX_VALUE : (a64) - (b64)));
-        return res;
-    }
-
     ///* Saturation for positive input values */
-    //#define silk_POS_SAT32(a)                   ((a) > int_MAX ? int_MAX : (a))
 
-    /// <summary>
-    /// Add with saturation for positive input values
-    /// </summary>
-    /// <param name="a"></param>
-    /// <param name="b"></param>
-    /// <returns></returns>
-    static byte silk_ADD_POS_SAT8(byte a, byte b) {
-        return (byte) ((((a + b) & 0x80) != 0) ? Byte.MAX_VALUE : (a + b));
-    }
-
-    /// <summary>
-    /// Add with saturation for positive input values
-    /// </summary>
-    /// <param name="a"></param>
-    /// <param name="b"></param>
-    /// <returns></returns>
-    static short silk_ADD_POS_SAT16(short a, short b) {
-        return (short) ((((a + b) & 0x8000) != 0) ? Short.MAX_VALUE : (a + b));
-    }
-
-    /// <summary>
-    /// Add with saturation for positive input values
-    /// </summary>
-    /// <param name="a"></param>
-    /// <param name="b"></param>
-    /// <returns></returns>
     static int silk_ADD_POS_SAT32(int a, int b) {
         return ((((a + b) & 0x80000000) != 0) ? Integer.MAX_VALUE : (a + b));
     }
 
-    /// <summary>
-    /// Add with saturation for positive input values
-    /// </summary>
-    /// <param name="a"></param>
-    /// <param name="b"></param>
-    /// <returns></returns>
-    static long silk_ADD_POS_SAT64(long a, long b) {
-        return ((((a + b) & Long.MIN_VALUE) != 0) ? Long.MAX_VALUE : (a + b));
-    }
-
-    static byte silk_LSHIFT8(byte a, int shift) {
-        byte ret = (byte) (a << shift);
-        return ret;
-    }
-
     static short silk_LSHIFT16(short a, int shift) {
-        short ret = (short) (a << shift);
-        return ret;
+        return (short) (a << shift);
     }
 
     static int silk_LSHIFT32(int a, int shift) {
-        int ret = a << shift;
-        return ret;
+        return a << shift;
     }
 
     static long silk_LSHIFT64(long a, int shift) {
-        long ret = a << shift;
-        return ret;
+        return a << shift;
     }
 
     static int silk_LSHIFT(int a, int shift) {
-        int ret = a << shift;
-        return ret;
+        return a << shift;
     }
 
     static int silk_LSHIFT_ovflw(int a, int shift) {
         return a << shift;
     }
 
-    /// <summary>
-    /// saturates before shifting
-    /// </summary>
-    /// <param name="a"></param>
-    /// <param name="shift"></param>
-    /// <returns></returns>
     static int silk_LSHIFT_SAT32(int a, int shift) {
         return (silk_LSHIFT32(silk_LIMIT((a), silk_RSHIFT32(Integer.MIN_VALUE, (shift)), silk_RSHIFT32(Integer.MAX_VALUE, (shift))), (shift)));
-    }
-
-    static byte silk_RSHIFT8(byte a, int shift) {
-        return (byte) (a >> shift);
     }
 
     static short silk_RSHIFT16(short a, int shift) {
@@ -1143,32 +797,27 @@ class Inlines {
     }
 
     static int silk_ADD_LSHIFT(int a, int b, int shift) {
-        int ret = a + (b << shift);
-        return ret;
+        return a + (b << shift);
         /* shift >= 0 */
     }
 
     static int silk_ADD_LSHIFT32(int a, int b, int shift) {
-        int ret = a + (b << shift);
-        return ret;
+        return a + (b << shift);
         /* shift >= 0 */
     }
 
     static int silk_ADD_RSHIFT(int a, int b, int shift) {
-        int ret = a + (b >> shift);
-        return ret;
+        return a + (b >> shift);
         /* shift  > 0 */
     }
 
     static int silk_ADD_RSHIFT32(int a, int b, int shift) {
-        int ret = a + (b >> shift);
-        return ret;
+        return a + (b >> shift);
         /* shift  > 0 */
     }
 
     static long silk_ADD_RSHIFT_uint(long a, long b, int shift) {
-        long ret = CapToUInt32(a + (CapToUInt32(b) >> shift));
-        return ret;
+        return CapToUInt32(a + (CapToUInt32(b) >> shift));
         /* shift  > 0 */
     }
 
@@ -1206,36 +855,12 @@ class Inlines {
         return Math.max((a), (b));
     }
 
-    static float silk_min(float a, float b) {
-        return Math.min((a), (b));
-    }
-
-    static float silk_max(float a, float b) {
-        return Math.max((a), (b));
-    }
-
-    /// <summary>
-    /// Macro to convert floating-point constants to fixed-point by applying a scalar factor
-    /// Because of limitations of the JIT, this macro is actually evaluated at runtime and therefore should not be used if you want to maximize performance
-    /// </summary>
-    static int SILK_CONST(float number, int scale) {
-        return ((int) ((number) * ((long) 1 << (scale)) + 0.5));
-    }
-
     /* silk_min() versions with typecast in the function call */
     static int silk_min_int(int a, int b) {
         return (Math.min((a), (b)));
     }
 
-    static short silk_min_16(short a, short b) {
-        return (((a) < (b)) ? (a) : (b));
-    }
-
     static int silk_min_32(int a, int b) {
-        return (Math.min((a), (b)));
-    }
-
-    static long silk_min_64(long a, long b) {
         return (Math.min((a), (b)));
     }
 
@@ -1252,24 +877,12 @@ class Inlines {
         return (Math.max((a), (b)));
     }
 
-    static long silk_max_64(long a, long b) {
-        return (Math.max((a), (b)));
-    }
-
-    static float silk_LIMIT(float a, float limit1, float limit2) {
-        return ((limit1) > (limit2) ? ((a) > (limit1) ? (limit1) : (Math.max((a), (limit2)))) : ((a) > (limit2) ? (limit2) : (Math.max((a), (limit1)))));
-    }
-
     static int silk_LIMIT(int a, int limit1, int limit2) {
         return silk_LIMIT_32(a, limit1, limit2);
     }
 
     static int silk_LIMIT_int(int a, int limit1, int limit2) {
         return silk_LIMIT_32(a, limit1, limit2);
-    }
-
-    static short silk_LIMIT_16(short a, short limit1, short limit2) {
-        return ((limit1) > (limit2) ? ((a) > (limit1) ? (limit1) : ((a) < (limit2) ? (limit2) : (a))) : ((a) > (limit2) ? (limit2) : ((a) < (limit1) ? (limit1) : (a))));
     }
 
     static int silk_LIMIT_32(int a, int limit1, int limit2) {
@@ -1281,55 +894,23 @@ class Inlines {
         return ((a) > 0) ? (a) : -(a);
     }
 
-    static int silk_abs_int16(int a) {
-        return (a ^ (a >> 15)) - (a >> 15);
-    }
-
     static int silk_abs_int32(int a) {
         return (a ^ (a >> 31)) - (a >> 31);
     }
 
-    static long silk_abs_int64(long a) {
-        return ((a) > 0) ? (a) : -(a);
-    }
-
-    static long silk_sign(int a) {
-        return Integer.compare(a, 0);
-    }
-
-    /// <summary>
-    /// PSEUDO-RANDOM GENERATOR
-    /// Make sure to store the result as the seed for the next call (also in between
-    /// frames), otherwise result won't be random at all. When only using some of the
-    /// bits, take the most significant bits by right-shifting.
-    /// </summary>
     static int silk_RAND(int seed) {
         return silk_MLA_ovflw(907633515, seed, 196314165);
     }
 
-    /// <summary>
-    /// silk_SMMUL: Signed top word multiply.
-    /// </summary>
-    /// <param name="a32"></param>
-    /// <param name="b32"></param>
-    /// <returns></returns>
     static int silk_SMMUL(int a32, int b32) {
         return (int) silk_RSHIFT64(silk_SMULL((a32), (b32)), 32);
     }
 
     /* a32 + (b32 * (c32 >> 16)) >> 16 */
     static int silk_SMLAWT(int a32, int b32, int c32) {
-        int ret = a32 + ((b32 >> 16) * (c32 >> 16)) + (((b32 & 0x0000FFFF) * ((c32 >> 16)) >> 16));
-        return ret;
+        return a32 + ((b32 >> 16) * (c32 >> 16)) + (((b32 & 0x0000FFFF) * ((c32 >> 16)) >> 16));
     }
 
-    /// <summary>
-    /// Divide two int32 values and return result as int32 in a given Q-domain
-    /// </summary>
-    /// <param name="a32">I    numerator (Q0)</param>
-    /// <param name="b32">I    denominator (Q0)</param>
-    /// <param name="Qres">I    Q-domain of result (>= 0)</param>
-    /// <returns>O    returns a good approximation of "(a32 << Qres) / b32"</returns>
     static int silk_DIV32_varQ(int a32, int b32, int Qres) {
         int a_headrm, b_headrm, lshift;
         int b32_inv, a32_nrm, b32_nrm, result;
@@ -1374,12 +955,6 @@ class Inlines {
         }
     }
 
-    /// <summary>
-    /// Invert int32 value and return result as int32 in a given Q-domain
-    /// </summary>
-    /// <param name="b32">I    denominator (Q0)</param>
-    /// <param name="Qres">I    Q-domain of result (> 0)</param>
-    /// <returns>a good approximation of "(1 << Qres) / b32"</returns>
     static int silk_INVERSE32_varQ(int b32, int Qres) {
         int b_headrm, lshift;
         int b32_inv, b32_nrm, err_Q32, result;
@@ -1420,10 +995,6 @@ class Inlines {
         }
     }
 
-    /// ///////////////////// from macros.h /////////////////////////////////////////////
-    /// <summary>
-    /// a32 + (b32 * (int)((short)(c32))) >> 16 output have to be 32bit int
-    /// </summary>
     // fixme: This method should be as optimized as possible
     static int silk_SMLAWB(int a32, int b32, int c32) {
         //return (int)(a32 + ((b32 * (long)((short)c32)) >> 16));
@@ -1432,32 +1003,16 @@ class Inlines {
         return ret;
     }
 
-    /// * (a32 * (b32 >> 16)) >> 16 */
     static int silk_SMULWT(int a32, int b32) {
         return (((a32) >> 16) * ((b32) >> 16) + ((((a32) & 0x0000FFFF) * ((b32) >> 16)) >> 16));
     }
 
-    /// * (int)((short)(a32)) * (b32 >> 16) */
-    static int silk_SMULBT(int a32, int b32) {
-        return ((int) ((short) (a32)) * ((b32) >> 16));
-    }
-
-    /// * a32 + (int)((short)(b32)) * (c32 >> 16) */
     static int silk_SMLABT(int a32, int b32, int c32) {
         return ((a32) + ((int) ((short) (b32))) * ((c32) >> 16));
     }
 
-    /// * a64 + (b32 * c32) */
-    static long silk_SMLAL(long a64, int b32, int c32) {
-        return (silk_ADD64((a64), ((long) (b32) * (long) (c32))));
-    }
-
     static int MatrixGetPointer(int row, int column, int N) {
         return (row * N) + column;
-    }
-
-    static int MatrixGet(int[] Matrix_base_adr, int row, int column, int N) {
-        return Matrix_base_adr[((row) * (N)) + (column)];
     }
 
     static short MatrixGet(short[] Matrix_base_adr, int row, int column, int N) {
@@ -1472,15 +1027,7 @@ class Inlines {
         return Matrix_base_adr[matrix_ptr + (row * N) + column];
     }
 
-    static short MatrixGet(short[] Matrix_base_adr, int matrix_ptr, int row, int column, int N) {
-        return Matrix_base_adr[matrix_ptr + (row * N) + column];
-    }
-
     static void MatrixSet(int[] Matrix_base_adr, int matrix_ptr, int row, int column, int N, int value) {
-        Matrix_base_adr[matrix_ptr + (row * N) + column] = value;
-    }
-
-    static void MatrixSet(short[] Matrix_base_adr, int matrix_ptr, int row, int column, int N, short value) {
         Matrix_base_adr[matrix_ptr + (row * N) + column] = value;
     }
 
@@ -1492,17 +1039,11 @@ class Inlines {
         Matrix_base_adr[((row) * (N)) + (column)] = value;
     }
 
-    /// <summary>
-    /// (a32 * b32) >> 16
-    /// </summary>
     static int silk_SMULWW(int a32, int b32) {
         //return CHOP32(((long)(a32) * (b32)) >> 16);
         return silk_MLA(silk_SMULWB((a32), (b32)), (a32), silk_RSHIFT_ROUND((b32), 16));
     }
 
-    /// <summary>
-    /// a32 + ((b32 * c32) >> 16)
-    /// </summary>
     static int silk_SMLAWW(int a32, int b32, int c32) {
         //return CHOP32(((a32) + (((long)(b32) * (c32)) >> 16)));
         return silk_MLA(silk_SMLAWB((a32), (b32), (c32)), (b32), silk_RSHIFT_ROUND((c32), 16));
@@ -1526,12 +1067,6 @@ class Inlines {
         return in32 == 0 ? 32 : 32 - EC_ILOG(in32);
     }
 
-    /// <summary>
-    /// Get number of leading zeros and fractional part (the bits right after the leading one)
-    /// </summary>
-    /// <param name="input">input</param>
-    /// <param name="lz">number of leading zeros</param>
-    /// <param name="frac_Q7">the 7 bits right after the leading one</param>
     static void silk_CLZ_FRAC(int input, BoxedValueInt lz, BoxedValueInt frac_Q7) {
         int lzeros = silk_CLZ32(input);
 
@@ -1539,13 +1074,6 @@ class Inlines {
         frac_Q7.Val = silk_ROR32(input, 24 - lzeros) & 0x7f;
     }
 
-    /// <summary>
-    /// Approximation of square root.
-    /// Accuracy: +/- 10%  for output values > 15
-    ///           +/- 2.5% for output values > 120
-    /// </summary>
-    /// <param name="x"></param>
-    /// <returns></returns>
     static int silk_SQRT_APPROX(int x) {
         int y;
         int lz;
@@ -1580,12 +1108,6 @@ class Inlines {
         return ((int) (silk_RSHIFT_ROUND64(silk_SMULL(a32, b32), Q)));
     }
 
-    /// <summary>
-    /// Approximation of 128 * log2() (very close inverse of silk_log2lin())
-    /// Convert input to a log scale
-    /// </summary>
-    /// <param name="inLin">(I) input in linear scale</param>
-    /// <returns></returns>
     static int silk_lin2log(int inLin) {
         BoxedValueInt lz = new BoxedValueInt(0);
         BoxedValueInt frac_Q7 = new BoxedValueInt(0);
@@ -1596,12 +1118,6 @@ class Inlines {
         return silk_LSHIFT(31 - lz.Val, 7) + silk_SMLAWB(frac_Q7.Val, silk_MUL(frac_Q7.Val, 128 - frac_Q7.Val), 179);
     }
 
-    /// <summary>
-    /// Approximation of 2^() (very close inverse of silk_lin2log())
-    /// Convert input to a linear scale
-    /// </summary>
-    /// <param name="inLog_Q7">input on log scale</param>
-    /// <returns>Linearized value</returns>
     static int silk_log2lin(int inLog_Q7) {
         int output, frac_Q7;
 
@@ -1625,14 +1141,6 @@ class Inlines {
         return output;
     }
 
-    /// <summary>
-    /// Interpolate two vectors
-    /// </summary>
-    /// <param name="xi">(O) interpolated vector [MAX_LPC_ORDER]</param>
-    /// <param name="x0">(I) first vector [MAX_LPC_ORDER]</param>
-    /// <param name="x1">(I) second vector [MAX_LPC_ORDER]</param>
-    /// <param name="ifact_Q2">(I) interp. factor, weight on 2nd vector</param>
-    /// <param name="d">(I) number of parameters</param>
     static void silk_interpolate(
             short[] xi,
             short[] x0,
@@ -1649,14 +1157,6 @@ class Inlines {
         }
     }
 
-    /// <summary>
-    /// Inner product with bit-shift
-    /// </summary>
-    /// <param name="inVec1">I input vector 1</param>
-    /// <param name="inVec2">I input vector 2</param>
-    /// <param name="scale">I number of bits to shift</param>
-    /// <param name="len">I vector lengths</param>
-    /// <returns></returns>
     static int silk_inner_prod_aligned_scale(
             short[] inVec1,
             short[] inVec2,
@@ -1741,12 +1241,6 @@ class Inlines {
         return sum;
     }
 
-    /// <summary>
-    /// returns the value that has fewer higher-order bits, ignoring sign bit (? I think?)
-    /// </summary>
-    /// <param name="a"></param>
-    /// <param name="b"></param>
-    /// <returns></returns>
     static long EC_MINI(long a, long b) {
         return (a + ((b - a) & ((b < a) ? 0xFFFFFFFF : 0)));
     }

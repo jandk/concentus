@@ -31,6 +31,8 @@
  */
 package org.concentus;
 
+import java.util.Arrays;
+
 class FindPredCoefs {
 
     static void silk_find_pred_coefs(
@@ -131,7 +133,7 @@ class FindPredCoefs {
                 x_ptr2 += psEnc.subfr_length;
             }
 
-            Arrays.MemSet(psEncCtrl.LTPCoef_Q14, (short) 0, psEnc.nb_subfr * SilkConstants.LTP_ORDER);
+            Arrays.fill(psEncCtrl.LTPCoef_Q14, 0, psEnc.nb_subfr * SilkConstants.LTP_ORDER, (short) 0);
             psEncCtrl.LTPredCodGain_Q7 = 0;
             psEnc.sum_log_gain_Q7 = 0;
         }

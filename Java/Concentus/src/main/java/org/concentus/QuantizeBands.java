@@ -181,8 +181,8 @@ class QuantizeBands {
         }
         enc_start_state.Assign(enc);
 
-        oldEBands_intra = Arrays.InitTwoDimensionalArrayInt(C, m.nbEBands);
-        error_intra = Arrays.InitTwoDimensionalArrayInt(C, m.nbEBands);
+        oldEBands_intra = new int[C][m.nbEBands];
+        error_intra = new int[C][m.nbEBands];
         System.arraycopy(oldEBands[0], 0, oldEBands_intra[0], 0, m.nbEBands);
         if (C == 2) {
             System.arraycopy(oldEBands[1], 0, oldEBands_intra[1], 0, m.nbEBands);

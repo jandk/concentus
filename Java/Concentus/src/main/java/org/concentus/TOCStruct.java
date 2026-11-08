@@ -31,6 +31,8 @@
  */
 package org.concentus;
 
+import java.util.Arrays;
+
 /// <summary>
 /// Struct for TOC (Table of Contents)
 /// </summary>
@@ -53,7 +55,7 @@ class TOCStruct {
 
     void Reset() {
         VADFlag = 0;
-        Arrays.MemSet(VADFlags, 0, SilkConstants.SILK_MAX_FRAMES_PER_PACKET);
+        Arrays.fill(VADFlags, 0, SilkConstants.SILK_MAX_FRAMES_PER_PACKET, 0);
         inbandFECFlag = 0;
     }
 }

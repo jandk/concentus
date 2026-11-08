@@ -34,6 +34,8 @@
  */
 package org.concentus;
 
+import java.util.Arrays;
+
 /// <summary>
 /// Decoder state
 /// </summary>
@@ -105,7 +107,7 @@ class CeltDecoder {
         postfilter_gain_old = 0;
         postfilter_tapset = 0;
         postfilter_tapset_old = 0;
-        Arrays.MemSet(preemph_memD, 0, 2);
+        Arrays.fill(preemph_memD, 0, 2, 0);
         decode_mem = null;
         lpc = null;
         oldEBands = null;
@@ -217,7 +219,7 @@ class CeltDecoder {
             end = this.end;
             effEnd = Inlines.IMAX(start, Inlines.IMIN(end, mode.effEBands));
 
-            X = Arrays.InitTwoDimensionalArrayInt(C, N);
+            X = new int[C][N];
             /**
              * < Interleaved normalised MDCTs
              */
@@ -250,7 +252,7 @@ class CeltDecoder {
 
             c = 0;
             do {
-                Arrays.MemMove(decode_mem[c], N, 0, CeltConstants.DECODE_BUFFER_SIZE - N + (overlap >> 1));
+                System.arraycopy(decode_mem[c], N, decode_mem[c], 0, CeltConstants.DECODE_BUFFER_SIZE - N + (overlap >> 1));
             } while (++c < C);
 
             CeltCommon.celt_synthesis(mode, X, out_syn, out_syn_ptrs, oldEBands, start, effEnd, C, C, 0, LM, downsample, 0);
@@ -342,7 +344,7 @@ class CeltDecoder {
                 /* Move the decoder memory one frame to the left to give us room to
                    add the data for the new frame. We ignore the overlap that extends
                    past the end of the buffer, because we aren't going to use it. */
-                Arrays.MemMove(buf, N, 0, CeltConstants.DECODE_BUFFER_SIZE - N);
+                System.arraycopy(buf, N, buf, 0, CeltConstants.DECODE_BUFFER_SIZE - N);
 
                 /* Extrapolate from the end of the excitation with a period of
                    "pitch_index", scaling down each period by an additional factor of
@@ -664,13 +666,13 @@ class CeltDecoder {
 
         c = 0;
         do {
-            Arrays.MemMove(decode_mem[c], N, 0, CeltConstants.DECODE_BUFFER_SIZE - N + overlap / 2);
+            System.arraycopy(decode_mem[c], N, decode_mem[c], 0, CeltConstants.DECODE_BUFFER_SIZE - N + overlap / 2);
         } while (++c < CC);
 
         /* Decode fixed codebook */
         collapse_masks = new short[C * nbEBands];
 
-        X = Arrays.InitTwoDimensionalArrayInt(C, N);
+        X = new int[C][N];
         /**
          * < Interleaved normalised MDCTs
          */

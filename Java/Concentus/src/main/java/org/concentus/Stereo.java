@@ -31,6 +31,8 @@
  */
 package org.concentus;
 
+import java.util.Arrays;
+
 class Stereo {
 
     /// <summary>
@@ -42,7 +44,7 @@ class Stereo {
             EntropyCoder psRangeDec,
             int[] pred_Q13) {
         int n;
-        int[][] ix = Arrays.InitTwoDimensionalArrayInt(2, 3);
+        int[][] ix = new int[2][3];
         int low_Q13, step_Q13;
 
         // Entropy decoding
@@ -469,8 +471,8 @@ class Stereo {
         // FIXME: ix was formerly an out parameter that was newly allocated here
         // but now it relies on the caller to initialize it
         // clear ix
-        Arrays.MemSet(ix[0], (byte) 0, 3);
-        Arrays.MemSet(ix[1], (byte) 0, 3);
+        Arrays.fill(ix[0], 0, 3, (byte) 0);
+        Arrays.fill(ix[1], 0, 3, (byte) 0);
 
         /* Quantize */
         for (n = 0; n < 2; n++) {

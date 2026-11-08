@@ -31,6 +31,8 @@
  */
 package org.concentus;
 
+import java.util.Arrays;
+
 class BurgModified {
 
     /* subfr_length * nb_subfr = ( 0.005 * 16000 + 16 ) * 4 = 384 */
@@ -84,7 +86,7 @@ class BurgModified {
 
         CAb[0] = CAf[0] = C0 + Inlines.silk_SMMUL(((int) ((TuningParameters.FIND_LPC_COND_FAC) * ((long) 1 << (32)) + 0.5))/*Inlines.SILK_CONST(TuningParameters.FIND_LPC_COND_FAC, 32)*/, C0) + 1;
         /* Q(-rshifts) */
-        Arrays.MemSet(C_first_row, 0, SilkConstants.SILK_MAX_ORDER_LPC);
+        Arrays.fill(C_first_row, 0, SilkConstants.SILK_MAX_ORDER_LPC, 0);
         if (rshifts > 0) {
             for (s = 0; s < nb_subfr; s++) {
                 x_offset = x_ptr + s * subfr_length;

@@ -34,6 +34,8 @@
  */
 package org.concentus;
 
+import java.util.Arrays;
+
 class CeltEncoder {
 
     CeltMode mode = null;
@@ -170,11 +172,11 @@ class CeltEncoder {
         PartialReset();
 
         // We have to reconstitute the dynamic buffers here.
-        this.in_mem = Arrays.InitTwoDimensionalArrayInt(channels, mode.overlap);
-        this.prefilter_mem = Arrays.InitTwoDimensionalArrayInt(channels, CeltConstants.COMBFILTER_MAXPERIOD);
-        this.oldBandE = Arrays.InitTwoDimensionalArrayInt(channels, mode.nbEBands);
-        this.oldLogE = Arrays.InitTwoDimensionalArrayInt(channels, mode.nbEBands);
-        this.oldLogE2 = Arrays.InitTwoDimensionalArrayInt(channels, mode.nbEBands);
+        this.in_mem = new int[channels][mode.overlap];
+        this.prefilter_mem = new int[channels][CeltConstants.COMBFILTER_MAXPERIOD];
+        this.oldBandE = new int[channels][mode.nbEBands];
+        this.oldLogE = new int[channels][mode.nbEBands];
+        this.oldLogE2 = new int[channels][mode.nbEBands];
 
         for (i = 0; i < mode.nbEBands; i++) {
             oldLogE[0][i] = oldLogE2[0][i] = -((short) (0.5 + (28.0f) * (1 << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(28.0f, CeltConstants.DB_SHIFT)*/;
@@ -355,7 +357,7 @@ class CeltEncoder {
             if (N > CeltConstants.COMBFILTER_MAXPERIOD) {
                 System.arraycopy(pre[c], N, prefilter_mem[c], 0, CeltConstants.COMBFILTER_MAXPERIOD);
             } else {
-                Arrays.MemMove(prefilter_mem[c], N, 0, CeltConstants.COMBFILTER_MAXPERIOD - N);
+                System.arraycopy(prefilter_mem[c], N, prefilter_mem[c], 0, CeltConstants.COMBFILTER_MAXPERIOD - N);
                 System.arraycopy(pre[c], CeltConstants.COMBFILTER_MAXPERIOD, prefilter_mem[c], CeltConstants.COMBFILTER_MAXPERIOD - N, N);
             }
         } while (++c < CC);
@@ -523,7 +525,7 @@ class CeltEncoder {
             effEnd = mode.effEBands;
         }
 
-        input = Arrays.InitTwoDimensionalArrayInt(CC, N + overlap);
+        input = new int[CC][N + overlap];
 
         sample_max = Inlines.MAX32(overlap_max, Inlines.celt_maxabs32(pcm, pcm_ptr, C * (N - overlap) / upsample));
         this.overlap_max = Inlines.celt_maxabs32(pcm, pcm_ptr + (C * (N - overlap) / upsample), C * overlap / upsample);
@@ -616,15 +618,15 @@ class CeltEncoder {
             transient_got_disabled = 1;
         }
 
-        freq = Arrays.InitTwoDimensionalArrayInt(CC, N);
+        freq = new int[CC][N];
         /**
          * < Interleaved signal MDCTs
          */
-        bandE = Arrays.InitTwoDimensionalArrayInt(CC, nbEBands);
-        bandLogE = Arrays.InitTwoDimensionalArrayInt(CC, nbEBands);
+        bandE = new int[CC][nbEBands];
+        bandLogE = new int[CC][nbEBands];
 
         secondMdct = (shortBlocks != 0 && complexity >= 8) ? 1 : 0;
-        bandLogE2 = Arrays.InitTwoDimensionalArrayInt(CC, nbEBands);
+        bandLogE2 = new int[CC][nbEBands];
         //Arrays.MemSet(bandLogE2, 0, C * nbEBands); // not explicitly needed
         if (secondMdct != 0) {
             CeltCommon.compute_mdcts(mode, 0, input, freq, C, CC, LM, upsample);
@@ -715,7 +717,7 @@ class CeltEncoder {
                        disabling masking. */
                     mask_avg = 0;
                     diff = 0;
-                    Arrays.MemSet(surround_dynalloc, 0, mask_end);
+                    Arrays.fill(surround_dynalloc, 0, mask_end, 0);
                 } else {
                     for (i = 0; i < mask_end; i++) {
                         surround_dynalloc[i] = Inlines.MAX16(0, surround_dynalloc[i] - ((short) (0.5 + (.25f) * (1 << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(.25f, CeltConstants.DB_SHIFT)*/);
@@ -782,7 +784,7 @@ class CeltEncoder {
             enc.enc_bit_logp(isTransient, 3);
         }
 
-        X = Arrays.InitTwoDimensionalArrayInt(C, N);
+        X = new int[C][N];
         /**
          * < Interleaved normalised MDCTs
          */
@@ -819,7 +821,7 @@ class CeltEncoder {
             tf_select = 0;
         }
 
-        error = Arrays.InitTwoDimensionalArrayInt(C, nbEBands);
+        error = new int[C][nbEBands];
         BoxedValueInt boxed_delayedintra = new BoxedValueInt(delayedIntra);
         QuantizeBands.quant_coarse_energy(mode, start, end, effEnd, bandLogE,
                 oldBandE, total_bits, error, enc,

@@ -31,6 +31,8 @@
  */
 package org.concentus;
 
+import java.util.Arrays;
+
 /// <summary>
 /// Prefilter state
 /// </summary>
@@ -50,8 +52,8 @@ class SilkPrefilterState {
     }
 
     void Reset() {
-        Arrays.MemSet(sLTP_shp, (short) 0, SilkConstants.LTP_BUF_LENGTH);
-        Arrays.MemSet(sAR_shp, 0, SilkConstants.MAX_SHAPE_LPC_ORDER + 1);
+        Arrays.fill(sLTP_shp, 0, SilkConstants.LTP_BUF_LENGTH, (short) 0);
+        Arrays.fill(sAR_shp, 0, SilkConstants.MAX_SHAPE_LPC_ORDER + 1, 0);
         sLTP_shp_buf_idx = 0;
         sLF_AR_shp_Q12 = 0;
         sLF_MA_shp_Q12 = 0;

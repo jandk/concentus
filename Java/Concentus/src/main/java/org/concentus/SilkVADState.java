@@ -31,6 +31,8 @@
  */
 package org.concentus;
 
+import java.util.Arrays;
+
 /// <summary>
 /// VAD state
 /// </summary>
@@ -87,15 +89,15 @@ class SilkVADState {
     int counter = 0;
 
     void Reset() {
-        Arrays.MemSet(AnaState, 0, 2);
-        Arrays.MemSet(AnaState1, 0, 2);
-        Arrays.MemSet(AnaState2, 0, 2);
-        Arrays.MemSet(XnrgSubfr, 0, SilkConstants.VAD_N_BANDS);
-        Arrays.MemSet(NrgRatioSmth_Q8, 0, SilkConstants.VAD_N_BANDS);
+        Arrays.fill(AnaState, 0, 2, 0);
+        Arrays.fill(AnaState1, 0, 2, 0);
+        Arrays.fill(AnaState2, 0, 2, 0);
+        Arrays.fill(XnrgSubfr, 0, SilkConstants.VAD_N_BANDS, 0);
+        Arrays.fill(NrgRatioSmth_Q8, 0, SilkConstants.VAD_N_BANDS, 0);
         HPstate = 0;
-        Arrays.MemSet(NL, 0, SilkConstants.VAD_N_BANDS);
-        Arrays.MemSet(inv_NL, 0, SilkConstants.VAD_N_BANDS);
-        Arrays.MemSet(NoiseLevelBias, 0, SilkConstants.VAD_N_BANDS);
+        Arrays.fill(NL, 0, SilkConstants.VAD_N_BANDS, 0);
+        Arrays.fill(inv_NL, 0, SilkConstants.VAD_N_BANDS, 0);
+        Arrays.fill(NoiseLevelBias, 0, SilkConstants.VAD_N_BANDS, 0);
         counter = 0;
     }
 }

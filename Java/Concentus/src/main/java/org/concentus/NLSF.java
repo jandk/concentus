@@ -607,7 +607,7 @@ class NLSF {
         Sort.silk_insertion_sort_increasing(err_Q26, tempIndices1, psNLSF_CB.nVectors, nSurvivors);
 
         RD_Q25 = new int[nSurvivors];
-        tempIndices2 = Arrays.InitTwoDimensionalArrayByte(nSurvivors, SilkConstants.MAX_LPC_ORDER);
+        tempIndices2 = new byte[nSurvivors][SilkConstants.MAX_LPC_ORDER];
 
         // Loop over survivors
         for (s = 0; s < nSurvivors; s++) {

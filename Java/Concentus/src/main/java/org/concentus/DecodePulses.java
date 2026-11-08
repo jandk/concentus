@@ -31,6 +31,8 @@
  */
 package org.concentus;
 
+import java.util.Arrays;
+
 class DecodePulses {
 
     /**
@@ -102,7 +104,8 @@ class DecodePulses {
             if (sum_pulses[i] > 0) {
                 ShellCoder.silk_shell_decoder(pulses, Inlines.silk_SMULBB(i, SilkConstants.SHELL_CODEC_FRAME_LENGTH), psRangeDec, sum_pulses[i]);
             } else {
-                Arrays.MemSetWithOffset(pulses, (byte) 0, Inlines.silk_SMULBB(i, SilkConstants.SHELL_CODEC_FRAME_LENGTH), SilkConstants.SHELL_CODEC_FRAME_LENGTH);
+                int offset = Inlines.silk_SMULBB(i, SilkConstants.SHELL_CODEC_FRAME_LENGTH);
+                Arrays.fill(pulses, offset, offset + SilkConstants.SHELL_CODEC_FRAME_LENGTH, (byte) 0);
             }
         }
 

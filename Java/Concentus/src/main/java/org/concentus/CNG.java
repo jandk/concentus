@@ -31,6 +31,8 @@
  */
 package org.concentus;
 
+import java.util.Arrays;
+
 /// <summary>
 /// Comfort noise generation and estimation
 /// </summary>
@@ -133,7 +135,7 @@ class CNG {
             }
 
             /* Update CNG excitation buffer with excitation from this subframe */
-            Arrays.MemMove(psCNG.CNG_exc_buf_Q14, 0, psDec.subfr_length, (psDec.nb_subfr - 1) * psDec.subfr_length);
+            System.arraycopy(psCNG.CNG_exc_buf_Q14, 0, psCNG.CNG_exc_buf_Q14, psDec.subfr_length, (psDec.nb_subfr - 1) * psDec.subfr_length);
 
             /* Smooth gains */
             for (i = 0; i < psDec.nb_subfr; i++) {
@@ -200,7 +202,7 @@ class CNG {
 
             System.arraycopy(CNG_sig_Q10, length, psCNG.CNG_synth_state, 0, SilkConstants.MAX_LPC_ORDER);
         } else {
-            Arrays.MemSet(psCNG.CNG_synth_state, 0, psDec.LPC_order);
+            Arrays.fill(psCNG.CNG_synth_state, 0, psDec.LPC_order, 0);
         }
     }
 }

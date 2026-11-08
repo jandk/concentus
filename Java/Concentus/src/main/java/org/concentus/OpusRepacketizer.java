@@ -34,6 +34,8 @@
  */
 package org.concentus;
 
+import java.util.Arrays;
+
 public class OpusRepacketizer {
 
     byte toc = 0;
@@ -282,7 +284,7 @@ public class OpusRepacketizer {
             if (data == frames[i]) {
                 /* Using OPUS_MOVE() instead of OPUS_COPY() in case we're doing in-place
                    padding from opus_packet_pad or opus_packet_unpad(). */
-                Arrays.MemMove(data, 0, ptr, len[i]);
+                System.arraycopy(data, 0, data, ptr, len[i]);
             } else {
                 System.arraycopy(frames[i], 0, data, ptr, len[i]);
             }
@@ -291,7 +293,7 @@ public class OpusRepacketizer {
 
         if (pad != 0) {
             /* Fill padding with zeros. */
-            Arrays.MemSetWithOffset(data, (byte) 0, ptr, data_ptr + maxlen - ptr);
+            Arrays.fill(data, ptr, ptr + data_ptr + maxlen - ptr, (byte) 0);
         }
 
         return tot_size;
@@ -390,7 +392,7 @@ public class OpusRepacketizer {
         }
         rp.Reset();
         /* Moving payload to the end of the packet so we can do in-place padding */
-        Arrays.MemMove(data, data_offset, data_offset + new_len - len, len);
+        System.arraycopy(data, data_offset, data, data_offset + new_len - len, len);
         //data.MemMoveTo(data.Point(new_len - len), len);
         rp.addPacket(data, data_offset + new_len - len, len);
         ret = rp.opus_repacketizer_out_range_impl(0, rp.nb_frames, data, data_offset, new_len, 0, 1);

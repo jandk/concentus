@@ -31,6 +31,8 @@
  */
 package org.concentus;
 
+import java.util.Arrays;
+
 /// <summary>
 /// Routines for managing packet loss concealment
 /// </summary>
@@ -129,7 +131,7 @@ class PLC {
                 }
             }
 
-            Arrays.MemSet(psPLC.LTPCoef_Q14, (short) 0, SilkConstants.LTP_ORDER);
+            Arrays.fill(psPLC.LTPCoef_Q14, 0, SilkConstants.LTP_ORDER, (short) 0);
             psPLC.LTPCoef_Q14[SilkConstants.LTP_ORDER / 2] = (short) (LTP_Gain_Q14);
 
             /* Limit LT coefs */
@@ -154,7 +156,7 @@ class PLC {
             }
         } else {
             psPLC.pitchL_Q8 = Inlines.silk_LSHIFT(Inlines.silk_SMULBB(psDec.fs_kHz, 18), 8);
-            Arrays.MemSet(psPLC.LTPCoef_Q14, (short) 0, SilkConstants.LTP_ORDER);
+            Arrays.fill(psPLC.LTPCoef_Q14, 0, SilkConstants.LTP_ORDER, (short) 0);
         }
 
         /* Save LPC coeficients */
@@ -235,7 +237,7 @@ class PLC {
         prevGain_Q10[1] = Inlines.silk_RSHIFT(psPLC.prevGain_Q16[1], 6);
 
         if (psDec.first_frame_after_reset != 0) {
-            Arrays.MemSet(psPLC.prevLPC_Q12, (short) 0, SilkConstants.MAX_LPC_ORDER);
+            Arrays.fill(psPLC.prevLPC_Q12, 0, SilkConstants.MAX_LPC_ORDER, (short) 0);
         }
 
         silk_PLC_energy(energy1, shift1, energy2, shift2, psDec.exc_Q14, prevGain_Q10, psDec.subfr_length, psDec.nb_subfr);

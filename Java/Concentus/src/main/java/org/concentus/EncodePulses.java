@@ -31,6 +31,8 @@
  */
 package org.concentus;
 
+import java.util.Arrays;
+
 class EncodePulses {
 
     /// <summary>
@@ -106,7 +108,7 @@ class EncodePulses {
         int pulses_ptr;
         short[] nBits_ptr;
 
-        Arrays.MemSet(pulses_comb, 0, 8);
+        Arrays.fill(pulses_comb, 0, 8, 0);
 
         /**
          * *************************
@@ -122,7 +124,7 @@ class EncodePulses {
             Inlines.OpusAssert(frame_length == 12 * 10);
             /* Make sure only happens for 10 ms @ 12 kHz */
             iter++;
-            Arrays.MemSetWithOffset(pulses, (byte) 0, frame_length, SilkConstants.SHELL_CODEC_FRAME_LENGTH);
+            Arrays.fill(pulses, frame_length, frame_length + SilkConstants.SHELL_CODEC_FRAME_LENGTH, (byte) 0);
         }
 
         /* Take the absolute value of the pulses */

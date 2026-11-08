@@ -31,6 +31,8 @@
  */
 package org.concentus;
 
+import java.util.Arrays;
+
 class EncodeAPI {
 
     /// <summary>
@@ -144,8 +146,8 @@ class EncodeAPI {
             /* Mono . Stereo transition: init state of second channel and stereo state */
             ret += SilkEncoder.silk_init_encoder(psEnc.state_Fxx[1]);
 
-            Arrays.MemSet(psEnc.sStereo.pred_prev_Q13, (short) 0, 2);
-            Arrays.MemSet(psEnc.sStereo.sSide, (short) 0, 2);
+            Arrays.fill(psEnc.sStereo.pred_prev_Q13, 0, 2, (short) 0);
+            Arrays.fill(psEnc.sStereo.sSide, 0, 2, (short) 0);
             psEnc.sStereo.mid_side_amp_Q0[0] = 0;
             psEnc.sStereo.mid_side_amp_Q0[1] = 1;
             psEnc.sStereo.mid_side_amp_Q0[2] = 0;
@@ -383,7 +385,7 @@ class EncodeAPI {
 
                     /* Reset LBRR flags */
                     for (n = 0; n < encControl.nChannelsInternal; n++) {
-                        Arrays.MemSet(psEnc.state_Fxx[n].LBRR_flags, 0, SilkConstants.MAX_FRAMES_PER_PACKET);
+                        Arrays.fill(psEnc.state_Fxx[n].LBRR_flags, 0, SilkConstants.MAX_FRAMES_PER_PACKET, 0);
                     }
 
                     psEnc.nBitsUsedLBRR = psRangeEnc.tell();
@@ -446,8 +448,8 @@ class EncodeAPI {
                             psEnc.state_Fxx[1].sShape.Reset();
                             psEnc.state_Fxx[1].sPrefilt.Reset();
                             psEnc.state_Fxx[1].sNSQ.Reset();
-                            Arrays.MemSet(psEnc.state_Fxx[1].prev_NLSFq_Q15, (short) 0, SilkConstants.MAX_LPC_ORDER);
-                            Arrays.MemSet(psEnc.state_Fxx[1].sLP.In_LP_State, 0, 2);
+                            Arrays.fill(psEnc.state_Fxx[1].prev_NLSFq_Q15, 0, SilkConstants.MAX_LPC_ORDER, (short) 0);
+                            Arrays.fill(psEnc.state_Fxx[1].sLP.In_LP_State, 0, 2, 0);
 
                             psEnc.state_Fxx[1].prevLag = 100;
                             psEnc.state_Fxx[1].sNSQ.lagPrev = 100;

@@ -34,6 +34,8 @@
  */
 package org.concentus;
 
+import java.util.Arrays;
+
 class CeltCommon {
 
     /* Table of 6*64/x, trained on real data to minimize the average error */
@@ -182,7 +184,7 @@ class CeltCommon {
             }
             /*printf("\n");*/
             /* First few samples are bad because we don't propagate the memory */
-            Arrays.MemSet(tmp, 0, 12);
+            Arrays.fill(tmp, 0, 12, 0);
 
             /* Normalize tmp to max range */
             {
@@ -343,7 +345,7 @@ class CeltCommon {
                 for (i = 0; i < bound; i++) {
                     output[c][i] *= upsample;
                 }
-                Arrays.MemSetWithOffset(output[c], 0, bound, B * N - bound);
+                Arrays.fill(output[c], bound, bound + B * N - bound, 0);
             } while (++c < C);
         }
     }
@@ -372,7 +374,7 @@ class CeltCommon {
 
         Nu = N / upsample;
         if (upsample != 1) {
-            Arrays.MemSetWithOffset(inp, 0, inp_ptr, N);
+            Arrays.fill(inp, inp_ptr, inp_ptr + N, 0);
         }
         for (i = 0; i < Nu; i++) {
             inp[inp_ptr + (i * upsample)] = pcmp[pcmp_ptr + (CC * i)];
@@ -414,7 +416,7 @@ class CeltCommon {
 
         Nu = N / upsample;
         if (upsample != 1) {
-            Arrays.MemSetWithOffset(inp, 0, inp_ptr, N);
+            Arrays.fill(inp, inp_ptr, inp_ptr + N, 0);
         }
         for (i = 0; i < Nu; i++) {
             inp[inp_ptr + (i * upsample)] = pcmp[CC * i];
@@ -792,10 +794,10 @@ class CeltCommon {
         int i, c;
         int tot_boost = 0;
         int maxDepth;
-        int[][] follower = Arrays.InitTwoDimensionalArrayInt(2, nbEBands);
+        int[][] follower = new int[2][nbEBands];
         int[] noise_floor = new int[C * nbEBands]; // opt: partitioned array
 
-        Arrays.MemSet(offsets, 0, nbEBands);
+        Arrays.fill(offsets, 0, nbEBands, 0);
         /* Dynamic allocation code */
         maxDepth = (-((short) (0.5 + (31.9f) * (1 << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(31.9f, CeltConstants.DB_SHIFT)*/);
         for (i = 0; i < end; i++) {

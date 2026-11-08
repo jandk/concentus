@@ -206,12 +206,11 @@ class EntropyCoder {
     }
 
     int read_byte() {
-        return offs < storage ? Inlines.SignedByteToUnsignedInt(buf[buf_ptr + this.offs++]) : 0;
+        return offs < storage ? Byte.toUnsignedInt(buf[buf_ptr + this.offs++]) : 0;
     }
 
     int read_byte_from_end() {
-        return end_offs < storage
-                ? Inlines.SignedByteToUnsignedInt(buf[buf_ptr + (storage - ++(this.end_offs))]) : 0;
+        return end_offs < storage ? Byte.toUnsignedInt(buf[buf_ptr + (storage - ++(this.end_offs))]) : 0;
     }
 
     int write_byte(long _value) {

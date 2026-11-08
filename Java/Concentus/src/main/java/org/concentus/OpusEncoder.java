@@ -42,14 +42,10 @@ import java.util.Arrays;
 public class OpusEncoder {
 
     final EncControlState silk_mode = new EncControlState();
-    OpusApplication application;
     int channels;
-    int delay_compensation;
     int force_channels;
-    OpusSignal signal_type;
     OpusBandwidth user_bandwidth;
     OpusBandwidth max_bandwidth;
-    int voice_ratio;
     int Fs;
     int use_vbr;
     int vbr_constraint;
@@ -57,20 +53,17 @@ public class OpusEncoder {
     int bitrate_bps;
     int user_bitrate_bps;
     int lsb_depth;
-    int encoder_buffer;
     int lfe;
     final TonalityAnalysisState analysis = new TonalityAnalysisState();
 
     // partial reset happens below this line
     int stream_channels;
     short hybrid_stereo_width_Q14;
-    int variable_HP_smth2_Q15;
     final int[] hp_mem = new int[4];
     int prev_framesize;
     OpusBandwidth bandwidth;
     int first;
     int[] energy_masking;
-    final short[] delay_buffer = new short[OpusConstants.MAX_ENCODER_BUFFER * 2];
     OpusBandwidth detected_bandwidth;
     int rangeFinal;
 
@@ -84,14 +77,10 @@ public class OpusEncoder {
 
     void reset() {
         silk_mode.Reset();
-        application = OpusApplication.OPUS_APPLICATION_UNIMPLEMENTED;
         channels = 0;
-        delay_compensation = 0;
         force_channels = 0;
-        signal_type = OpusSignal.OPUS_SIGNAL_UNKNOWN;
         user_bandwidth = OpusBandwidth.OPUS_BANDWIDTH_UNKNOWN;
         max_bandwidth = OpusBandwidth.OPUS_BANDWIDTH_UNKNOWN;
-        voice_ratio = 0;
         Fs = 0;
         use_vbr = 0;
         vbr_constraint = 0;
@@ -99,7 +88,6 @@ public class OpusEncoder {
         bitrate_bps = 0;
         user_bitrate_bps = 0;
         lsb_depth = 0;
-        encoder_buffer = 0;
         lfe = 0;
         analysis.Reset();
         PartialReset();
@@ -111,13 +99,11 @@ public class OpusEncoder {
     void PartialReset() {
         stream_channels = 0;
         hybrid_stereo_width_Q14 = 0;
-        variable_HP_smth2_Q15 = 0;
         Arrays.fill(hp_mem, 0, 4, 0);
         prev_framesize = 0;
         bandwidth = OpusBandwidth.OPUS_BANDWIDTH_UNKNOWN;
         first = 0;
         energy_masking = null;
-        Arrays.fill(delay_buffer, 0, OpusConstants.MAX_ENCODER_BUFFER * 2, (short) 0);
         detected_bandwidth = OpusBandwidth.OPUS_BANDWIDTH_UNKNOWN;
         rangeFinal = 0;
         //CeltEncoder.Reset();
@@ -132,7 +118,6 @@ public class OpusEncoder {
         hybrid_stereo_width_Q14 = 1 << 14;
         first = 1;
         bandwidth = OpusBandwidth.OPUS_BANDWIDTH_FULLBAND;
-        variable_HP_smth2_Q15 = 193536;
     }
 
     /**
@@ -146,26 +131,8 @@ public class OpusEncoder {
      * @param Fs          Sampling rate of input signal (Hz). This must be one of 8000,
      *                    12000, 16000, 24000, or 48000.
      * @param channels    Number of channels (1 or 2) in input signal
-     * @param application There are three coding modes:
-     *                    <p>
-     *                    OPUS_APPLICATION_VOIP gives best quality at a given bitrate for voice
-     *                    signals. It enhances the input signal by high-pass filtering and
-     *                    emphasizing formants and harmonics.Optionally it includes in-band forward
-     *                    error correction to protect against packet loss. Use this mode for
-     *                    typical VoIP applications. Because of the enhancement, even at high
-     *                    bitrates the output may sound different from the input.
-     *                    <p>
-     *                    OPUS_APPLICATION_AUDIO gives best quality at a given bitrate for most
-     *                    non-voice signals like music. Use this mode for music and mixed
-     *                    (music/voice) content, broadcast, and applications requiring less than 15
-     *                    ms of coding delay.
-     *                    <p>
-     *                    OPUS_APPLICATION_RESTRICTED_LOWDELAY configures low-delay mode that
-     *                    disables the speech-optimized mode in exchange for slightly reduced
-     *                    delay. This mode can only be set on an newly initialized or freshly reset
-     *                    encoder because it changes the codec delay.
      */
-    public OpusEncoder(int Fs, int channels, OpusApplication application) throws OpusException {
+    public OpusEncoder(int Fs, int channels) throws OpusException {
         int ret;
         if ((Fs != 48000 && Fs != 24000 && Fs != 16000 && Fs != 12000 && Fs != 8000)) {
             throw new IllegalArgumentException("Sample rate is invalid (must be 8/12/16/24/48 Khz)");
@@ -174,7 +141,7 @@ public class OpusEncoder {
             throw new IllegalArgumentException("Number of channels must be 1 or 2");
         }
 
-        ret = opus_init_encoder(Fs, channels, application);
+        ret = opus_init_encoder(Fs, channels);
         if (ret != OpusError.OPUS_OK) {
             if (ret == OpusError.OPUS_BAD_ARG) {
                 throw new IllegalArgumentException("OPUS_BAD_ARG when creating encoder");
@@ -183,12 +150,11 @@ public class OpusEncoder {
         }
     }
 
-    int opus_init_encoder(int Fs, int channels, OpusApplication application) {
+    int opus_init_encoder(int Fs, int channels) {
         CeltEncoder celt_enc;
         int err;
 
-        if ((Fs != 48000 && Fs != 24000 && Fs != 16000 && Fs != 12000 && Fs != 8000) || (channels != 1 && channels != 2)
-                || application == OpusApplication.OPUS_APPLICATION_UNIMPLEMENTED) {
+        if ((Fs != 48000 && Fs != 24000 && Fs != 16000 && Fs != 12000 && Fs != 8000) || (channels != 1 && channels != 2)) {
             return OpusError.OPUS_BAD_ARG;
         }
 
@@ -218,22 +184,13 @@ public class OpusEncoder {
         this.vbr_constraint = 1;
         this.user_bitrate_bps = OpusConstants.OPUS_AUTO;
         this.bitrate_bps = 3000 + Fs * channels;
-        this.application = application;
-        this.signal_type = OpusSignal.OPUS_SIGNAL_AUTO;
         this.user_bandwidth = OpusBandwidth.OPUS_BANDWIDTH_AUTO;
         this.max_bandwidth = OpusBandwidth.OPUS_BANDWIDTH_FULLBAND;
         this.force_channels = OpusConstants.OPUS_AUTO;
-        this.voice_ratio = -1;
-        this.encoder_buffer = this.Fs / 100;
         this.lsb_depth = 24;
         this.variable_duration = OpusFramesize.OPUS_FRAMESIZE_ARG;
 
-        /* Delay compensation of 4 ms (2.5 ms for SILK's extra look-ahead
-           + 1.5 ms for SILK resamplers and stereo prediction) */
-        this.delay_compensation = this.Fs / 250;
-
         this.hybrid_stereo_width_Q14 = 1 << 14;
-        this.variable_HP_smth2_Q15 = Inlines.silk_LSHIFT(Inlines.silk_lin2log(TuningParameters.VARIABLE_HP_MIN_CUTOFF_HZ), 8);
         this.first = 1;
         this.bandwidth = OpusBandwidth.OPUS_BANDWIDTH_FULLBAND;
 
@@ -284,16 +241,11 @@ public class OpusEncoder {
         int bytes_target;
         short[] pcm_buf;
         int nb_compr_bytes;
-        int cutoff_Hz, hp_freq_smth1;
-        int voice_est;
-        /* Probability of voice in Q7 */
         int equiv_rate;
-        int delay_compensation;
         int frame_rate;
         OpusBandwidth curr_bandwidth;
         int max_data_bytes;
         /* Max number of bytes we're allowed to use */
-        int total_buffer;
         CeltMode celt_mode;
         AnalysisInfo analysis_info = new AnalysisInfo(); // porting note: stack var
         int analysis_read_pos_bak = -1;
@@ -310,15 +262,9 @@ public class OpusEncoder {
         }
 
         celt_enc = Celt_Encoder;
-        if (application == OpusApplication.OPUS_APPLICATION_RESTRICTED_LOWDELAY) {
-            delay_compensation = 0;
-        } else {
-            delay_compensation = this.delay_compensation;
-        }
 
         lsb_depth = Inlines.IMIN(lsb_depth, this.lsb_depth);
         celt_mode = celt_enc.GetMode();
-        this.voice_ratio = -1;
 
         if (analysis.enabled) {
             analysis_info.valid = 0;
@@ -342,10 +288,6 @@ public class OpusEncoder {
             this.detected_bandwidth = OpusBandwidth.OPUS_BANDWIDTH_UNKNOWN;
             if (analysis_info.valid != 0) {
                 int analysis_bandwidth;
-                if (signal_type == OpusSignal.OPUS_SIGNAL_AUTO) {
-                    this.voice_ratio = (int) Math.floor(.5f + 100 * (1 - analysis_info.music_prob));
-                }
-
                 analysis_bandwidth = analysis_info.bandwidth;
                 if (analysis_bandwidth <= 12) {
                     this.detected_bandwidth = OpusBandwidth.OPUS_BANDWIDTH_NARROWBAND;
@@ -361,7 +303,6 @@ public class OpusEncoder {
             }
         }
 
-        total_buffer = delay_compensation;
         this.bitrate_bps = user_bitrate_to_bitrate(frame_size, max_data_bytes);
 
         frame_rate = Fs / frame_size;
@@ -406,27 +347,10 @@ public class OpusEncoder {
         /* Equivalent 20-ms rate for mode/channel/bandwidth decisions */
         equiv_rate = bitrate_bps - (40 * channels + 20) * (Fs / frame_size - 50);
 
-        if (signal_type == OpusSignal.OPUS_SIGNAL_VOICE) {
-            voice_est = 127;
-        } else if (signal_type == OpusSignal.OPUS_SIGNAL_MUSIC) {
-            voice_est = 0;
-        } else if (voice_ratio >= 0) {
-            voice_est = voice_ratio * 327 >> 8;
-            /* For AUDIO, never be more than 90% confident of having speech */
-            if (application == OpusApplication.OPUS_APPLICATION_AUDIO) {
-                voice_est = Inlines.IMIN(voice_est, 115);
-            }
-        } else if (application == OpusApplication.OPUS_APPLICATION_VOIP) {
-            voice_est = 115;
-        } else {
-            voice_est = 48;
-        }
-
         if (force_channels != OpusConstants.OPUS_AUTO && channels == 2) {
             this.stream_channels = force_channels;
         } else /* Rate-dependent mono-stereo decision */ if (channels == 2) {
-            int stereo_threshold;
-            stereo_threshold = OpusTables.stereo_music_threshold + ((voice_est * voice_est * (OpusTables.stereo_voice_threshold - OpusTables.stereo_music_threshold)) >> 14);
+            int stereo_threshold = OpusTables.stereo_threshold;
             if (stream_channels == 2) {
                 stereo_threshold -= 1000;
             } else {
@@ -440,25 +364,14 @@ public class OpusEncoder {
 
         /* Automatic (rate-dependent) bandwidth selection */
         {
-            int[] voice_bandwidth_thresholds;
-            int[] music_bandwidth_thresholds;
-            int[] bandwidth_thresholds = new int[8];
+            int[] bandwidth_thresholds;
             OpusBandwidth bandwidth = OpusBandwidth.OPUS_BANDWIDTH_FULLBAND;
             int equiv_rate2;
 
             equiv_rate2 = equiv_rate;
-            if (channels == 2 && force_channels != 1) {
-                voice_bandwidth_thresholds = OpusTables.stereo_voice_bandwidth_thresholds;
-                music_bandwidth_thresholds = OpusTables.stereo_music_bandwidth_thresholds;
-            } else {
-                voice_bandwidth_thresholds = OpusTables.mono_voice_bandwidth_thresholds;
-                music_bandwidth_thresholds = OpusTables.mono_music_bandwidth_thresholds;
-            }
-            /* Interpolate bandwidth thresholds depending on voice estimation */
-            for (i = 0; i < 8; i++) {
-                bandwidth_thresholds[i] = music_bandwidth_thresholds[i]
-                        + ((voice_est * voice_est * (voice_bandwidth_thresholds[i] - music_bandwidth_thresholds[i])) >> 14);
-            }
+            bandwidth_thresholds = (channels == 2 && force_channels != 1)
+                    ? OpusTables.stereo_bandwidth_thresholds
+                    : OpusTables.mono_bandwidth_thresholds;
             do {
                 int threshold, hysteresis;
                 threshold = bandwidth_thresholds[2 * (OpusBandwidthHelpers.GetOrdinal(bandwidth) - OpusBandwidthHelpers.GetOrdinal(OpusBandwidth.OPUS_BANDWIDTH_MEDIUMBAND))];
@@ -596,22 +509,8 @@ public class OpusEncoder {
 
         enc.enc_init(data, data_ptr, (max_data_bytes - 1));
 
-        pcm_buf = new short[(total_buffer + frame_size) * channels];
-        System.arraycopy(delay_buffer, ((encoder_buffer - total_buffer) * channels), pcm_buf, 0, total_buffer * channels);
-
-        hp_freq_smth1 = Inlines.silk_LSHIFT(Inlines.silk_lin2log(TuningParameters.VARIABLE_HP_MIN_CUTOFF_HZ), 8);
-
-        this.variable_HP_smth2_Q15 = Inlines.silk_SMLAWB(variable_HP_smth2_Q15,
-                hp_freq_smth1 - variable_HP_smth2_Q15, ((int) ((TuningParameters.VARIABLE_HP_SMTH_COEF2) * ((long) 1 << (16)) + 0.5))/*Inlines.SILK_CONST(TuningParameters.VARIABLE_HP_SMTH_COEF2, 16)*/);
-
-        /* convert from log scale to Hertz */
-        cutoff_Hz = Inlines.silk_log2lin(Inlines.silk_RSHIFT(variable_HP_smth2_Q15, 8));
-
-        if (application == OpusApplication.OPUS_APPLICATION_VOIP) {
-            CodecHelpers.hp_cutoff(pcm, pcm_ptr, cutoff_Hz, pcm_buf, (total_buffer * channels), hp_mem, frame_size, channels, Fs);
-        } else {
-            CodecHelpers.dc_reject(pcm, pcm_ptr, 3, pcm_buf, total_buffer * channels, hp_mem, frame_size, channels, Fs);
-        }
+        pcm_buf = new short[frame_size * channels];
+        CodecHelpers.dc_reject(pcm, pcm_ptr, 3, pcm_buf, 0, hp_mem, frame_size, channels, Fs);
 
         /* CELT processing */
         {
@@ -656,15 +555,6 @@ public class OpusEncoder {
             nb_compr_bytes = bytes_target;
         }
 
-        if (channels * (encoder_buffer - (frame_size + total_buffer)) > 0) {
-            System.arraycopy(delay_buffer, channels * frame_size, delay_buffer, 0, channels * (encoder_buffer - frame_size - total_buffer));
-            System.arraycopy(pcm_buf, 0, delay_buffer, (channels * (encoder_buffer - frame_size - total_buffer)), (frame_size + total_buffer) * channels);
-        } else {
-            System.arraycopy(pcm_buf, (frame_size + total_buffer - encoder_buffer) * channels, delay_buffer, 0, encoder_buffer * channels);
-        }
-
-        /* stereo_fade() needs to be after the buffer copying because we don't
-           want it to affect the delay buffer */
         if (energy_masking == null && channels == 2) {
             /* Apply stereo width reduction (at low bitrates) */
             int stereo_width_Q14 = Inlines.IMIN((1 << 14), 2 * Inlines.IMAX(0, equiv_rate - 30000));
@@ -744,16 +634,9 @@ public class OpusEncoder {
             throw new IllegalArgumentException("Output buffer is too small: Stated size is " + max_data_bytes + " bytes, actual size is " + (out_data.length - out_data_offset) + " bytes");
         }
 
-        int delay_compensation;
-        if (application == OpusApplication.OPUS_APPLICATION_RESTRICTED_LOWDELAY) {
-            delay_compensation = 0;
-        } else {
-            delay_compensation = this.delay_compensation;
-        }
-
         int internal_frame_size = CodecHelpers.compute_frame_size(in_pcm, pcm_offset, frame_size,
                 variable_duration, channels, Fs, bitrate_bps,
-                delay_compensation, analysis.subframe_mem, analysis.enabled);
+                analysis.subframe_mem, analysis.enabled);
 
         // Check that input pcm length is >= frame_size
         if (pcm_offset + internal_frame_size > in_pcm.length) {
@@ -800,22 +683,6 @@ public class OpusEncoder {
             spcm[c] = (short) (((in_pcm[idx] & 0xff) | (in_pcm[idx + 1] << 8)) & 0xffff);
         }
         return encode(spcm, 0, frame_size, out_data, out_data_offset, max_data_bytes);
-    }
-
-    /// <summary>
-    /// Gets or sets the application (or signal type) of the input signal. This hints
-    /// to the encoder what type of details we want to preserve in the encoding.
-    /// This cannot be changed after the encoder has started
-    /// </summary>
-    public OpusApplication getApplication() {
-        return application;
-    }
-
-    public void setApplication(OpusApplication value) {
-        if (first == 0 && application != value) {
-            throw new IllegalArgumentException("Application cannot be changed after encoding has started");
-        }
-        application = value;
     }
 
     /// <summary>
@@ -932,26 +799,10 @@ public class OpusEncoder {
     }
 
     /// <summary>
-    /// Gets or sets a hint to the encoder for what type of audio is being processed, voice or music
-    /// </summary>
-    public OpusSignal getSignalType() {
-        return signal_type;
-    }
-
-    public void setSignalType(OpusSignal value) {
-        signal_type = value;
-    }
-
-    /// <summary>
     /// Gets the number of samples of audio that are being stored in a buffer and are therefore contributing to latency.
     /// </summary>
     public int getLookahead() {
-        int returnVal = Fs / 400;
-        if (application != OpusApplication.OPUS_APPLICATION_RESTRICTED_LOWDELAY) {
-            returnVal += delay_compensation;
-        }
-
-        return returnVal;
+        return Fs / 400;
     }
 
     /// <summary>

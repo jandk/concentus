@@ -241,8 +241,10 @@ class Pitch {
         for (i = 0; i < max_pitch >> 1; i++) {
             int sum;
             xcorr[i] = 0;
-            if (Inlines.abs(i - 2 * best_pitch[0]) > 2 && Inlines.abs(i - 2 * best_pitch[1]) > 2) {
-                continue;
+            if (Math.abs(i - 2 * best_pitch[0]) > 2) {
+                if (Math.abs(i - 2 * best_pitch[1]) > 2) {
+                    continue;
+                }
             }
             sum = 0;
             for (j = 0; j < len >> 1; j++) {
@@ -363,12 +365,14 @@ class Pitch {
                 g1 = (Inlines.VSHR32(Inlines.MULT16_32_Q15(Inlines.celt_rsqrt_norm(t), xy), sh + 1));
             }
 
-            if (Inlines.abs(T1 - prev_period) <= 1) {
+            if (Math.abs(T1 - prev_period) <= 1) {
                 cont = prev_gain;
-            } else if (Inlines.abs(T1 - prev_period) <= 2 && 5 * k * k < T0) {
-                cont = Inlines.HALF16(prev_gain);
             } else {
-                cont = 0;
+                if (Math.abs(T1 - prev_period) <= 2 && 5 * k * k < T0) {
+                    cont = Inlines.HALF16(prev_gain);
+                } else {
+                    cont = 0;
+                }
             }
             thresh = Inlines.MAX16(((short) (0.5 + (.3f) * (1 << (15))))/*Inlines.QCONST16(.3f, 15)*/, (Inlines.MULT16_16_Q15(((short) (0.5 + (.7f) * (1 << (15))))/*Inlines.QCONST16(.7f, 15)*/, g0) - cont));
 

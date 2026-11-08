@@ -42,7 +42,6 @@ class AnalysisInfo {
     float tonality_slope = 0;
     float noisiness = 0;
     float activity = 0;
-    float music_prob = 0;
     int bandwidth = 0;
 
     AnalysisInfo() {
@@ -54,7 +53,6 @@ class AnalysisInfo {
         this.tonality_slope = other.tonality_slope;
         this.noisiness = other.noisiness;
         this.activity = other.activity;
-        this.music_prob = other.music_prob;
         this.bandwidth = other.bandwidth;
     }
 
@@ -64,7 +62,6 @@ class AnalysisInfo {
         tonality_slope = 0;
         noisiness = 0;
         activity = 0;
-        music_prob = 0;
         bandwidth = 0;
     }
 }

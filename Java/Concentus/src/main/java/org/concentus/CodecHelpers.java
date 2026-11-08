@@ -55,34 +55,6 @@ public class CodecHelpers {
         return (byte) (0xFF & toc);
     }
 
-    static void hp_cutoff(short[] input, int input_ptr, int cutoff_Hz, short[] output, int output_ptr, int[] hp_mem, int len, int channels, int Fs) {
-        int[] B_Q28 = new int[3];
-        int[] A_Q28 = new int[2];
-        int Fc_Q19, r_Q28, r_Q22;
-
-        Inlines.OpusAssert(cutoff_Hz <= Integer.MAX_VALUE / ((int) ((1.5f * 3.14159f / 1000) * ((long) 1 << (19)) + 0.5))/*Inlines.SILK_CONST(1.5f * 3.14159f / 1000, 19)*/);
-        Fc_Q19 = Inlines.silk_DIV32_16(Inlines.silk_SMULBB(((int) ((1.5f * 3.14159f / 1000) * ((long) 1 << (19)) + 0.5))/*Inlines.SILK_CONST(1.5f * 3.14159f / 1000, 19)*/, cutoff_Hz), Fs / 1000);
-        Inlines.OpusAssert(Fc_Q19 > 0 && Fc_Q19 < 32768);
-
-        r_Q28 = ((int) ((1.0f) * ((long) 1 << (28)) + 0.5))/*Inlines.SILK_CONST(1.0f, 28)*/ - Inlines.silk_MUL(((int) ((0.92f) * ((long) 1 << (9)) + 0.5))/*Inlines.SILK_CONST(0.92f, 9)*/, Fc_Q19);
-
-        /* b = r * [ 1; -2; 1 ]; */
-        /* a = [ 1; -2 * r * ( 1 - 0.5 * Fc^2 ); r^2 ]; */
-        B_Q28[0] = r_Q28;
-        B_Q28[1] = Inlines.silk_LSHIFT(-r_Q28, 1);
-        B_Q28[2] = r_Q28;
-
-        /* -r * ( 2 - Fc * Fc ); */
-        r_Q22 = Inlines.silk_RSHIFT(r_Q28, 6);
-        A_Q28[0] = Inlines.silk_SMULWW(r_Q22, Inlines.silk_SMULWW(Fc_Q19, Fc_Q19) - ((int) ((2.0f) * ((long) 1 << (22)) + 0.5))/*Inlines.SILK_CONST(2.0f, 22)*/);
-        A_Q28[1] = Inlines.silk_SMULWW(r_Q22, r_Q22);
-
-        Filters.silk_biquad_alt(input, input_ptr, B_Q28, A_Q28, hp_mem, 0, output, output_ptr, len, channels);
-        if (channels == 2) {
-            Filters.silk_biquad_alt(input, input_ptr + 1, B_Q28, A_Q28, hp_mem, 2, output, output_ptr + 1, len, channels);
-        }
-    }
-
     static void dc_reject(short[] input, int input_ptr, int cutoff_Hz, short[] output, int output_ptr, int[] hp_mem, int len, int channels, int Fs) {
         int c, i;
         int shift;
@@ -264,7 +236,7 @@ public class CodecHelpers {
     }
 
     static int optimize_framesize(short[] x, int x_ptr, int len, int C, int Fs,
-                                  int bitrate, int tonality, float[] mem, int buffering) {
+                                  int bitrate, int tonality, float[] mem) {
         int N;
         int i;
         float[] e = new float[MAX_DYNAMIC_FRAMESIZE + 4];
@@ -272,29 +244,12 @@ public class CodecHelpers {
         int memx;
         int bestLM = 0;
         int subframe;
-        int pos;
-        int offset;
         int[] sub;
 
         subframe = Fs / 400;
         sub = new int[subframe];
         e[0] = mem[0];
         e_1[0] = 1.0f / (CeltConstants.EPSILON + mem[0]);
-        if (buffering != 0) {
-            /* Consider the CELT delay when not in restricted-lowdelay */
-            /* We assume the buffering is between 2.5 and 5 ms */
-            offset = 2 * subframe - buffering;
-            Inlines.OpusAssert(offset >= 0 && offset <= subframe);
-            len -= offset;
-            e[1] = mem[1];
-            e_1[1] = 1.0f / (CeltConstants.EPSILON + mem[1]);
-            e[2] = mem[2];
-            e_1[2] = 1.0f / (CeltConstants.EPSILON + mem[2]);
-            pos = 3;
-        } else {
-            pos = 1;
-            offset = 0;
-        }
         N = Inlines.IMIN(len / subframe, MAX_DYNAMIC_FRAMESIZE);
         /* Just silencing a warning, it's really initialized later */
         memx = 0;
@@ -304,7 +259,7 @@ public class CodecHelpers {
             int j;
             tmp = CeltConstants.EPSILON;
 
-            Downmix.downmix_int(x, x_ptr, sub, 0, subframe, i * subframe + offset, 0, -2, C);
+            Downmix.downmix_int(x, x_ptr, sub, 0, subframe, i * subframe, 0, -2, C);
             if (i == 0) {
                 memx = sub[0];
             }
@@ -313,22 +268,12 @@ public class CodecHelpers {
                 tmp += (tmpx - memx) * (float) (tmpx - memx);
                 memx = tmpx;
             }
-            e[i + pos] = tmp;
-            e_1[i + pos] = 1.0f / tmp;
+            e[i + 1] = tmp;
+            e_1[i + 1] = 1.0f / tmp;
         }
-        /* Hack to get 20 ms working with APPLICATION_AUDIO
-           The real problem is that the corresponding memory needs to use 1.5 ms
-           from this frame and 1 ms from the next frame */
-        e[i + pos] = e[i + pos - 1];
-        if (buffering != 0) {
-            N = Inlines.IMIN(MAX_DYNAMIC_FRAMESIZE, N + 2);
-        }
+        e[i + 1] = e[i];
         bestLM = transient_viterbi(e, e_1, N, (int) ((1.0f + .5f * tonality) * (60 * C + 40)), bitrate / 400);
         mem[0] = e[1 << bestLM];
-        if (buffering != 0) {
-            mem[1] = e[(1 << bestLM) + 1];
-            mem[2] = e[(1 << bestLM) + 2];
-        }
         return bestLM;
     }
 
@@ -359,13 +304,13 @@ public class CodecHelpers {
 
     static int compute_frame_size(short[] analysis_pcm, int analysis_pcm_ptr, int frame_size,
                                   OpusFramesize variable_duration, int C, int Fs, int bitrate_bps,
-                                  int delay_compensation, float[] subframe_mem, boolean analysis_enabled
+                                  float[] subframe_mem, boolean analysis_enabled
     ) {
 
         if (analysis_enabled && variable_duration == OpusFramesize.OPUS_FRAMESIZE_VARIABLE && frame_size >= Fs / 200) {
             int LM = 3;
             LM = optimize_framesize(analysis_pcm, analysis_pcm_ptr, frame_size, C, Fs, bitrate_bps,
-                    0, subframe_mem, delay_compensation);
+                    0, subframe_mem);
             while ((Fs / 400 << LM) > frame_size) {
                 LM--;
             }

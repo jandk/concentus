@@ -542,8 +542,8 @@ class CeltCommon {
                 int curr0, curr1;
                 curr0 = Inlines.IMIN(cost0, cost1 + lambda);
                 curr1 = Inlines.IMIN(cost0 + lambda, cost1);
-                cost0 = curr0 + Inlines.abs(metric[i] - 2 * CeltTables.tf_select_table[LM][4 * isTransient + 2 * sel]);
-                cost1 = curr1 + Inlines.abs(metric[i] - 2 * CeltTables.tf_select_table[LM][4 * isTransient + 2 * sel + 1]);
+                cost0 = curr0 + Math.abs(metric[i] - 2 * CeltTables.tf_select_table[LM][4 * isTransient + 2 * sel]);
+                cost1 = curr1 + Math.abs(metric[i] - 2 * CeltTables.tf_select_table[LM][4 * isTransient + 2 * sel + 1]);
             }
             cost0 = Inlines.IMIN(cost0, cost1);
             selcost[sel] = cost0;
@@ -579,8 +579,8 @@ class CeltCommon {
                 curr1 = from1;
                 path1[i] = 1;
             }
-            cost0 = curr0 + Inlines.abs(metric[i] - 2 * CeltTables.tf_select_table[LM][4 * isTransient + 2 * tf_select]);
-            cost1 = curr1 + Inlines.abs(metric[i] - 2 * CeltTables.tf_select_table[LM][4 * isTransient + 2 * tf_select + 1]);
+            cost0 = curr0 + Math.abs(metric[i] - 2 * CeltTables.tf_select_table[LM][4 * isTransient + 2 * tf_select]);
+            cost1 = curr1 + Math.abs(metric[i] - 2 * CeltTables.tf_select_table[LM][4 * isTransient + 2 * tf_select + 1]);
         }
         tf_res[len - 1] = cost0 < cost1 ? 0 : 1;
         /* Viterbi backward pass to check the decisions */

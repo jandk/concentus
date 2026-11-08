@@ -55,5 +55,4 @@ public class OpusConstants {
     /* 15 ms at 48 kHz */
     public static final int DETECT_SIZE = 200;
 
-    public static final int MAX_ENCODER_BUFFER = 480;
 }

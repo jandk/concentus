@@ -74,15 +74,8 @@ class Analysis {
 
     static void tonality_get_info(TonalityAnalysisState tonal, AnalysisInfo info_out, int len) {
         int pos;
-        int curr_lookahead;
-        float psum;
-        int i;
 
         pos = tonal.read_pos;
-        curr_lookahead = tonal.write_pos - tonal.read_pos;
-        if (curr_lookahead < 0) {
-            curr_lookahead += OpusConstants.DETECT_SIZE;
-        }
 
         if (len > 480 && pos != tonal.write_pos) {
             pos++;
@@ -107,23 +100,6 @@ class Analysis {
             tonal.read_pos -= OpusConstants.DETECT_SIZE;
         }
 
-        /* Compensate for the delay in the features themselves.
-           FIXME: Need a better estimate the 10 I just made up */
-        curr_lookahead = Inlines.IMAX(curr_lookahead - 10, 0);
-
-        psum = 0;
-        /* Summing the probability of transition patterns that involve music at
-           time (DETECT_SIZE-curr_lookahead-1) */
-        for (i = 0; i < OpusConstants.DETECT_SIZE - curr_lookahead; i++) {
-            psum += tonal.pmusic[i];
-        }
-        for (; i < OpusConstants.DETECT_SIZE; i++) {
-            psum += tonal.pspeech[i];
-        }
-        psum = psum * tonal.music_confidence + (1 - psum) * tonal.speech_confidence;
-        /*printf("%f %f %f\n", psum, info_out.music_prob, info_out.tonality);*/
-
-        info_out.music_prob = psum;
     }
 
     /// <summary>
@@ -151,19 +127,14 @@ class Analysis {
         float[] noisiness;
         float[] band_tonality = new float[OpusConstants.NB_TBANDS];
         float[] logE = new float[OpusConstants.NB_TBANDS];
-        float[] BFCC = new float[8];
-        float[] features = new float[25];
         float frame_tonality;
         float max_frame_tonality;
         /*float tw_sum=0;*/
         float frame_noisiness;
         float pi4 = (float) (M_PI * M_PI * M_PI * M_PI);
         float slope = 0;
-        float frame_stationarity;
         float relativeE;
-        float[] frame_probs = new float[2];
-        float alpha, alphaE, alphaE2;
-        float frame_loudness;
+        float alphaE2;
         float bandwidth_mask;
         int bandwidth = 0;
         float maxE = 0;
@@ -171,14 +142,8 @@ class Analysis {
         int remaining;
         AnalysisInfo info; //[porting note] pointer
 
-        tonal.last_transition++;
-        alpha = 1.0f / Inlines.IMIN(20, 1 + tonal.count);
-        alphaE = 1.0f / Inlines.IMIN(50, 1 + tonal.count);
         alphaE2 = 1.0f / Inlines.IMIN(1000, 1 + tonal.count);
 
-        if (tonal.count < 4) {
-            tonal.music_prob = 0.5f;
-        }
         kfft = celt_mode.mdct.kfft[0];
         if (tonal.count == 0) {
             tonal.mem_fill = 240;
@@ -257,7 +222,6 @@ class Analysis {
         /*tw_sum = 0;*/
         info.activity = 0;
         frame_noisiness = 0;
-        frame_stationarity = 0;
         if (tonal.count == 0) {
             for (b = 0; b < OpusConstants.NB_TBANDS; b++) {
                 tonal.lowE[b] = 1e10f;
@@ -265,7 +229,6 @@ class Analysis {
             }
         }
         relativeE = 0;
-        frame_loudness = 0;
         for (b = 0; b < OpusConstants.NB_TBANDS; b++) {
             float E = 0, tE = 0, nE = 0;
             float L1, L2;
@@ -283,7 +246,6 @@ class Analysis {
             tonal.E[tonal.E_count][b] = E;
             frame_noisiness += nE / (1e-15f + E);
 
-            frame_loudness += (float) Math.sqrt(E + 1e-10f);
             logE[b] = (float) Math.log(E + 1e-10f);
             tonal.lowE[b] = Inlines.MIN32(logE[b], tonal.lowE[b] + 0.01f);
             tonal.highE[b] = Inlines.MAX32(logE[b], tonal.highE[b] - 0.1f);
@@ -302,7 +264,6 @@ class Analysis {
             stationarity = Inlines.MIN16(0.99f, L1 / (float) Math.sqrt(1e-15 + OpusConstants.NB_FRAMES * L2));
             stationarity *= stationarity;
             stationarity *= stationarity;
-            frame_stationarity += stationarity;
             /*band_tonality[b] = tE/(1e-15+E)*/
             band_tonality[b] = Inlines.MAX16(tE / (1e-15f + E), stationarity * tonal.prev_band_tonality[b]);
             frame_tonality += band_tonality[b];
@@ -349,22 +310,6 @@ class Analysis {
         if (tonal.count <= 2) {
             bandwidth = 20;
         }
-        frame_loudness = 20 * (float) Math.log10(frame_loudness);
-        tonal.Etracker = Inlines.MAX32(tonal.Etracker - .03f, frame_loudness);
-        tonal.lowECount *= (1 - alphaE);
-        if (frame_loudness < tonal.Etracker - 30) {
-            tonal.lowECount += alphaE;
-        }
-
-        for (i = 0; i < 8; i++) {
-            float sum = 0;
-            for (b = 0; b < 16; b++) {
-                sum += OpusTables.dct_table[i * 16 + b] * logE[b];
-            }
-            BFCC[i] = sum;
-        }
-
-        frame_stationarity /= OpusConstants.NB_TBANDS;
         relativeE /= OpusConstants.NB_TBANDS;
         if (tonal.count < 10) {
             relativeE = 0.5f;
@@ -381,164 +326,6 @@ class Analysis {
         tonal.E_count = (tonal.E_count + 1) % OpusConstants.NB_FRAMES;
         tonal.count++;
         info.tonality = frame_tonality;
-
-        for (i = 0; i < 4; i++) {
-            features[i] = -0.12299f * (BFCC[i] + tonal.mem[i + 24]) + 0.49195f * (tonal.mem[i] + tonal.mem[i + 16]) + 0.69693f * tonal.mem[i + 8] - 1.4349f * tonal.cmean[i];
-        }
-
-        for (i = 0; i < 4; i++) {
-            tonal.cmean[i] = (1 - alpha) * tonal.cmean[i] + alpha * BFCC[i];
-        }
-
-        for (i = 0; i < 4; i++) {
-            features[4 + i] = 0.63246f * (BFCC[i] - tonal.mem[i + 24]) + 0.31623f * (tonal.mem[i] - tonal.mem[i + 16]);
-        }
-        for (i = 0; i < 3; i++) {
-            features[8 + i] = 0.53452f * (BFCC[i] + tonal.mem[i + 24]) - 0.26726f * (tonal.mem[i] + tonal.mem[i + 16]) - 0.53452f * tonal.mem[i + 8];
-        }
-
-        if (tonal.count > 5) {
-            for (i = 0; i < 9; i++) {
-                tonal.std[i] = (1 - alpha) * tonal.std[i] + alpha * features[i] * features[i];
-            }
-        }
-
-        for (i = 0; i < 8; i++) {
-            tonal.mem[i + 24] = tonal.mem[i + 16];
-            tonal.mem[i + 16] = tonal.mem[i + 8];
-            tonal.mem[i + 8] = tonal.mem[i];
-            tonal.mem[i] = BFCC[i];
-        }
-        for (i = 0; i < 9; i++) {
-            features[11 + i] = (float) Math.sqrt(tonal.std[i]);
-        }
-        features[20] = info.tonality;
-        features[21] = info.activity;
-        features[22] = frame_stationarity;
-        features[23] = info.tonality_slope;
-        features[24] = tonal.lowECount;
-
-        if (info.enabled) {
-            MultiLayerPerceptron.mlp_process(OpusTables.net, features, frame_probs);
-            frame_probs[0] = .5f * (frame_probs[0] + 1);
-            /* Curve fitting between the MLP probability and the actual probability */
-            frame_probs[0] = .01f + 1.21f * frame_probs[0] * frame_probs[0] - .23f * (float) Math.pow(frame_probs[0], 10);
-            /* Probability of active audio (as opposed to silence) */
-            frame_probs[1] = .5f * frame_probs[1] + .5f;
-            /* Consider that silence has a 50-50 probability. */
-            frame_probs[0] = frame_probs[1] * frame_probs[0] + (1 - frame_probs[1]) * .5f;
-
-            /*printf("%f %f ", frame_probs[0], frame_probs[1]);*/
-            {
-                /* Probability of state transition */
-                float tau;
-                /* Represents independence of the MLP probabilities, where
-                   beta=1 means fully independent. */
-                float beta;
-                /* Denormalized probability of speech (p0) and music (p1) after update */
-                float p0, p1;
-                /* Probabilities for "all speech" and "all music" */
-                float s0, m0;
-                /* Probability sum for renormalisation */
-                float psum;
-                /* Instantaneous probability of speech and music, with beta pre-applied. */
-                float speech0;
-                float music0;
-
-                /* One transition every 3 minutes of active audio */
-                tau = .00005f * frame_probs[1];
-                beta = .05f;
-                //if (1)
-                {
-                    /* Adapt beta based on how "unexpected" the new prob is */
-                    float p, q;
-                    p = Inlines.MAX16(.05f, Inlines.MIN16(.95f, frame_probs[0]));
-                    q = Inlines.MAX16(.05f, Inlines.MIN16(.95f, tonal.music_prob));
-                    beta = .01f + .05f * Inlines.ABS16(p - q) / (p * (1 - q) + q * (1 - p));
-                }
-                /* p0 and p1 are the probabilities of speech and music at this frame
-                   using only information from previous frame and applying the
-                   state transition model */
-                p0 = (1 - tonal.music_prob) * (1 - tau) + tonal.music_prob * tau;
-                p1 = tonal.music_prob * (1 - tau) + (1 - tonal.music_prob) * tau;
-                /* We apply the current probability with exponent beta to work around
-                   the fact that the probability estimates aren't independent. */
-                p0 *= (float) Math.pow(1 - frame_probs[0], beta);
-                p1 *= (float) Math.pow(frame_probs[0], beta);
-                /* Normalise the probabilities to get the Marokv probability of music. */
-                tonal.music_prob = p1 / (p0 + p1);
-                info.music_prob = tonal.music_prob;
-
-                /* This chunk of code deals with delayed decision. */
-                psum = 1e-20f;
-                /* Instantaneous probability of speech and music, with beta pre-applied. */
-                speech0 = (float) Math.pow(1 - frame_probs[0], beta);
-                music0 = (float) Math.pow(frame_probs[0], beta);
-                if (tonal.count == 1) {
-                    tonal.pspeech[0] = 0.5f;
-                    tonal.pmusic[0] = 0.5f;
-                }
-                /* Updated probability of having only speech (s0) or only music (m0),
-                   before considering the new observation. */
-                s0 = tonal.pspeech[0] + tonal.pspeech[1];
-                m0 = tonal.pmusic[0] + tonal.pmusic[1];
-                /* Updates s0 and m0 with instantaneous probability. */
-                tonal.pspeech[0] = s0 * (1 - tau) * speech0;
-                tonal.pmusic[0] = m0 * (1 - tau) * music0;
-                /* Propagate the transition probabilities */
-                for (i = 1; i < OpusConstants.DETECT_SIZE - 1; i++) {
-                    tonal.pspeech[i] = tonal.pspeech[i + 1] * speech0;
-                    tonal.pmusic[i] = tonal.pmusic[i + 1] * music0;
-                }
-                /* Probability that the latest frame is speech, when all the previous ones were music. */
-                tonal.pspeech[OpusConstants.DETECT_SIZE - 1] = m0 * tau * speech0;
-                /* Probability that the latest frame is music, when all the previous ones were speech. */
-                tonal.pmusic[OpusConstants.DETECT_SIZE - 1] = s0 * tau * music0;
-
-                /* Renormalise probabilities to 1 */
-                for (i = 0; i < OpusConstants.DETECT_SIZE; i++) {
-                    psum += tonal.pspeech[i] + tonal.pmusic[i];
-                }
-                psum = 1.0f / psum;
-                for (i = 0; i < OpusConstants.DETECT_SIZE; i++) {
-                    tonal.pspeech[i] *= psum;
-                    tonal.pmusic[i] *= psum;
-                }
-                psum = tonal.pmusic[0];
-                for (i = 1; i < OpusConstants.DETECT_SIZE; i++) {
-                    psum += tonal.pspeech[i];
-                }
-
-                /* Estimate our confidence in the speech/music decisions */
-                if (frame_probs[1] > .75) {
-                    if (tonal.music_prob > .9) {
-                        float adapt;
-                        adapt = 1.0f / (++tonal.music_confidence_count);
-                        tonal.music_confidence_count = Inlines.IMIN(tonal.music_confidence_count, 500);
-                        tonal.music_confidence += adapt * Inlines.MAX16(-.2f, frame_probs[0] - tonal.music_confidence);
-                    }
-                    if (tonal.music_prob < .1) {
-                        float adapt;
-                        adapt = 1.0f / (++tonal.speech_confidence_count);
-                        tonal.speech_confidence_count = Inlines.IMIN(tonal.speech_confidence_count, 500);
-                        tonal.speech_confidence += adapt * Inlines.MIN16(.2f, frame_probs[0] - tonal.speech_confidence);
-                    }
-                } else {
-                    if (tonal.music_confidence_count == 0) {
-                        tonal.music_confidence = .9f;
-                    }
-                    if (tonal.speech_confidence_count == 0) {
-                        tonal.speech_confidence = .1f;
-                    }
-                }
-            }
-            if (tonal.last_music != ((tonal.music_prob > .5f) ? 1 : 0)) {
-                tonal.last_transition = 0;
-            }
-            tonal.last_music = (tonal.music_prob > .5f) ? 1 : 0;
-        } else {
-            info.music_prob = 0;
-        }
 
         info.bandwidth = bandwidth;
         info.noisiness = frame_noisiness;

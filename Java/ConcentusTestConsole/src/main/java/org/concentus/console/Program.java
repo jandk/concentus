@@ -1,6 +1,8 @@
 package org.concentus.console;
 
-import org.concentus.*;
+import org.concentus.OpusDecoder;
+import org.concentus.OpusEncoder;
+import org.concentus.OpusException;
 import org.gagravarr.opus.OpusAudioData;
 import org.gagravarr.opus.OpusFile;
 import org.gagravarr.opus.OpusInfo;
@@ -28,7 +30,7 @@ public class Program {
 
         try {
             FileInputStream fileIn = new FileInputStream("F:\\concentus\\AudioData\\48Khz Stereo.raw");
-            OpusEncoder encoder = new OpusEncoder(48000, 2, OpusApplication.OPUS_APPLICATION_AUDIO);
+            OpusEncoder encoder = new OpusEncoder(48000, 2);
             encoder.setBitrate(96000);
             encoder.setSignalType(OpusSignal.OPUS_SIGNAL_MUSIC);
             encoder.setComplexity(10);
@@ -78,7 +80,7 @@ public class Program {
     {
         try {
             FileInputStream fileIn = new FileInputStream("C:\\Users\\lostromb\\Documents\\Visual Studio 2015\\Projects\\Concentus-git\\AudioData\\48Khz Stereo.raw");
-            OpusEncoder encoder = new OpusEncoder(48000, 2, OpusApplication.OPUS_APPLICATION_AUDIO);
+            OpusEncoder encoder = new OpusEncoder(48000, 2);
             encoder.setBitrate(96000);
             encoder.setSignalType(OpusSignal.OPUS_SIGNAL_MUSIC);
             encoder.setComplexity(0);

@@ -292,7 +292,7 @@ class CeltEncoder {
         pf_threshold = ((short) (0.5 + (.2f) * (1 << (15))))/*Inlines.QCONST16(.2f, 15)*/;
 
         /* Adjusting the threshold based on rate and continuity */
-        if (Inlines.abs(pitch_index.Val - prefilter_period) * 10 > pitch_index.Val) {
+        if (Math.abs(pitch_index.Val - prefilter_period) * 10 > pitch_index.Val) {
             pf_threshold += ((short) (0.5 + (.2f) * (1 << (15))))/*Inlines.QCONST16(.2f, 15)*/;
         }
         if (nbAvailableBytes < 25) {

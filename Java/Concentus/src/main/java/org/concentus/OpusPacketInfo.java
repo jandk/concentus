@@ -224,14 +224,14 @@ public class OpusPacketInfo {
         if (len < 1) {
             size.Val = -1;
             return -1;
-        } else if (Inlines.SignedByteToUnsignedInt(data[data_ptr]) < 252) {
-            size.Val = (short) Inlines.SignedByteToUnsignedInt(data[data_ptr]);
+        } else if (Byte.toUnsignedInt(data[data_ptr]) < 252) {
+            size.Val = (short) Byte.toUnsignedInt(data[data_ptr]);
             return 1;
         } else if (len < 2) {
             size.Val = -1;
             return -1;
         } else {
-            size.Val = (short) (4 * Inlines.SignedByteToUnsignedInt(data[data_ptr + 1]) + Inlines.SignedByteToUnsignedInt(data[data_ptr]));
+            size.Val = (short) (4 * Byte.toUnsignedInt(data[data_ptr + 1]) + Byte.toUnsignedInt(data[data_ptr]));
             return 2;
         }
     }
@@ -304,7 +304,7 @@ public class OpusPacketInfo {
                     return OpusError.OPUS_INVALID_PACKET;
                 }
                 /* Number of frames encoded in bits 0 to 5 */
-                ch = Inlines.SignedByteToUnsignedInt(data[data_ptr++]);
+                ch = Byte.toUnsignedInt(data[data_ptr++]);
                 count = ch & 0x3F;
                 if (count == 0 || framesize * count > 5760) {
                     return OpusError.OPUS_INVALID_PACKET;
@@ -318,7 +318,7 @@ public class OpusPacketInfo {
                         if (len <= 0) {
                             return OpusError.OPUS_INVALID_PACKET;
                         }
-                        p = Inlines.SignedByteToUnsignedInt(data[data_ptr++]);
+                        p = Byte.toUnsignedInt(data[data_ptr++]);
                         len--;
                         tmp = p == 255 ? 254 : p;
                         len -= tmp;

@@ -40,7 +40,6 @@ public class OpusMSEncoder {
 
     final ChannelLayout layout = new ChannelLayout();
     int lfe_stream = 0;
-    OpusApplication application = OpusApplication.OPUS_APPLICATION_AUDIO;
     OpusFramesize variable_duration = OpusFramesize.OPUS_FRAMESIZE_UNKNOWN;
     int surround = 0;
     int bitrate_bps = 0;
@@ -283,7 +282,6 @@ public class OpusMSEncoder {
             int streams,
             int coupled_streams,
             short[] mapping,
-            OpusApplication application,
             int surround
     ) {
         int i, ret;
@@ -302,7 +300,6 @@ public class OpusMSEncoder {
             this.lfe_stream = -1;
         }
         this.bitrate_bps = OpusConstants.OPUS_AUTO;
-        this.application = application;
         this.variable_duration = OpusFramesize.OPUS_FRAMESIZE_ARG;
         for (i = 0; i < layout.nb_channels; i++) {
             layout.mapping[i] = mapping[i];
@@ -314,7 +311,7 @@ public class OpusMSEncoder {
         encoder_ptr = 0;
 
         for (i = 0; i < layout.nb_coupled_streams; i++) {
-            ret = encoders[encoder_ptr].opus_init_encoder(Fs, 2, application);
+            ret = encoders[encoder_ptr].opus_init_encoder(Fs, 2);
             if (ret != OpusError.OPUS_OK) {
                 return ret;
             }
@@ -324,7 +321,7 @@ public class OpusMSEncoder {
             encoder_ptr += 1;
         }
         for (; i < layout.nb_streams; i++) {
-            ret = encoders[encoder_ptr].opus_init_encoder(Fs, 1, application);
+            ret = encoders[encoder_ptr].opus_init_encoder(Fs, 1);
             if (i == lfe_stream) {
                 encoders[encoder_ptr].setIsLFE(true);
             }
@@ -347,8 +344,7 @@ public class OpusMSEncoder {
             int mapping_family,
             BoxedValueInt streams,
             BoxedValueInt coupled_streams,
-            short[] mapping,
-            OpusApplication application
+            short[] mapping
     ) {
         streams.Val = 0;
         coupled_streams.Val = 0;
@@ -390,7 +386,7 @@ public class OpusMSEncoder {
             return OpusError.OPUS_UNIMPLEMENTED;
         }
         return opus_multistream_encoder_init(Fs, channels, streams.Val, coupled_streams.Val,
-                mapping, application, (channels > 2 && mapping_family == 1) ? 1 : 0);
+                mapping, (channels > 2 && mapping_family == 1) ? 1 : 0);
     }
 
     public static OpusMSEncoder Create(
@@ -398,8 +394,7 @@ public class OpusMSEncoder {
             int channels,
             int streams,
             int coupled_streams,
-            short[] mapping,
-            OpusApplication application
+            short[] mapping
     ) throws OpusException {
         int ret;
         OpusMSEncoder st;
@@ -408,7 +403,7 @@ public class OpusMSEncoder {
             throw new IllegalArgumentException("Invalid channel / stream configuration");
         }
         st = new OpusMSEncoder(streams, coupled_streams);
-        ret = st.opus_multistream_encoder_init(Fs, channels, streams, coupled_streams, mapping, application, 0);
+        ret = st.opus_multistream_encoder_init(Fs, channels, streams, coupled_streams, mapping, 0);
         if (ret != OpusError.OPUS_OK) {
             if (ret == OpusError.OPUS_BAD_ARG) {
                 throw new IllegalArgumentException("OPUS_BAD_ARG when creating MS encoder");
@@ -446,12 +441,11 @@ public class OpusMSEncoder {
             int mapping_family,
             BoxedValueInt streams,
             BoxedValueInt coupled_streams,
-            short[] mapping,
-            OpusApplication application
+            short[] mapping
     ) throws OpusException {
         int ret;
         OpusMSEncoder st;
-        if ((channels > 255) || (channels < 1) || application == OpusApplication.OPUS_APPLICATION_UNIMPLEMENTED) {
+        if ((channels > 255) || (channels < 1)) {
             throw new IllegalArgumentException("Invalid channel count or application");
         }
         BoxedValueInt nb_streams = new BoxedValueInt(0);
@@ -459,7 +453,7 @@ public class OpusMSEncoder {
         GetStreamCount(channels, mapping_family, nb_streams, nb_coupled_streams);
 
         st = new OpusMSEncoder(nb_streams.Val, nb_coupled_streams.Val);
-        ret = st.opus_multistream_surround_encoder_init(Fs, channels, mapping_family, streams, coupled_streams, mapping, application);
+        ret = st.opus_multistream_surround_encoder_init(Fs, channels, mapping_family, streams, coupled_streams, mapping);
         if (ret != OpusError.OPUS_OK) {
             if (ret == OpusError.OPUS_BAD_ARG) {
                 throw new IllegalArgumentException("Bad argument passed to CreateSurround");
@@ -577,15 +571,12 @@ public class OpusMSEncoder {
         celt_mode = encoders[encoder_ptr].GetCeltMode();
 
         {
-            int delay_compensation;
             int channels;
 
             channels = layout.nb_streams + layout.nb_coupled_streams;
-            delay_compensation = encoders[encoder_ptr].getLookahead();
-            delay_compensation -= Fs / 400;
             frame_size = CodecHelpers.compute_frame_size(pcm, pcm_ptr, analysis_frame_size,
                     variable_duration, channels, Fs, bitrate_bps,
-                    delay_compensation, subframe_mem, encoders[encoder_ptr].analysis.enabled);
+                    subframe_mem, encoders[encoder_ptr].analysis.enabled);
         }
 
         if (400 * frame_size < Fs) {
@@ -772,16 +763,6 @@ public class OpusMSEncoder {
         bitrate_bps = value;
     }
 
-    public OpusApplication getApplication() {
-        return encoders[0].getApplication();
-    }
-
-    public void setApplication(OpusApplication value) {
-        for (int encoder_ptr = 0; encoder_ptr < layout.nb_streams; encoder_ptr++) {
-            encoders[encoder_ptr].setApplication(value);
-        }
-    }
-
     public int getForceChannels() {
         return encoders[0].getForceChannels();
     }
@@ -849,16 +830,6 @@ public class OpusMSEncoder {
     public void setUseConstrainedVBR(boolean value) {
         for (int encoder_ptr = 0; encoder_ptr < layout.nb_streams; encoder_ptr++) {
             encoders[encoder_ptr].setUseConstrainedVBR(value);
-        }
-    }
-
-    public OpusSignal getSignalType() {
-        return encoders[0].getSignalType();
-    }
-
-    public void setSignalType(OpusSignal value) {
-        for (int encoder_ptr = 0; encoder_ptr < layout.nb_streams; encoder_ptr++) {
-            encoders[encoder_ptr].setSignalType(value);
         }
     }
 

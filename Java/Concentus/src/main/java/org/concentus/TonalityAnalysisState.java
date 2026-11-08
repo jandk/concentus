@@ -51,34 +51,10 @@ class TonalityAnalysisState {
     final float[] lowE = new float[OpusConstants.NB_TBANDS];
     final float[] highE = new float[OpusConstants.NB_TBANDS];
     final float[] meanE = new float[OpusConstants.NB_TOT_BANDS];
-    final float[] mem = new float[32];
-    final float[] cmean = new float[8];
-    final float[] std = new float[9];
-    float music_prob;
-    float Etracker;
-    float lowECount;
     int E_count;
-    int last_music;
-    int last_transition;
     int count;
     final float[] subframe_mem = new float[3];
     int analysis_offset;
-    /**
-     * Probability of having speech for time i to DETECT_SIZE-1 (and music
-     * before). pspeech[0] is the probability that all frames in the window are
-     * speech.
-     */
-    final float[] pspeech = new float[OpusConstants.DETECT_SIZE];
-    /**
-     * Probability of having music for time i to DETECT_SIZE-1 (and speech
-     * before). pmusic[0] is the probability that all frames in the window are
-     * music.
-     */
-    final float[] pmusic = new float[OpusConstants.DETECT_SIZE];
-    float speech_confidence;
-    float music_confidence;
-    int speech_confidence_count;
-    int music_confidence_count;
     int write_pos;
     int read_pos;
     int read_subframe;
@@ -104,24 +80,10 @@ class TonalityAnalysisState {
         Arrays.fill(lowE, 0, OpusConstants.NB_TBANDS, 0f);
         Arrays.fill(highE, 0, OpusConstants.NB_TBANDS, 0f);
         Arrays.fill(meanE, 0, OpusConstants.NB_TOT_BANDS, 0f);
-        Arrays.fill(mem, 0, 32, 0f);
-        Arrays.fill(cmean, 0, 8, 0f);
-        Arrays.fill(std, 0, 9, 0f);
-        music_prob = 0;
-        Etracker = 0;
-        lowECount = 0;
         E_count = 0;
-        last_music = 0;
-        last_transition = 0;
         count = 0;
         Arrays.fill(subframe_mem, 0, 3, 0f);
         analysis_offset = 0;
-        Arrays.fill(pspeech, 0, OpusConstants.DETECT_SIZE, 0f);
-        Arrays.fill(pmusic, 0, OpusConstants.DETECT_SIZE, 0f);
-        speech_confidence = 0;
-        music_confidence = 0;
-        speech_confidence_count = 0;
-        music_confidence_count = 0;
         write_pos = 0;
         read_pos = 0;
         read_subframe = 0;

@@ -179,11 +179,11 @@ year=1986
         Inlines.OpusAssert(_n >= 2);
         j = _n - 1;
         i = (_y[j] < 0) ? 1 : 0;
-        k = Inlines.abs(_y[j]);
+        k = Math.abs(_y[j]);
         do {
             j--;
             i += CELT_PVQ_U(_n - j, k);
-            k += Inlines.abs(_y[j]);
+            k += Math.abs(_y[j]);
             if (_y[j] < 0) {
                 i += CELT_PVQ_U(_n - j, k + 1);
             }

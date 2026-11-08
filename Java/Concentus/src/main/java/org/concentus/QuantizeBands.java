@@ -137,7 +137,7 @@ class QuantizeBands {
                     qi = -1;
                 }
                 error[c][i] = (Inlines.PSHR32(f, 7) - Inlines.SHL16((qi), CeltConstants.DB_SHIFT));
-                badness += Inlines.abs(qi0 - qi);
+                badness += Math.abs(qi0 - qi);
                 q = Inlines.SHL32(qi, CeltConstants.DB_SHIFT);
 
                 tmp = Inlines.PSHR32(Inlines.MULT16_16(coef, oldE), 8) + prev[c] + Inlines.SHL32(q, 7);

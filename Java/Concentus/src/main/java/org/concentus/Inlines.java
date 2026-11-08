@@ -46,7 +46,7 @@ final class Inlines {
     }
 
     static long CapToUInt32(long val) {
-        return (0xFFFFFFFFL & (int) val);
+        return 0xFFFFFFFFL & (int) val;
     }
 
     static long CapToUInt32(int val) {
@@ -55,25 +55,25 @@ final class Inlines {
 
     // CELT-SPECIFIC INLINES
     static int MULT16_16SU(int a, int b) {
-        return ((int) (short) (a) * (b & 0xFFFF));
+        return (int) (short) a * (b & 0xFFFF);
     }
 
     static int MULT16_32_P16(short a, int b) {
-        return ADD32(MULT16_16((a), SHR((b), 16)), PSHR(MULT16_16SU((a), ((b) & 0x0000ffff)), 16));
+        return ADD32(MULT16_16(a, SHR(b, 16)), PSHR(MULT16_16SU(a, b & 0x0000ffff), 16));
     }
 
     static int MULT16_32_Q15(short a, int b) {
-        return ((a * (b >> 16)) << 1) + ((a * (b & 0xFFFF)) >> 15);
+        return (a * (b >> 16) << 1) + (a * (b & 0xFFFF) >> 15);
         //return ADD32(SHL(MULT16_16((a), SHR((b), 16)), 1), SHR(MULT16_16SU((a), (ushort)((b) & 0x0000ffff)), 15));
     }
 
     static int MULT16_32_Q15(int a, int b) {
-        return ((a * (b >> 16)) << 1) + ((a * (b & 0xFFFF)) >> 15);
+        return (a * (b >> 16) << 1) + (a * (b & 0xFFFF) >> 15);
         //return ADD32(SHL(MULT16_16((a), SHR((b), 16)), 1), SHR(MULT16_16SU((a), (uint)((b) & 0x0000ffff)), 15));
     }
 
     static int MULT32_32_Q31(int a, int b) {
-        return ADD32(ADD32(SHL(MULT16_16(SHR((a), 16), SHR((b), 16)), 1), SHR(MULT16_16SU(SHR((a), 16), ((b) & 0x0000ffff)), 15)), SHR(MULT16_16SU(SHR((b), 16), ((a) & 0x0000ffff)), 15));
+        return ADD32(ADD32(SHL(MULT16_16(SHR(a, 16), SHR(b, 16)), 1), SHR(MULT16_16SU(SHR(a, 16), b & 0x0000ffff), 15)), SHR(MULT16_16SU(SHR(b, 16), a & 0x0000ffff), 15));
     }
 
     static int NEG16(int x) {
@@ -85,7 +85,7 @@ final class Inlines {
     }
 
     static short EXTRACT16(int x) {
-        return ((short) x);
+        return (short) x;
     }
 
     static int EXTEND32(int x) {
@@ -93,15 +93,15 @@ final class Inlines {
     }
 
     static int SHR16(int a, int shift) {
-        return ((a) >> (shift));
+        return a >> shift;
     }
 
     static short SHL16(short a, int shift) {
-        return ((short) ((a & 0xFFFF) << shift));
+        return (short) ((a & 0xFFFF) << shift);
     }
 
     static int SHL16(int a, int shift) {
-        return (int) (0xFFFFFFFFL & ((long) a << shift));
+        return (int) (0xFFFFFFFFL & (long) a << shift);
     }
 
     static int SHR32(int a, int shift) {
@@ -109,19 +109,19 @@ final class Inlines {
     }
 
     static int SHL32(int a, int shift) {
-        return (int) (0xFFFFFFFFL & ((long) a << shift));
+        return (int) (0xFFFFFFFFL & (long) a << shift);
     }
 
     static int PSHR32(int a, int shift) {
-        return (SHR32((a) + ((EXTEND32(1) << ((shift)) >> 1)), shift));
+        return SHR32(a + (EXTEND32(1) << shift >> 1), shift);
     }
 
     static int VSHR32(int a, int shift) {
-        return (((shift) > 0) ? SHR32(a, shift) : SHL32(a, -(shift)));
+        return shift > 0 ? SHR32(a, shift) : SHL32(a, -shift);
     }
 
     private static int SHR(int a, int shift) {
-        return ((a) >> (shift));
+        return a >> shift;
     }
 
     private static int SHL(int a, int shift) {
@@ -129,39 +129,39 @@ final class Inlines {
     }
 
     private static int PSHR(int a, int shift) {
-        return (SHR((a) + ((EXTEND32(1) << ((shift)) >> 1)), shift));
+        return SHR(a + (EXTEND32(1) << shift >> 1), shift);
     }
 
     static int SATURATE(int x, int a) {
-        return (((x) > (a) ? (a) : Math.max((x), -(a))));
+        return x > a ? a : Math.max(x, -a);
     }
 
     static int HALF16(int x) {
-        return (SHR32(x, 1));
+        return SHR32(x, 1);
     }
 
     static int HALF32(int x) {
-        return (SHR32(x, 1));
+        return SHR32(x, 1);
     }
 
     static short ADD16(short a, short b) {
-        return ((short) (a + b));
+        return (short) (a + b);
     }
 
     static int ADD16(int a, int b) {
-        return (a + b);
+        return a + b;
     }
 
     static int SUB16(int a, int b) {
-        return (a - b);
+        return a - b;
     }
 
     static int ADD32(int a, int b) {
-        return (a + b);
+        return a + b;
     }
 
     static int SUB32(int a, int b) {
-        return (a - b);
+        return a - b;
     }
 
     static int MULT16_16(int a, int b) {
@@ -173,27 +173,27 @@ final class Inlines {
     }
 
     static int MAC16_16(int c, short a, short b) {
-        return c + (a * b);
+        return c + a * b;
     }
 
     static int MAC16_16(int c, int a, int b) {
-        return c + (a * b);
+        return c + a * b;
     }
 
     static int MULT16_16_Q14(int a, int b) {
-        return (SHR(MULT16_16((a), (b)), 14));
+        return SHR(MULT16_16(a, b), 14);
     }
 
     static short MULT16_16_Q15(short a, short b) {
-        return (short) ((SHR(MULT16_16((a), (b)), 15)));
+        return (short) SHR(MULT16_16(a, b), 15);
     }
 
     static int MULT16_16_Q15(int a, int b) {
-        return (SHR(MULT16_16((a), (b)), 15));
+        return SHR(MULT16_16(a, b), 15);
     }
 
     static int MULT16_16_P15(int a, int b) {
-        return (SHR(ADD32(16384, MULT16_16((a), (b))), 15));
+        return SHR(ADD32(16384, MULT16_16(a, b)), 15);
     }
 
     static short SIG2WORD16(int x) {
@@ -204,31 +204,31 @@ final class Inlines {
     }
 
     static int MIN16(int a, int b) {
-        return (Math.min((a), (b)));
+        return Math.min(a, b);
     }
 
     static int MAX16(int a, int b) {
-        return (Math.max((a), (b)));
+        return Math.max(a, b);
     }
 
     static int IMIN(int a, int b) {
-        return (Math.min((a), (b)));
+        return Math.min(a, b);
     }
 
     static long IMIN(long a, long b) {
-        return (Math.min((a), (b)));
+        return Math.min(a, b);
     }
 
     static int IMAX(int a, int b) {
-        return (Math.max((a), (b)));
+        return Math.max(a, b);
     }
 
     static int MIN32(int a, int b) {
-        return (Math.min((a), (b)));
+        return Math.min(a, b);
     }
 
     static int MAX32(int a, int b) {
-        return (Math.max((a), (b)));
+        return Math.max(a, b);
     }
 
     static int celt_udiv(int n, int d) {
@@ -249,11 +249,11 @@ final class Inlines {
      */
     static int celt_ilog2(int x) {
         Inlines.OpusAssert(x > 0, "celt_ilog2() only defined for strictly positive numbers");
-        return (EC_ILOG(x) - 1);
+        return EC_ILOG(x) - 1;
     }
 
     static int FRAC_MUL16(int a, int b) {
-        return ((16384 + ((short) a * (short) b)) >> 15);
+        return 16384 + (short) a * (short) b >> 15;
     }
 
     static int isqrt32(long _val) {
@@ -265,11 +265,11 @@ final class Inlines {
           The main idea is to search for the largest binary digit b such that
            (g+b)*(g+b) <= _val, and add it to the solution g.*/
         g = 0;
-        bshift = (EC_ILOG(_val) - 1) >> 1;
+        bshift = EC_ILOG(_val) - 1 >> 1;
         b = 1 << bshift;
         do {
             long t;
-            t = ((g << 1) + b) << bshift;
+            t = (g << 1) + b << bshift;
             if (t <= _val) {
                 g += b;
                 _val -= t;
@@ -299,7 +299,7 @@ final class Inlines {
         x = VSHR32(x, 2 * k);
         n = (short) (x - 32768);
         rt = ADD16(sqrt_C[0], MULT16_16_Q15(n, ADD16(sqrt_C[1], MULT16_16_Q15(n, ADD16(sqrt_C[2],
-                MULT16_16_Q15(n, ADD16(sqrt_C[3], MULT16_16_Q15(n, (sqrt_C[4])))))))));
+                MULT16_16_Q15(n, ADD16(sqrt_C[3], MULT16_16_Q15(n, sqrt_C[4]))))))));
         rt = VSHR32(rt, 7 - k);
         return rt;
     }
@@ -381,7 +381,7 @@ final class Inlines {
         } else if (integer < -15) {
             return 0;
         }
-        frac = (short) (celt_exp2_frac((short) (x - SHL16((short) (integer), 10))));
+        frac = (short) celt_exp2_frac((short) (x - SHL16((short) integer, 10)));
         return VSHR32(EXTEND32(frac), -integer - 2);
     }
 
@@ -415,24 +415,18 @@ final class Inlines {
     // SILK-SPECIFIC INLINES
 
     static long EC_MINI(long a, long b) {
-        return (a + ((b - a) & ((b < a) ? 0xFFFFFFFF : 0)));
+        return Math.min(a, b);
     }
 
     static int EC_ILOG(long x) {
-        if (x == 0) {
-            return 1;
-        }
-        x |= (x >> 1);
-        x |= (x >> 2);
-        x |= (x >> 4);
-        x |= (x >> 8);
-        x |= (x >> 16);
-        long y = x - ((x >> 1) & 0x55555555);
-        y = (((y >> 2) & 0x33333333) + (y & 0x33333333));
-        y = (((y >> 4) + y) & 0x0f0f0f0f);
-        y += (y >> 8);
-        y += (y >> 16);
-        y = (y & 0x0000003f);
-        return (int) y;
+        return 64 - Long.numberOfLeadingZeros(x);
+    }
+
+    public static short QCONST16(float f, int bits) {
+        return (short) (0.5 + f * (1 << bits));
+    }
+
+    public static int QCONST32(float f, int bits) {
+        return (int) (0.5 + (f) * (1 << (bits)));
     }
 }

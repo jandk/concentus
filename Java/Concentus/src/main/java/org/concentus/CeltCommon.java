@@ -243,10 +243,10 @@ class CeltCommon {
         }
     }
 
-    private static final short[][] gains = {
-            new short[]{((short) (0.5 + (0.3066406250f) * (1 << (15))))/*Inlines.QCONST16(0.3066406250f, 15)*/, ((short) (0.5 + (0.2170410156f) * (1 << (15))))/*Inlines.QCONST16(0.2170410156f, 15)*/, ((short) (0.5 + (0.1296386719f) * (1 << (15))))/*Inlines.QCONST16(0.1296386719f, 15)*/},
-            new short[]{((short) (0.5 + (0.4638671875f) * (1 << (15))))/*Inlines.QCONST16(0.4638671875f, 15)*/, ((short) (0.5 + (0.2680664062f) * (1 << (15))))/*Inlines.QCONST16(0.2680664062f, 15)*/, ((short) (0.5 + (0.0f) * (1 << (15))))/*Inlines.QCONST16(0.0f, 15)*/},
-            new short[]{((short) (0.5 + (0.7998046875f) * (1 << (15))))/*Inlines.QCONST16(0.7998046875f, 15)*/, ((short) (0.5 + (0.1000976562f) * (1 << (15))))/*Inlines.QCONST16(0.1000976562f, 15)*/, ((short) (0.5 + (0.0f) * (1 << (15))))/*Inlines.QCONST16(0.0f, 15)*/}
+    private static final short[][] gains = new short[][]{
+            new short[]{Inlines.QCONST16(0.3066406250f, 15), Inlines.QCONST16(0.2170410156f, 15), Inlines.QCONST16(0.1296386719f, 15)},
+            new short[]{Inlines.QCONST16(0.4638671875f, 15), Inlines.QCONST16(0.2680664062f, 15), Inlines.QCONST16(0.0f, 15)},
+            new short[]{Inlines.QCONST16(0.7998046875f, 15), Inlines.QCONST16(0.1000976562f, 15), Inlines.QCONST16(0.0f, 15)}
     };
 
     static void comb_filter(int[] y, int y_ptr, int[] x, int x_ptr, int T0, int T1, int N,

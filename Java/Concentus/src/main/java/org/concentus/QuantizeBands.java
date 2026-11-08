@@ -88,9 +88,9 @@ class QuantizeBands {
                 }
                 q = Inlines.SHL32(qi, CeltConstants.DB_SHIFT); // opus bug: useless extend32
 
-                oldEBands[i + c * m.nbEBands] = Inlines.MAX16((-((short) (0.5 + (9.0f) * (1 << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(9.0f, CeltConstants.DB_SHIFT)*/), oldEBands[i + c * m.nbEBands]);
+                oldEBands[i + c * m.nbEBands] = Inlines.MAX16(-Inlines.QCONST16(9.0f, CeltConstants.DB_SHIFT), oldEBands[i + c * m.nbEBands]);
                 tmp = Inlines.PSHR32(Inlines.MULT16_16(coef, oldEBands[i + c * m.nbEBands]), 8) + prev[c] + Inlines.SHL32(q, 7);
-                tmp = Inlines.MAX32(-((int) (0.5 + (28.0f) * (1 << (CeltConstants.DB_SHIFT + 7))))/*Inlines.QCONST32(28.0f, CeltConstants.DB_SHIFT + 7)*/, tmp);
+                tmp = Inlines.MAX32(-Inlines.QCONST32(28.0f, CeltConstants.DB_SHIFT + 7), tmp);
                 oldEBands[i + c * m.nbEBands] = (Inlines.PSHR32(tmp, 7));
                 prev[c] = prev[c] + Inlines.SHL32(q, 7) - Inlines.MULT16_16(beta, Inlines.PSHR32(q, 8));
             } while (++c < C);
@@ -109,10 +109,10 @@ class QuantizeBands {
                 int q2;
                 int offset;
                 q2 = dec.dec_bits(fine_quant[i]);
-                offset = Inlines.SUB16((Inlines.SHR32(
+                offset = Inlines.SUB16(Inlines.SHR32(
                                 Inlines.SHL32(q2, CeltConstants.DB_SHIFT)
-                                        + ((short) (0.5 + (.5f) * (1 << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(.5f, CeltConstants.DB_SHIFT)*/, fine_quant[i])),
-                        ((short) (0.5 + (.5f) * (1 << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(.5f, CeltConstants.DB_SHIFT)*/); // opus bug: unnecessary extend32
+                                        + Inlines.QCONST16(.5f, CeltConstants.DB_SHIFT), fine_quant[i]),
+                        Inlines.QCONST16(.5f, CeltConstants.DB_SHIFT)); // opus bug: unnecessary extend32
                 oldEBands[i + c * m.nbEBands] += offset;
             } while (++c < C);
         }
@@ -132,7 +132,7 @@ class QuantizeBands {
                     int q2;
                     int offset;
                     q2 = dec.dec_bits(1);
-                    offset = Inlines.SHR16((Inlines.SHL16((q2), CeltConstants.DB_SHIFT) - ((short) (0.5 + (.5f) * (1 << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(.5f, CeltConstants.DB_SHIFT)*/), fine_quant[i] + 1);
+                    offset = Inlines.SHR16(Inlines.SHL16(q2, CeltConstants.DB_SHIFT) - Inlines.QCONST16(.5f, CeltConstants.DB_SHIFT), fine_quant[i] + 1);
                     oldEBands[i + c * m.nbEBands] += offset;
                     bits_left--;
                 } while (++c < C);

@@ -117,7 +117,7 @@ class CeltDecoder {
         this.oldLogE2 = new int[2 * mode.nbEBands];
 
         for (i = 0; i < 2 * mode.nbEBands; i++) {
-            oldLogE[i] = oldLogE2[i] = -((short) (0.5 + (28.0f) * (1 << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(28.0f, CeltConstants.DB_SHIFT)*/;
+            oldLogE[i] = oldLogE2[i] = -Inlines.QCONST16(28.0f, CeltConstants.DB_SHIFT);
         }
     }
 
@@ -283,7 +283,7 @@ class CeltDecoder {
                 if (dec.tell() + 2 <= total_bits) {
                     postfilter_tapset = dec.dec_icdf(CeltTables.tapset_icdf, 2);
                 }
-                postfilter_gain = ((short) (0.5 + (.09375f) * ((1) << (15))))/*Inlines.QCONST16(.09375f, 15)*/ * (qg + 1);
+                postfilter_gain = Inlines.QCONST16(.09375f, 15) * (qg + 1);
             }
             tell = dec.tell();
         }
@@ -406,7 +406,7 @@ class CeltDecoder {
 
         if (silence != 0) {
             for (i = 0; i < C * nbEBands; i++) {
-                oldBandE[i] = -((short) (0.5 + (28.0f) * (1 << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(28.0f, CeltConstants.DB_SHIFT)*/;
+                oldBandE[i] = -Inlines.QCONST16(28.0f, CeltConstants.DB_SHIFT);
             }
         }
 
@@ -458,7 +458,7 @@ class CeltDecoder {
         do {
             for (i = end; i < nbEBands; i++) {
                 oldBandE[c * nbEBands + i] = 0;
-                oldLogE[c * nbEBands + i] = oldLogE2[c * nbEBands + i] = -((short) (0.5 + (28.0f) * (1 << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(28.0f, CeltConstants.DB_SHIFT)*/;
+                oldLogE[c * nbEBands + i] = oldLogE2[c * nbEBands + i] = -Inlines.QCONST16(28.0f, CeltConstants.DB_SHIFT);
             }
         } while (++c < 2);
         this.rng = (int) dec.rng;

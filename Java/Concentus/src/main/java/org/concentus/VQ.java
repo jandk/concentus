@@ -76,7 +76,7 @@ class VQ {
 
         factor = SPREAD_FACTOR[spread - 1];
 
-        gain = (Inlines.celt_div(Inlines.MULT16_16(CeltConstants.Q15_ONE, len), len + factor * K));
+        gain = Inlines.celt_div(Inlines.MULT16_16(CeltConstants.Q15_ONE, len), len + factor * K);
         theta = Inlines.HALF16(Inlines.MULT16_16_Q15(gain, gain));
 
         c = Inlines.celt_cos_norm(Inlines.EXTEND32(theta));

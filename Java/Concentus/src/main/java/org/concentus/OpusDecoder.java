@@ -200,7 +200,7 @@ public class OpusDecoder {
 
         if (decode_gain != 0) {
             int gain;
-            gain = Inlines.celt_exp2(Inlines.MULT16_16_P15(((short) (0.5 + (6.48814081e-4f) * ((1) << (25))))/*Inlines.QCONST16(6.48814081e-4f, 25)*/, decode_gain));
+            gain = Inlines.celt_exp2(Inlines.MULT16_16_P15(Inlines.QCONST16(6.48814081e-4f, 25), decode_gain));
             for (i = pcm_ptr; i < pcm_ptr + (frame_size * channels); i++) {
                 int x;
                 x = Inlines.MULT16_32_P16(pcm[i], gain);

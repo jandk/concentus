@@ -150,7 +150,7 @@ class Bands {
             depth = Inlines.celt_udiv(1 + pulses[i], (m.eBands[i + 1] - m.eBands[i])) >> LM;
 
             thresh32 = Inlines.SHR32(Inlines.celt_exp2((-Inlines.SHL16((depth), 10 - EntropyCoder.BITRES))), 1);
-            thresh = (Inlines.MULT16_32_Q15(((short) (0.5 + (0.5f) * (1 << (15))))/*Inlines.QCONST16(0.5f, 15)*/, Inlines.MIN32(32767, thresh32)));
+            thresh = Inlines.MULT16_32_Q15(Inlines.QCONST16(0.5f, 15), Inlines.MIN32(32767, thresh32));
             {
                 int t;
                 t = N0 << LM;
@@ -226,7 +226,7 @@ class Bands {
         mid2 = Inlines.SHR16(mid, 1);
         El = Inlines.MULT16_16(mid2, mid2) + side.Val - (2 * xp.Val);
         Er = Inlines.MULT16_16(mid2, mid2) + side.Val + (2 * xp.Val);
-        if (Er < ((int) (0.5 + (6e-4f) * (1 << (28))))/*Inlines.QCONST32(6e-4f, 28)*/ || El < ((int) (0.5 + (6e-4f) * (1 << (28))))/*Inlines.QCONST32(6e-4f, 28)*/) {
+        if (Er < Inlines.QCONST32(6e-4f, 28) || El < Inlines.QCONST32(6e-4f, 28)) {
             System.arraycopy(X, X_ptr, Y, Y_ptr, N);
             return;
         }
@@ -312,8 +312,8 @@ class Bands {
             for (j = 0; j < N0; j++) {
                 int tmpidx = X_ptr + i + (stride * 2 * j);
                 int tmp1, tmp2;
-                tmp1 = Inlines.MULT16_16(((short) (0.5 + (.70710678f) * (1 << (15))))/*Inlines.QCONST16(.70710678f, 15)*/, X[tmpidx]);
-                tmp2 = Inlines.MULT16_16(((short) (0.5 + (.70710678f) * (1 << (15))))/*Inlines.QCONST16(.70710678f, 15)*/, X[tmpidx + stride]);
+                tmp1 = Inlines.MULT16_16(Inlines.QCONST16(.70710678f, 15), X[tmpidx]);
+                tmp2 = Inlines.MULT16_16(Inlines.QCONST16(.70710678f, 15), X[tmpidx + stride]);
                 X[tmpidx] = Inlines.EXTRACT16(Inlines.PSHR32(Inlines.ADD32(tmp1, tmp2), 15));
                 X[tmpidx + stride] = Inlines.EXTRACT16(Inlines.PSHR32(Inlines.SUB32(tmp1, tmp2), 15));
             }
@@ -666,7 +666,7 @@ class Bands {
                             int tmp;
                             ctx.seed = celt_lcg_rand(ctx.seed);
                             /* About 48 dB below the "normal" folding level */
-                            tmp = ((short) (0.5 + (1.0f / 256) * (1 << (10))))/*Inlines.QCONST16(1.0f / 256, 10)*/;
+                            tmp = Inlines.QCONST16(1.0f / 256, 10);
                             tmp = (((ctx.seed) & 0x8000) != 0 ? tmp : -tmp);
                             X[X_ptr + j] = (lowband[lowband_ptr + j] + tmp);
                         }

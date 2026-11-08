@@ -85,7 +85,7 @@ class Rate {
     static int interp_bits2pulses(CeltMode m, int start, int end, int skip_start,
                                   int[] bits1, int[] bits2, int[] thresh, int[] cap, int total, BoxedValueInt _balance,
                                   int skip_rsv, BoxedValueInt intensity, int intensity_rsv, BoxedValueInt dual_stereo, int dual_stereo_rsv, int[] bits,
-                                  int[] ebits, int[] fine_priority, int C, int LM, EntropyCoder ec, int encode, int prev, int signalBandwidth) {
+                                  int[] ebits, int[] fine_priority, int C, int LM, EntropyCoder ec) {
         int psum;
         int lo, hi;
         int i, j;
@@ -174,18 +174,7 @@ class Rate {
               Otherwise it is force-skipped.
               This ensures that we have enough bits to code the skip flag.*/
             if (band_bits >= Inlines.IMAX(thresh[j], alloc_floor + (1 << EntropyCoder.BITRES))) {
-                if (encode != 0) {
-                    /*This if() block is the only part of the allocation function that
-                       is not a mandatory part of the bitstream: any bands we choose to
-                       skip here must be explicitly signaled.*/
- /*Choose a threshold with some hysteresis to keep bands from
-                       fluctuating in and out.*/
-                    if (codedBands <= start + 2 || (band_bits > ((j < prev ? 7 : 9) * band_width << LM << EntropyCoder.BITRES) >> 4 && j <= signalBandwidth)) {
-                        ec.enc_bit_logp(1, 1);
-                        break;
-                    }
-                    ec.enc_bit_logp(0, 1);
-                } else if (ec.dec_bit_logp(1) != 0) {
+                if (ec.dec_bit_logp(1) != 0) {
                     break;
                 }
                 /*We used a bit to skip this band.*/
@@ -211,12 +200,7 @@ class Rate {
         Inlines.OpusAssert(codedBands > start);
         /* Code the intensity and dual stereo parameters. */
         if (intensity_rsv > 0) {
-            if (encode != 0) {
-                intensity.Val = Inlines.IMIN(intensity.Val, codedBands);
-                ec.enc_uint((intensity.Val - start), (codedBands + 1 - start));
-            } else {
-                intensity.Val = start + (int) ec.dec_uint(codedBands + 1 - start);
-            }
+            intensity.Val = start + (int) ec.dec_uint(codedBands + 1 - start);
         } else {
             intensity.Val = 0;
         }
@@ -226,11 +210,7 @@ class Rate {
             dual_stereo_rsv = 0;
         }
         if (dual_stereo_rsv > 0) {
-            if (encode != 0) {
-                ec.enc_bit_logp(dual_stereo.Val, 1);
-            } else {
-                dual_stereo.Val = ec.dec_bit_logp(1);
-            }
+            dual_stereo.Val = ec.dec_bit_logp(1);
         } else {
             dual_stereo.Val = 0;
         }
@@ -347,7 +327,7 @@ class Rate {
     }
 
     static int compute_allocation(CeltMode m, int start, int end, int[] offsets, int[] cap, int alloc_trim, BoxedValueInt intensity, BoxedValueInt dual_stereo,
-                                  int total, BoxedValueInt balance, int[] pulses, int[] ebits, int[] fine_priority, int C, int LM, EntropyCoder ec, int encode, int prev, int signalBandwidth) {
+                                  int total, BoxedValueInt balance, int[] pulses, int[] ebits, int[] fine_priority, int C, int LM, EntropyCoder ec) {
         int lo, hi, len, j;
         int codedBands;
         int skip_start;
@@ -453,7 +433,7 @@ class Rate {
 
         codedBands = interp_bits2pulses(m, start, end, skip_start, bits1, bits2, thresh, cap,
                 total, balance, skip_rsv, intensity, intensity_rsv, dual_stereo, dual_stereo_rsv,
-                pulses, ebits, fine_priority, C, LM, ec, encode, prev, signalBandwidth);
+                pulses, ebits, fine_priority, C, LM, ec);
 
         return codedBands;
     }

@@ -81,21 +81,4 @@ class OpusBandwidthHelpers {
         return OpusBandwidth.OPUS_BANDWIDTH_AUTO;
     }
 
-    static OpusBandwidth MIN(OpusBandwidth a, OpusBandwidth b) {
-        if (GetOrdinal(a) < GetOrdinal(b)) {
-            return a;
-        }
-        return b;
-    }
-
-    static OpusBandwidth MAX(OpusBandwidth a, OpusBandwidth b) {
-        if (GetOrdinal(a) > GetOrdinal(b)) {
-            return a;
-        }
-        return b;
-    }
-
-    static OpusBandwidth SUBTRACT(OpusBandwidth a, int b) {
-        return GetBandwidth(GetOrdinal(a) - b);
-    }
 }

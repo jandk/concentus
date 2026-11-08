@@ -172,30 +172,6 @@ year=1986
         return (CELT_PVQ_U(_n, _k) + CELT_PVQ_U(_n, (_k) + 1));
     }
 
-    static long icwrs(int _n, int[] _y) {
-        long i;
-        int j;
-        int k;
-        Inlines.OpusAssert(_n >= 2);
-        j = _n - 1;
-        i = (_y[j] < 0) ? 1 : 0;
-        k = Math.abs(_y[j]);
-        do {
-            j--;
-            i += CELT_PVQ_U(_n - j, k);
-            k += Math.abs(_y[j]);
-            if (_y[j] < 0) {
-                i += CELT_PVQ_U(_n - j, k + 1);
-            }
-        } while (j > 0);
-        return i;
-    }
-
-    static void encode_pulses(int[] _y, int _n, int _k, EntropyCoder _enc) {
-        Inlines.OpusAssert(_k > 0);
-        _enc.enc_uint(icwrs(_n, _y), CELT_PVQ_V(_n, _k));
-    }
-
     static int cwrsi(int _n, int _k, long _i, int[] _y) {
         long p;
         int s;

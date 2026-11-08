@@ -369,7 +369,7 @@ class CeltDecoder {
         BoxedValueInt boxed_balance = new BoxedValueInt(0);
         codedBands = Rate.compute_allocation(mode, 0, end, offsets, cap,
                 alloc_trim, boxed_intensity, boxed_dual_stereo, bits, boxed_balance, pulses,
-                fine_quant, fine_priority, C, LM, dec, 0, 0, 0);
+                fine_quant, fine_priority, C, LM, dec);
         intensity = boxed_intensity.Val;
         dual_stereo = boxed_dual_stereo.Val;
         balance = boxed_balance.Val;
@@ -387,7 +387,7 @@ class CeltDecoder {
         X = new int[C][N];
 
         BoxedValueInt boxed_rng = new BoxedValueInt(rng);
-        Bands.quant_all_bands(0, mode, 0, end, X[0], C == 2 ? X[1] : null, collapse_masks,
+        Bands.quant_all_bands(mode, 0, end, X[0], C == 2 ? X[1] : null, collapse_masks,
                 null, pulses, shortBlocks, spread_decision, dual_stereo, intensity, tf_res,
                 len * (8 << EntropyCoder.BITRES) - anti_collapse_rsv, balance, dec, LM, codedBands, boxed_rng);
         this.rng = boxed_rng.Val;
@@ -488,25 +488,8 @@ class CeltDecoder {
         this.stream_channels = value;
     }
 
-    int GetAndClearError() {
-        int returnVal = error;
-        this.error = 0;
-        return returnVal;
-    }
-
-    public int GetLookahead() {
-        return overlap / downsample;
-    }
-
     public int GetPitch() {
         return postfilter_period;
     }
 
-    public CeltMode GetMode() {
-        return mode;
-    }
-
-    public int GetFinalRange() {
-        return rng;
-    }
 }

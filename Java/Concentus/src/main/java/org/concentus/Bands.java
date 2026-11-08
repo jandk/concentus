@@ -38,30 +38,6 @@ import java.util.Arrays;
 
 class Bands {
 
-    static int hysteresis_decision(
-            int val,
-            int[] thresholds,
-            int[] hysteresis,
-            int N,
-            int prev) {
-        int i;
-        for (i = 0; i < N; i++) {
-            if (val < thresholds[i]) {
-                break;
-            }
-        }
-
-        if (i > prev && val < thresholds[prev] + hysteresis[prev]) {
-            i = prev;
-        }
-
-        if (i < prev && val > thresholds[prev - 1] - hysteresis[prev - 1]) {
-            i = prev;
-        }
-
-        return i;
-    }
-
     static int celt_lcg_rand(int seed) {
         return (1664525 * seed + 1013904223);
     }
@@ -87,65 +63,6 @@ class Bands {
         return (ls - lc) * (1 << 11)
                 + Inlines.FRAC_MUL16(isin, Inlines.FRAC_MUL16(isin, -2597) + 7932)
                 - Inlines.FRAC_MUL16(icos, Inlines.FRAC_MUL16(icos, -2597) + 7932);
-    }
-
-    /* Compute the amplitude (sqrt energy) in each of the bands */
-    static void compute_band_energies(CeltMode m, int[][] X, int[][] bandE, int end, int C, int LM) {
-        int i, c, N;
-        short[] eBands = m.eBands;
-        N = m.shortMdctSize << LM;
-        c = 0;
-
-        do {
-            for (i = 0; i < end; i++) {
-                int j;
-                int maxval = 0;
-                int sum = 0;
-                maxval = Inlines.celt_maxabs32(X[c], (eBands[i] << LM), (eBands[i + 1] - eBands[i]) << LM);
-                if (maxval > 0) {
-                    int shift = Inlines.celt_ilog2(maxval) - 14 + (((m.logN[i] >> EntropyCoder.BITRES) + LM + 1) >> 1);
-                    j = eBands[i] << LM;
-                    if (shift > 0) {
-                        do {
-                            sum = Inlines.MAC16_16(sum, Inlines.EXTRACT16(Inlines.SHR32(X[c][j], shift)),
-                                    Inlines.EXTRACT16(Inlines.SHR32(X[c][j], shift)));
-                        } while (++j < eBands[i + 1] << LM);
-                    } else {
-                        do {
-                            sum = Inlines.MAC16_16(sum, Inlines.EXTRACT16(Inlines.SHL32(X[c][j], -shift)),
-                                    Inlines.EXTRACT16(Inlines.SHL32(X[c][j], -shift)));
-                        } while (++j < eBands[i + 1] << LM);
-                    }
-                    /* We're adding one here to ensure the normalized band isn't larger than unity norm */
-                    bandE[c][i] = CeltConstants.EPSILON + Inlines.VSHR32(Inlines.celt_sqrt(sum), -shift);
-                } else {
-                    bandE[c][i] = CeltConstants.EPSILON;
-                }
-                /*printf ("%f ", bandE[i+c*m->nbEBands]);*/
-            }
-        } while (++c < C);
-    }
-
-    /* Normalise each band such that the energy is one. */
-    static void normalise_bands(CeltMode m, int[][] freq, int[][] X, int[][] bandE, int end, int C, int M) {
-        int i, c;
-        short[] eBands = m.eBands;
-        c = 0;
-        do {
-            i = 0;
-            do {
-                int g;
-                int j, shift;
-                int E;
-                shift = Inlines.celt_zlog2(bandE[c][i]) - 13;
-                E = Inlines.VSHR32(bandE[c][i], shift);
-                g = Inlines.EXTRACT16(Inlines.celt_rcp(Inlines.SHL32(E, 3)));
-                j = M * eBands[i];
-                do {
-                    X[c][j] = Inlines.MULT16_16_Q15(Inlines.VSHR32(freq[c][j], shift - 1), g);
-                } while (++j < M * eBands[i + 1]);
-            } while (++i < end);
-        } while (++c < C);
     }
 
     /* De-normalise the energy to produce the synthesis from the unit-energy bands */
@@ -292,38 +209,6 @@ class Bands {
         }
     }
 
-    static void intensity_stereo(int[] X, int X_ptr, int[] Y, int Y_ptr, int[][] bandE, int bandID, int N) {
-        int i = bandID;
-        int j;
-        int a1, a2;
-        int left, right;
-        int norm;
-        int shift = Inlines.celt_zlog2(Inlines.MAX32(bandE[0][i], bandE[1][i])) - 13;
-        left = Inlines.VSHR32(bandE[0][i], shift);
-        right = Inlines.VSHR32(bandE[1][i], shift);
-        norm = CeltConstants.EPSILON + Inlines.celt_sqrt(CeltConstants.EPSILON + Inlines.MULT16_16(left, left) + Inlines.MULT16_16(right, right));
-        a1 = Inlines.DIV32_16(Inlines.SHL32(left, 14), norm);
-        a2 = Inlines.DIV32_16(Inlines.SHL32(right, 14), norm);
-        for (j = 0; j < N; j++) {
-            int r, l;
-            l = X[X_ptr + j];
-            r = Y[Y_ptr + j];
-            X[X_ptr + j] = Inlines.EXTRACT16(Inlines.SHR32(Inlines.MAC16_16(Inlines.MULT16_16(a1, l), a2, r), 14));
-            /* Side is not encoded, no need to calculate */
-        }
-    }
-
-    static void stereo_split(int[] X, int X_ptr, int[] Y, int Y_ptr, int N) {
-        int j;
-        for (j = 0; j < N; j++) {
-            int r, l;
-            l = Inlines.MULT16_16(((short) (0.5 + (.70710678f) * (1 << (15))))/*Inlines.QCONST16(.70710678f, 15)*/, X[X_ptr + j]);
-            r = Inlines.MULT16_16(((short) (0.5 + (.70710678f) * (1 << (15))))/*Inlines.QCONST16(.70710678f, 15)*/, Y[Y_ptr + j]);
-            X[X_ptr + j] = Inlines.EXTRACT16(Inlines.SHR32(Inlines.ADD32(l, r), 15));
-            Y[Y_ptr + j] = Inlines.EXTRACT16(Inlines.SHR32(Inlines.SUB32(r, l), 15));
-        }
-    }
-
     static void stereo_merge(int[] X, int X_ptr, int[] Y, int Y_ptr, int mid, int N) {
         int j;
         BoxedValueInt xp = new BoxedValueInt(0);
@@ -368,107 +253,6 @@ class Bands {
             X[X_ptr + j] = Inlines.EXTRACT16(Inlines.PSHR32(Inlines.MULT16_16(lgain, Inlines.SUB16(l, r)), kl + 1));
             Y[Y_ptr + j] = Inlines.EXTRACT16(Inlines.PSHR32(Inlines.MULT16_16(rgain, Inlines.ADD16(l, r)), kr + 1));
         }
-    }
-
-    /* Decide whether we should spread the pulses in the current frame */
-    static int spreading_decision(CeltMode m, int[][] X, BoxedValueInt average,
-                                  int last_decision, BoxedValueInt hf_average, BoxedValueInt tapset_decision, int update_hf,
-                                  int end, int C, int M) {
-        int i, c;
-        int sum = 0, nbBands = 0;
-        short[] eBands = m.eBands;
-        int decision;
-        int hf_sum = 0;
-
-        Inlines.OpusAssert(end > 0);
-
-        if (M * (eBands[end] - eBands[end - 1]) <= 8) {
-            return Spread.SPREAD_NONE;
-        }
-
-        c = 0;
-
-        do {
-            for (i = 0; i < end; i++) {
-                int j, N, tmp = 0;
-                int[] tcount = {0, 0, 0};
-                int[] x = X[c];
-                int x_ptr = M * eBands[i];
-                N = M * (eBands[i + 1] - eBands[i]);
-                if (N <= 8) {
-                    continue;
-                }
-                /* Compute rough CDF of |x[j]| */
-                for (j = x_ptr; j < N + x_ptr; j++) {
-                    int x2N;
-                    /* Q13 */
-
-                    x2N = Inlines.MULT16_16(Inlines.MULT16_16_Q15(x[j], x[j]), N);
-                    if (x2N < ((short) (0.5 + (0.25f) * (1 << (13))))/*Inlines.QCONST16(0.25f, 13)*/) {
-                        tcount[0]++;
-                    }
-                    if (x2N < ((short) (0.5 + (0.0625f) * (1 << (13))))/*Inlines.QCONST16(0.0625f, 13)*/) {
-                        tcount[1]++;
-                    }
-                    if (x2N < ((short) (0.5 + (0.015625f) * (1 << (13))))/*Inlines.QCONST16(0.015625f, 13)*/) {
-                        tcount[2]++;
-                    }
-                }
-
-                /* Only include four last bands (8 kHz and up) */
-                if (i > m.nbEBands - 4) {
-                    hf_sum += Inlines.celt_udiv(32 * (tcount[1] + tcount[0]), N);
-                }
-
-                tmp = (2 * tcount[2] >= N ? 1 : 0) + (2 * tcount[1] >= N ? 1 : 0) + (2 * tcount[0] >= N ? 1 : 0);
-                sum += tmp * 256;
-                nbBands++;
-            }
-        } while (++c < C);
-
-        if (update_hf != 0) {
-            if (hf_sum != 0) {
-                hf_sum = Inlines.celt_udiv(hf_sum, C * (4 - m.nbEBands + end));
-            }
-
-            hf_average.Val = (hf_average.Val + hf_sum) >> 1;
-            hf_sum = hf_average.Val;
-
-            if (tapset_decision.Val == 2) {
-                hf_sum += 4;
-            } else if (tapset_decision.Val == 0) {
-                hf_sum -= 4;
-            }
-            if (hf_sum > 22) {
-                tapset_decision.Val = 2;
-            } else if (hf_sum > 18) {
-                tapset_decision.Val = 1;
-            } else {
-                tapset_decision.Val = 0;
-            }
-        }
-
-        Inlines.OpusAssert(nbBands > 0);
-        /* end has to be non-zero */
-        Inlines.OpusAssert(sum >= 0);
-        sum = Inlines.celt_udiv(sum, nbBands);
-
-        /* Recursive averaging */
-        sum = (sum + average.Val) >> 1;
-        average.Val = sum;
-
-        /* Hysteresis */
-        sum = (3 * sum + (((3 - last_decision) << 7) + 64) + 2) >> 2;
-        if (sum < 80) {
-            decision = Spread.SPREAD_AGGRESSIVE;
-        } else if (sum < 256) {
-            decision = Spread.SPREAD_NORMAL;
-        } else if (sum < 384) {
-            decision = Spread.SPREAD_LIGHT;
-        } else {
-            decision = Spread.SPREAD_NONE;
-        }
-        return decision;
     }
 
     static void deinterleave_hadamard(int[] X, int X_ptr, int N0, int stride, int hadamard) {
@@ -536,21 +320,6 @@ class Bands {
         }
     }
 
-    static void haar1ZeroOffset(int[] X, int N0, int stride) {
-        int i, j;
-        N0 >>= 1;
-        for (i = 0; i < stride; i++) {
-            for (j = 0; j < N0; j++) {
-                int tmpidx = i + (stride * 2 * j);
-                int tmp1, tmp2;
-                tmp1 = Inlines.MULT16_16(((short) (0.5 + (.70710678f) * (1 << (15))))/*Inlines.QCONST16(.70710678f, 15)*/, X[tmpidx]);
-                tmp2 = Inlines.MULT16_16(((short) (0.5 + (.70710678f) * (1 << (15))))/*Inlines.QCONST16(.70710678f, 15)*/, X[tmpidx + stride]);
-                X[tmpidx] = Inlines.EXTRACT16(Inlines.PSHR32(Inlines.ADD32(tmp1, tmp2), 15));
-                X[tmpidx + stride] = Inlines.EXTRACT16(Inlines.PSHR32(Inlines.SUB32(tmp1, tmp2), 15));
-            }
-        }
-    }
-
     static int compute_qn(int N, int b, int offset, int pulse_cap, int stereo) {
         short[] exp2_table8
                 = {16384, 17866, 19483, 21247, 23170, 25267, 27554, 30048};
@@ -580,7 +349,6 @@ class Bands {
 
     public static class band_ctx {
 
-        public int encode;
         public CeltMode m;
         public int i;
         public int intensity;
@@ -603,7 +371,7 @@ class Bands {
     }
 
     static void compute_theta(band_ctx ctx, split_ctx sctx,
-                              int[] X, int X_ptr, int[] Y, int Y_ptr, int N, BoxedValueInt b, int B, int B0,
+                              int N, BoxedValueInt b, int B, int B0,
                               int LM,
                               int stereo, BoxedValueInt fill) {
         int qn;
@@ -615,19 +383,15 @@ class Bands {
         int offset;
         int tell;
         int inv = 0;
-        int encode;
         CeltMode m;
         int i;
         int intensity;
         EntropyCoder ec; // porting note: pointer
-        int[][] bandE;
 
-        encode = ctx.encode;
         m = ctx.m;
         i = ctx.i;
         intensity = ctx.intensity;
         ec = ctx.ec;
-        bandE = ctx.bandE;
 
         /* Decide on the resolution to give to the split parameter theta */
         pulse_cap = m.logN[i] + LM * (1 << EntropyCoder.BITRES);
@@ -637,119 +401,62 @@ class Bands {
             qn = 1;
         }
 
-        if (encode != 0) {
-            /* theta is the atan() of the ratio between the (normalized)
-               side and mid. With just that parameter, we can re-scale both
-               mid and side because we know that 1) they have unit norm and
-               2) they are orthogonal. */
-            itheta = VQ.stereo_itheta(X, X_ptr, Y, Y_ptr, stereo, N);
-        }
-
         tell = ec.tell_frac();
 
         if (qn != 1) {
-            if (encode != 0) {
-                itheta = (itheta * qn + 8192) >> 14;
-            }
 
             /* Entropy coding of the angle. We use a uniform pdf for the
                time split, a step for stereo, and a triangular one for the rest. */
             if (stereo != 0 && N > 2) {
                 int p0 = 3;
-                int x = itheta;
+                int x;
                 int x0 = qn / 2;
                 long ft = Inlines.CapToUInt32(p0 * (x0 + 1) + x0);
                 /* Use a probability of p0 up to itheta=8192 and then use 1 after */
-                if (encode != 0) {
-                    ec.encode(
-                            (x <= x0
-                                    ? (p0 * x)
-                                    : ((x - 1 - x0) + (x0 + 1) * p0)),
-                            (x <= x0
-                                    ? (p0 * (x + 1))
-                                    : ((x - x0) + (x0 + 1) * p0)),
-                            ft);
+                int fs = (int) ec.decode(ft);
+                if (fs < (x0 + 1) * p0) {
+                    x = fs / p0;
                 } else {
-                    int fs = (int) ec.decode(ft);
-                    if (fs < (x0 + 1) * p0) {
-                        x = fs / p0;
-                    } else {
-                        x = x0 + 1 + (fs - (x0 + 1) * p0);
-                    }
-
-                    ec.dec_update(
-                            (x <= x0
-                                    ? p0 * x
-                                    : (x - 1 - x0) + (x0 + 1) * p0),
-                            (x <= x0
-                                    ? p0 * (x + 1)
-                                    : (x - x0) + (x0 + 1) * p0),
-                            ft);
-                    itheta = x;
+                    x = x0 + 1 + (fs - (x0 + 1) * p0);
                 }
+
+                ec.dec_update(
+                        (x <= x0
+                                ? p0 * x
+                                : (x - 1 - x0) + (x0 + 1) * p0),
+                        (x <= x0
+                                ? p0 * (x + 1)
+                                : (x - x0) + (x0 + 1) * p0),
+                        ft);
+                itheta = x;
             } else if (B0 > 1 || stereo != 0) {
                 /* Uniform pdf */
-                if (encode != 0) {
-                    ec.enc_uint(itheta, (qn + 1));
-                } else {
-                    itheta = (int) ec.dec_uint(qn + 1);
-                }
+                itheta = (int) ec.dec_uint(qn + 1);
             } else {
-                int fs = 1, ft;
+                int fs, ft;
                 ft = ((qn >> 1) + 1) * ((qn >> 1) + 1);
-                if (encode != 0) {
-                    int fl;
+                /* Triangular pdf */
+                int fl;
+                int fm;
+                fm = (int) ec.decode(ft);
 
-                    fs = itheta <= (qn >> 1) ? itheta + 1 : qn + 1 - itheta;
-                    fl = itheta <= (qn >> 1) ? itheta * (itheta + 1) >> 1
-                            : ft - ((qn + 1 - itheta) * (qn + 2 - itheta) >> 1);
-
-                    ec.encode(fl, (fl + fs), ft);
+                if (fm < ((qn >> 1) * ((qn >> 1) + 1) >> 1)) {
+                    itheta = (Inlines.isqrt32(8 * fm + 1) - 1) >> 1;
+                    fs = itheta + 1;
+                    fl = itheta * (itheta + 1) >> 1;
                 } else {
-                    /* Triangular pdf */
-                    int fl = 0;
-                    int fm;
-                    fm = (int) ec.decode(ft);
-
-                    if (fm < ((qn >> 1) * ((qn >> 1) + 1) >> 1)) {
-                        itheta = (Inlines.isqrt32(8 * fm + 1) - 1) >> 1;
-                        fs = itheta + 1;
-                        fl = itheta * (itheta + 1) >> 1;
-                    } else {
-                        itheta = (2 * (qn + 1) - Inlines.isqrt32(8 * (ft - fm - 1) + 1)) >> 1;
-                        fs = qn + 1 - itheta;
-                        fl = ft - ((qn + 1 - itheta) * (qn + 2 - itheta) >> 1);
-                    }
-
-                    ec.dec_update(fl, (fl + fs), ft);
+                    itheta = (2 * (qn + 1) - Inlines.isqrt32(8 * (ft - fm - 1) + 1)) >> 1;
+                    fs = qn + 1 - itheta;
+                    fl = ft - ((qn + 1 - itheta) * (qn + 2 - itheta) >> 1);
                 }
+
+                ec.dec_update(fl, (fl + fs), ft);
             }
             Inlines.OpusAssert(itheta >= 0);
             itheta = Inlines.celt_udiv(itheta * 16384, qn);
-            if (encode != 0 && stereo != 0) {
-                if (itheta == 0) {
-                    intensity_stereo(X, X_ptr, Y, Y_ptr, bandE, i, N);
-                } else {
-                    stereo_split(X, X_ptr, Y, Y_ptr, N);
-                }
-            }
         } else if (stereo != 0) {
-            if (encode != 0) {
-                inv = itheta > 8192 ? 1 : 0;
-                if (inv != 0) {
-                    int j;
-                    for (j = 0; j < N; j++) {
-                        Y[Y_ptr + j] = (-Y[Y_ptr + j]);
-                    }
-                }
-                intensity_stereo(X, X_ptr, Y, Y_ptr, bandE, i, N);
-            }
             if (b.Val > 2 << EntropyCoder.BITRES && ctx.remaining_bits > 2 << EntropyCoder.BITRES) {
-                if (encode != 0) {
-                    ec.enc_bit_logp(inv, 2);
-                } else {
-                    inv = ec.dec_bit_logp(2);
-                }
+                inv = ec.dec_bit_logp(2);
             } else {
                 inv = 0;
             }
@@ -786,15 +493,12 @@ class Bands {
 
     static int quant_band_n1(band_ctx ctx, int[] X, int X_ptr, int[] Y, int Y_ptr, int b,
                              int[] lowband_out, int lowband_out_ptr) {
-        int resynth = ctx.encode == 0 ? 1 : 0;
         int c;
         int stereo;
         int[] x = X;
         int x_ptr = X_ptr;
-        int encode;
         EntropyCoder ec; // porting note: pointer
 
-        encode = ctx.encode;
         ec = ctx.ec;
 
         stereo = (Y != null) ? 1 : 0;
@@ -802,18 +506,11 @@ class Bands {
         do {
             int sign = 0;
             if (ctx.remaining_bits >= 1 << EntropyCoder.BITRES) {
-                if (encode != 0) {
-                    sign = x[x_ptr] < 0 ? 1 : 0;
-                    ec.enc_bits(sign, 1);
-                } else {
-                    sign = ec.dec_bits(1);
-                }
+                sign = ec.dec_bits(1);
                 ctx.remaining_bits -= 1 << EntropyCoder.BITRES;
                 b -= 1 << EntropyCoder.BITRES;
             }
-            if (resynth != 0) {
-                x[x_ptr] = sign != 0 ? -CeltConstants.NORM_SCALING : CeltConstants.NORM_SCALING;
-            }
+            x[x_ptr] = sign != 0 ? -CeltConstants.NORM_SCALING : CeltConstants.NORM_SCALING;
             x = Y;
             x_ptr = Y_ptr;
         } while (++c < 1 + stereo);
@@ -835,19 +532,16 @@ class Bands {
         int cache_ptr;
         int q;
         int curr_bits;
-        int imid = 0, iside = 0;
+        int imid, iside;
         int B0 = B;
-        int mid = 0, side = 0;
+        int mid, side;
         int cm = 0;
-        int resynth = (ctx.encode == 0) ? 1 : 0;
-        int Y = 0;
-        int encode;
+        int Y;
         CeltMode m; //porting note: pointer
         int i;
         int spread;
         EntropyCoder ec; //porting note: pointer
 
-        encode = ctx.encode;
         m = ctx.m;
         i = ctx.i;
         spread = ctx.spread;
@@ -874,7 +568,7 @@ class Bands {
 
             BoxedValueInt boxed_b = new BoxedValueInt(b);
             BoxedValueInt boxed_fill = new BoxedValueInt(fill);
-            compute_theta(ctx, sctx, X, X_ptr, X, Y, N, boxed_b, B, B0, LM, 0, boxed_fill);
+            compute_theta(ctx, sctx, N, boxed_b, B, B0, LM, 0, boxed_fill);
             b = boxed_b.Val;
             fill = boxed_fill.Val;
 
@@ -945,47 +639,41 @@ class Bands {
                 int K = Rate.get_pulses(q);
 
                 /* Finally do the actual quantization */
-                if (encode != 0) {
-                    cm = VQ.alg_quant(X, X_ptr, N, K, spread, B, ec);
-                } else {
-                    cm = VQ.alg_unquant(X, X_ptr, N, K, spread, B, ec, gain);
-                }
+                cm = VQ.alg_unquant(X, X_ptr, N, K, spread, B, ec, gain);
             } else {
                 /* If there's no pulse, fill the band anyway */
                 int j;
 
-                if (resynth != 0) {
-                    int cm_mask;
+                int cm_mask;
                     /* B can be as large as 16, so this shift might overflow an int on a
                        16-bit platform; use a long to get defined behavior.*/
-                    cm_mask = (1 << B) - 1;
-                    fill = fill & cm_mask;
+                cm_mask = (1 << B) - 1;
+                fill = fill & cm_mask;
 
-                    if (fill == 0) {
-                        Arrays.fill(X, X_ptr, X_ptr + N, 0);
-                    } else {
-                        if (lowband == null) {
-                            /* Noise */
-                            for (j = 0; j < N; j++) {
-                                ctx.seed = celt_lcg_rand(ctx.seed);
-                                X[X_ptr + j] = (ctx.seed >> 20);
-                            }
-                            cm = cm_mask;
-                        } else {
-                            /* Folded spectrum */
-                            for (j = 0; j < N; j++) {
-                                int tmp;
-                                ctx.seed = celt_lcg_rand(ctx.seed);
-                                /* About 48 dB below the "normal" folding level */
-                                tmp = ((short) (0.5 + (1.0f / 256) * (1 << (10))))/*Inlines.QCONST16(1.0f / 256, 10)*/;
-                                tmp = (((ctx.seed) & 0x8000) != 0 ? tmp : -tmp);
-                                X[X_ptr + j] = (lowband[lowband_ptr + j] + tmp);
-                            }
-                            cm = fill;
+                if (fill == 0) {
+                    Arrays.fill(X, X_ptr, X_ptr + N, 0);
+                } else {
+                    if (lowband == null) {
+                        /* Noise */
+                        for (j = 0; j < N; j++) {
+                            ctx.seed = celt_lcg_rand(ctx.seed);
+                            X[X_ptr + j] = (ctx.seed >> 20);
                         }
-
-                        VQ.renormalise_vector(X, X_ptr, N, gain);
+                        cm = cm_mask;
+                    } else {
+                        /* Folded spectrum */
+                        for (j = 0; j < N; j++) {
+                            int tmp;
+                            ctx.seed = celt_lcg_rand(ctx.seed);
+                            /* About 48 dB below the "normal" folding level */
+                            tmp = ((short) (0.5 + (1.0f / 256) * (1 << (10))))/*Inlines.QCONST16(1.0f / 256, 10)*/;
+                            tmp = (((ctx.seed) & 0x8000) != 0 ? tmp : -tmp);
+                            X[X_ptr + j] = (lowband[lowband_ptr + j] + tmp);
+                        }
+                        cm = fill;
                     }
+
+                    VQ.renormalise_vector(X, X_ptr, N, gain);
                 }
             }
         }
@@ -1012,13 +700,10 @@ class Bands {
         int time_divide = 0;
         int recombine = 0;
         int longBlocks;
-        int cm = 0;
-        int resynth = ctx.encode == 0 ? 1 : 0;
+        int cm;
         int k;
-        int encode;
         int tf_change;
 
-        encode = ctx.encode;
         tf_change = ctx.tf_change;
 
         longBlocks = B0 == 1 ? 1 : 0;
@@ -1042,19 +727,8 @@ class Bands {
         }
 
         for (k = 0; k < recombine; k++) {
-            if (encode != 0) {
-                haar1(X, X_ptr, N >> k, 1 << k);
-            }
             if (lowband != null) {
                 haar1(lowband, lowband_ptr, N >> k, 1 << k);
-            }
-            int idx1 = fill & 0xF;
-            int idx2 = fill >> 4;
-            if (idx1 < 0) {
-                System.out.println("e");
-            }
-            if (idx2 < 0) {
-                System.out.println("e");
             }
             fill = bit_interleave_table[fill & 0xF] | bit_interleave_table[fill >> 4] << 2;
         }
@@ -1063,9 +737,6 @@ class Bands {
 
         /* Increasing the time resolution */
         while ((N_B & 1) == 0 && tf_change < 0) {
-            if (encode != 0) {
-                haar1(X, X_ptr, N_B, B);
-            }
             if (lowband != null) {
                 haar1(lowband, lowband_ptr, N_B, B);
             }
@@ -1080,9 +751,6 @@ class Bands {
 
         /* Reorganize the samples in time order instead of frequency order */
         if (B0 > 1) {
-            if (encode != 0) {
-                deinterleave_hadamard(X, X_ptr, N_B >> recombine, B0 << recombine, longBlocks);
-            }
             if (lowband != null) {
                 deinterleave_hadamard(lowband, lowband_ptr, N_B >> recombine, B0 << recombine, longBlocks);
             }
@@ -1091,40 +759,38 @@ class Bands {
         cm = quant_partition(ctx, X, X_ptr, N, b, B, lowband, lowband_ptr, LM, gain, fill);
 
         /* This code is used by the decoder and by the resynthesis-enabled encoder */
-        if (resynth != 0) {
-            /* Undo the sample reorganization going from time order to frequency order */
-            if (B0 > 1) {
-                interleave_hadamard(X, X_ptr, N_B >> recombine, B0 << recombine, longBlocks);
-            }
-
-            /* Undo time-freq changes that we did earlier */
-            N_B = N_B0;
-            B = B0;
-            for (k = 0; k < time_divide; k++) {
-                B >>= 1;
-                N_B <<= 1;
-                cm |= cm >> B;
-                haar1(X, X_ptr, N_B, B);
-            }
-
-            for (k = 0; k < recombine; k++) {
-                cm = bit_deinterleave_table[cm];
-                haar1(X, X_ptr, N0 >> k, 1 << k);
-            }
-            B <<= recombine;
-
-            /* Scale output for later folding */
-            if (lowband_out != null) {
-                int j;
-                int n;
-                n = (Inlines.celt_sqrt(Inlines.SHL32(N0, 22)));
-                for (j = 0; j < N0; j++) {
-                    lowband_out[lowband_out_ptr + j] = Inlines.MULT16_16_Q15(n, X[X_ptr + j]);
-                }
-            }
-
-            cm = cm & ((1 << B) - 1);
+        /* Undo the sample reorganization going from time order to frequency order */
+        if (B0 > 1) {
+            interleave_hadamard(X, X_ptr, N_B >> recombine, B0 << recombine, longBlocks);
         }
+
+        /* Undo time-freq changes that we did earlier */
+        N_B = N_B0;
+        B = B0;
+        for (k = 0; k < time_divide; k++) {
+            B >>= 1;
+            N_B <<= 1;
+            cm |= cm >> B;
+            haar1(X, X_ptr, N_B, B);
+        }
+
+        for (k = 0; k < recombine; k++) {
+            cm = bit_deinterleave_table[cm];
+            haar1(X, X_ptr, N0 >> k, 1 << k);
+        }
+        B <<= recombine;
+
+        /* Scale output for later folding */
+        if (lowband_out != null) {
+            int j;
+            int n;
+            n = (Inlines.celt_sqrt(Inlines.SHL32(N0, 22)));
+            for (j = 0; j < N0; j++) {
+                lowband_out[lowband_out_ptr + j] = Inlines.MULT16_16_Q15(n, X[X_ptr + j]);
+            }
+        }
+
+        cm = cm & ((1 << B) - 1);
         return cm;
     }
 
@@ -1133,20 +799,17 @@ class Bands {
                                  int N, int b, int B, int[] lowband, int lowband_ptr,
                                  int LM, int[] lowband_out, int lowband_out_ptr,
                                  int[] lowband_scratch, int lowband_scratch_ptr, int fill) {
-        int imid = 0, iside = 0;
-        int inv = 0;
-        int mid = 0, side = 0;
-        int cm = 0;
-        int resynth = ctx.encode == 0 ? 1 : 0;
+        int imid, iside;
+        int inv;
+        int mid, side;
+        int cm;
         int mbits, sbits, delta;
         int itheta;
         int qalloc;
         split_ctx sctx = new split_ctx(); // porting note: stack var
         int orig_fill;
-        int encode;
         EntropyCoder ec; //porting note: pointer
 
-        encode = ctx.encode;
         ec = ctx.ec;
 
         /* Special case for one sample */
@@ -1158,7 +821,7 @@ class Bands {
 
         BoxedValueInt boxed_b = new BoxedValueInt(b);
         BoxedValueInt boxed_fill = new BoxedValueInt(fill);
-        compute_theta(ctx, sctx, X, X_ptr, Y, Y_ptr, N, boxed_b, B, B, LM, 1, boxed_fill);
+        compute_theta(ctx, sctx, N, boxed_b, B, B, LM, 1, boxed_fill);
         b = boxed_b.Val;
         fill = boxed_fill.Val;
 
@@ -1178,7 +841,7 @@ class Bands {
             int c;
             int sign = 0;
             int[] x2, y2;
-            int x2_ptr, y2_ptr;
+            int x2_ptr;
             mbits = b;
             sbits = 0;
             /* Only need one bit for the side. */
@@ -1192,22 +855,14 @@ class Bands {
                 x2 = Y;
                 x2_ptr = Y_ptr;
                 y2 = X;
-                y2_ptr = X_ptr;
             } else {
                 x2 = X;
                 x2_ptr = X_ptr;
                 y2 = Y;
-                y2_ptr = Y_ptr;
             }
 
             if (sbits != 0) {
-                if (encode != 0) {
-                    /* Here we only need to encode a sign for the side. */
-                    sign = (x2[x2_ptr] * y2[Y_ptr + 1] - x2[x2_ptr + 1] * y2[Y_ptr] < 0) ? 1 : 0;
-                    ec.enc_bits(sign, 1);
-                } else {
-                    sign = ec.dec_bits(1);
-                }
+                sign = ec.dec_bits(1);
             }
             sign = 1 - 2 * sign;
             /* We use orig_fill here because we want to fold the side, but if
@@ -1219,19 +874,17 @@ class Bands {
                and there's no need to worry about mixing with the other channel. */
             y2[Y_ptr] = ((-sign) * x2[x2_ptr + 1]);
             y2[Y_ptr + 1] = (sign * x2[x2_ptr]);
-            if (resynth != 0) {
-                int tmp;
-                X[X_ptr] = Inlines.MULT16_16_Q15(mid, X[X_ptr]);
-                X[X_ptr + 1] = Inlines.MULT16_16_Q15(mid, X[X_ptr + 1]);
-                Y[Y_ptr] = Inlines.MULT16_16_Q15(side, Y[Y_ptr]);
-                Y[Y_ptr + 1] = Inlines.MULT16_16_Q15(side, Y[Y_ptr + 1]);
-                tmp = X[X_ptr];
-                X[X_ptr] = Inlines.SUB16(tmp, Y[Y_ptr]);
-                Y[Y_ptr] = Inlines.ADD16(tmp, Y[Y_ptr]);
-                tmp = X[X_ptr + 1];
-                X[X_ptr + 1] = Inlines.SUB16(tmp, Y[Y_ptr + 1]);
-                Y[Y_ptr + 1] = Inlines.ADD16(tmp, Y[Y_ptr + 1]);
-            }
+            int tmp;
+            X[X_ptr] = Inlines.MULT16_16_Q15(mid, X[X_ptr]);
+            X[X_ptr + 1] = Inlines.MULT16_16_Q15(mid, X[X_ptr + 1]);
+            Y[Y_ptr] = Inlines.MULT16_16_Q15(side, Y[Y_ptr]);
+            Y[Y_ptr + 1] = Inlines.MULT16_16_Q15(side, Y[Y_ptr + 1]);
+            tmp = X[X_ptr];
+            X[X_ptr] = Inlines.SUB16(tmp, Y[Y_ptr]);
+            Y[Y_ptr] = Inlines.ADD16(tmp, Y[Y_ptr]);
+            tmp = X[X_ptr + 1];
+            X[X_ptr + 1] = Inlines.SUB16(tmp, Y[Y_ptr + 1]);
+            Y[Y_ptr + 1] = Inlines.ADD16(tmp, Y[Y_ptr + 1]);
         } else {
             /* "Normal" split code */
             int rebalance;
@@ -1277,22 +930,20 @@ class Bands {
 
 
         /* This code is used by the decoder and by the resynthesis-enabled encoder */
-        if (resynth != 0) {
-            if (N != 2) {
-                stereo_merge(X, X_ptr, Y, Y_ptr, mid, N);
-            }
-            if (inv != 0) {
-                int j;
-                for (j = Y_ptr; j < N + Y_ptr; j++) {
-                    Y[j] = (short) (-Y[j]);
-                }
+        if (N != 2) {
+            stereo_merge(X, X_ptr, Y, Y_ptr, mid, N);
+        }
+        if (inv != 0) {
+            int j;
+            for (j = Y_ptr; j < N + Y_ptr; j++) {
+                Y[j] = (short) (-Y[j]);
             }
         }
 
         return cm;
     }
 
-    static void quant_all_bands(int encode, CeltMode m, int start, int end,
+    static void quant_all_bands(CeltMode m, int start, int end,
                                 int[] X_, int[] Y_, short[] collapse_masks,
                                 int[][] bandE, int[] pulses, int shortBlocks, int spread,
                                 int dual_stereo, int intensity, int[] tf_res, int total_bits,
@@ -1311,7 +962,6 @@ class Bands {
         int update_lowband = 1;
         int C = Y_ != null ? 2 : 1;
         int norm_offset;
-        int resynth = encode == 0 ? 1 : 0;
         band_ctx ctx = new band_ctx(); // porting note: stack var
 
         M = 1 << LM;
@@ -1331,7 +981,6 @@ class Bands {
         lowband_offset = 0;
         ctx.bandE = bandE;
         ctx.ec = ec;
-        ctx.encode = encode;
         ctx.intensity = intensity;
         ctx.m = m;
         ctx.seed = seed.Val;
@@ -1345,7 +994,7 @@ class Bands {
             int[] X, Y;
             int X_ptr, Y_ptr;
             Y_ptr = 0;
-            int tf_change = 0;
+            int tf_change;
             long x_cm;
             long y_cm;
             int last;
@@ -1377,7 +1026,7 @@ class Bands {
                 b = 0;
             }
 
-            if (resynth != 0 && M * eBands[i] - N >= M * eBands[start] && (update_lowband != 0 || lowband_offset == 0)) {
+            if (M * eBands[i] - N >= M * eBands[start] && (update_lowband != 0 || lowband_offset == 0)) {
                 lowband_offset = i;
             }
 
@@ -1426,10 +1075,8 @@ class Bands {
 
                 /* Switch off dual stereo to do intensity. */
                 dual_stereo = 0;
-                if (resynth != 0) {
-                    for (j = 0; j < M * eBands[i] - norm_offset; j++) {
-                        norm[j] = (Inlines.HALF32(norm[j] + norm[norm2 + j]));
-                    }
+                for (j = 0; j < M * eBands[i] - norm_offset; j++) {
+                    norm[j] = (Inlines.HALF32(norm[j] + norm[norm2 + j]));
                 }
             }
             if (dual_stereo != 0) {

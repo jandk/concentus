@@ -66,17 +66,8 @@ public class OpusError {
     public static final int OPUS_INVALID_PACKET = -4;
 
     /**
-     * Invalid/unsupported request number
-     */
-    public static final int OPUS_UNIMPLEMENTED = -5;
-
-    /**
      * An encoder or decoder structure is invalid or already freed
      */
     public static final int OPUS_INVALID_STATE = -6;
 
-    /**
-     * Memory allocation has failed
-     */
-    public static final int OPUS_ALLOC_FAIL = -7;
 }

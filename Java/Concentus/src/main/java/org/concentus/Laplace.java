@@ -49,46 +49,6 @@ class Laplace {
         return (Inlines.CapToUInt32(ft * (16384 - decay)) >> 15);
     }
 
-    static void ec_laplace_encode(EntropyCoder enc, BoxedValueInt value, long fs, int decay) {
-        long fl;
-        int val = value.Val;
-        fl = 0;
-        if (val != 0) {
-            int s;
-            int i;
-            s = -(val < 0 ? 1 : 0);
-            val = (val + s) ^ s;
-            fl = fs;
-            fs = ec_laplace_get_freq1(fs, decay);
-
-            /* Search the decaying part of the PDF.*/
-            for (i = 1; fs > 0 && i < val; i++) {
-                fs *= 2;
-                fl = Inlines.CapToUInt32(fl + fs + 2 * LAPLACE_MINP);
-                fs = Inlines.CapToUInt32((fs * decay) >> 15);
-            }
-
-            /* Everything beyond that has probability LAPLACE_MINP. */
-            if (fs == 0) {
-                int di;
-                int ndi_max;
-                ndi_max = (int) (32768 - fl + LAPLACE_MINP - 1) >> LAPLACE_LOG_MINP;
-                ndi_max = (ndi_max - s) >> 1;
-                di = Inlines.IMIN(val - i, ndi_max - 1);
-                fl = Inlines.CapToUInt32(fl + (2 * di + 1 + s) * LAPLACE_MINP);
-                fs = Inlines.IMIN(LAPLACE_MINP, 32768 - fl);
-                value.Val = (i + di + s) ^ s;
-            } else {
-                fs += LAPLACE_MINP;
-                fl = fl + Inlines.CapToUInt32(fs & ~s);
-            }
-            Inlines.OpusAssert(fl + fs <= 32768);
-            Inlines.OpusAssert(fs > 0);
-        }
-
-        enc.encode_bin(fl, (fl + fs), 15);
-    }
-
     static int ec_laplace_decode(EntropyCoder dec, long fs, int decay) {
         int val = 0;
         long fl;

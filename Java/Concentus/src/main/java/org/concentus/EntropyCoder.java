@@ -31,8 +31,6 @@
  */
 package org.concentus;
 
-import java.util.Arrays;
-
 /*A range decoder.
 This is an entropy decoder based upon \cite{Mar79}, which is itself a
 rediscovery of the FIFO arithmetic code introduced by \cite{Pas76}.
@@ -105,9 +103,6 @@ class EntropyCoder {
     /*The maximum symbol value.*/
     private final long EC_SYM_MAX = 0x000000FF;
 
-    /*Bits to shift by to move a symbol into the high-order position.*/
-    private final int EC_CODE_SHIFT = 0x00000017;
-
     /*Carry bit of the high-order range symbol.*/
     private final long EC_CODE_TOP = 0x80000000L;
 
@@ -179,55 +174,12 @@ class EntropyCoder {
         error = 0;
     }
 
-    void Assign(EntropyCoder other) {
-        this.buf = other.buf;
-        this.buf_ptr = other.buf_ptr;
-        this.storage = other.storage;
-        this.end_offs = other.end_offs;
-        this.end_window = other.end_window;
-        this.nend_bits = other.nend_bits;
-        this.nbits_total = other.nbits_total;
-        this.offs = other.offs;
-        this.rng = other.rng;
-        this.val = other.val;
-        this.ext = other.ext;
-        this.rem = other.rem;
-        this.error = other.error;
-    }
-
-    byte[] get_buffer() {
-        byte[] convertedBuf = new byte[storage];
-        System.arraycopy(buf, buf_ptr, convertedBuf, 0, storage);
-        return convertedBuf;
-    }
-
-    void write_buffer(byte[] data, int data_ptr, int target_offset, int size) {
-        System.arraycopy(data, data_ptr, buf, buf_ptr + target_offset, size);
-    }
-
     int read_byte() {
         return offs < storage ? Byte.toUnsignedInt(buf[buf_ptr + this.offs++]) : 0;
     }
 
     int read_byte_from_end() {
         return end_offs < storage ? Byte.toUnsignedInt(buf[buf_ptr + (storage - ++(this.end_offs))]) : 0;
-    }
-
-    int write_byte(long _value) {
-        if (offs + end_offs >= storage) {
-            return -1;
-        }
-        buf[buf_ptr + this.offs++] = (byte) (_value & 0xFF);
-        return 0;
-    }
-
-    int write_byte_at_end(long _value) {
-        if (offs + end_offs >= storage) {
-            return -1;
-        }
-
-        buf[buf_ptr + (storage - ++(this.end_offs))] = (byte) (_value & 0xFF);
-        return 0;
     }
 
     /// <summary>
@@ -389,183 +341,6 @@ class EntropyCoder {
         return ret;
     }
 
-    /// <summary>
-    /// Outputs a symbol, with a carry bit.
-    /// If there is a potential to propagate a carry over several symbols, they are
-    /// buffered until it can be determined whether or not an actual carry will
-    /// occur.
-    /// If the counter for the buffered symbols overflows, then the stream becomes
-    /// undecodable.
-    /// This gives a theoretical limit of a few billion symbols in a single packet on
-    /// 32-bit systems.
-    /// The alternative is to truncate the range in order to force a carry, but
-    /// requires similar carry tracking in the decoder, needlessly slowing it down.
-    /// </summary>
-    /// <param name="this"></param>
-    /// <param name="_c"></param>
-    void enc_carry_out(int _c) {
-        if (_c != EC_SYM_MAX) {
-            /*No further carry propagation possible, flush buffer.*/
-            int carry;
-            carry = _c >> EC_SYM_BITS;
-
-            /*Don't output a byte on the first write.
-              This compare should be taken care of by branch-prediction thereafter.*/
-            if (rem >= 0) {
-                this.error |= write_byte(Inlines.CapToUInt32(rem + carry));
-            }
-
-            if (ext > 0) {
-                long sym;
-                sym = (EC_SYM_MAX + carry) & EC_SYM_MAX;
-                do {
-                    this.error |= write_byte(sym);
-                } while (--(this.ext) > 0);
-            }
-
-            this.rem = (int) (_c & EC_SYM_MAX);
-        } else {
-            this.ext++;
-        }
-    }
-
-    void enc_normalize() {
-        /*If the range is too small, output some bits and rescale it.*/
-        while (rng <= EC_CODE_BOT) {
-            enc_carry_out((int) (val >> EC_CODE_SHIFT));
-            /*Move the next-to-high-order symbol into the high-order position.*/
-            this.val = Inlines.CapToUInt32((val << EC_SYM_BITS) & (EC_CODE_TOP - 1));
-            this.rng = Inlines.CapToUInt32(rng << EC_SYM_BITS);
-            this.nbits_total += EC_SYM_BITS;
-        }
-    }
-
-    void enc_init(byte[] _buf, int buf_ptr, int _size) {
-        this.buf = _buf;
-        this.buf_ptr = buf_ptr;
-        this.end_offs = 0;
-        this.end_window = 0;
-        this.nend_bits = 0;
-        /*This is the offset from which ec_tell() will subtract partial bits.*/
-        this.nbits_total = EC_CODE_BITS + 1;
-        this.offs = 0;
-        this.rng = Inlines.CapToUInt32(EC_CODE_TOP);
-        this.rem = -1;
-        this.val = 0;
-        this.ext = 0;
-        this.storage = _size;
-        this.error = 0;
-    }
-
-    void encode(long _fl, long _fh, long _ft) {
-        _fl = Inlines.CapToUInt32(_fl);
-        _fh = Inlines.CapToUInt32(_fh);
-        _ft = Inlines.CapToUInt32(_ft);
-        long r = Inlines.CapToUInt32(rng / _ft);
-        if (_fl > 0) {
-            this.val += Inlines.CapToUInt32(rng - (r * (_ft - _fl)));
-            this.rng = Inlines.CapToUInt32(r * (_fh - _fl));
-        } else {
-            this.rng = Inlines.CapToUInt32(rng - (r * (_ft - _fh)));
-        }
-
-        enc_normalize();
-    }
-
-    void encode_bin(long _fl, long _fh, int _bits) {
-        _fl = Inlines.CapToUInt32(_fl);
-        _fh = Inlines.CapToUInt32(_fh);
-        long r = Inlines.CapToUInt32(rng >> _bits);
-        if (_fl > 0) {
-            this.val = Inlines.CapToUInt32(val + Inlines.CapToUInt32(rng - (r * ((1 << _bits) - _fl))));
-            this.rng = Inlines.CapToUInt32(r * (_fh - _fl));
-        } else {
-            this.rng = Inlines.CapToUInt32(rng - (r * ((1 << _bits) - _fh)));
-        }
-
-        enc_normalize();
-    }
-
-    /*The probability of having a "one" is 1/(1<<_logp).*/
-    void enc_bit_logp(int _val, int _logp) {
-        long r = rng;
-        long l = val;
-        long s = r >> _logp;
-        r -= s;
-        if (_val != 0) {
-            this.val = Inlines.CapToUInt32(l + r);
-        }
-
-        this.rng = _val != 0 ? s : r;
-        enc_normalize();
-    }
-
-    void enc_icdf(int _s, short[] _icdf, int _ftb) {
-        long r = Inlines.CapToUInt32(rng >> _ftb);
-        if (_s > 0) {
-            this.val = val + Inlines.CapToUInt32(rng - Inlines.CapToUInt32(r * _icdf[_s - 1]));
-            this.rng = (r * Inlines.CapToUInt32(_icdf[_s - 1] - _icdf[_s]));
-        } else {
-            this.rng = Inlines.CapToUInt32(rng - (r * _icdf[_s]));
-        }
-        enc_normalize();
-    }
-
-    void enc_uint(long _fl, long _ft) {
-        _fl = Inlines.CapToUInt32(_fl);
-        _ft = Inlines.CapToUInt32(_ft);
-
-        long ft;
-        long fl;
-        int ftb;
-        /*In order to optimize EC_ILOG(), it is undefined for the value 0.*/
-        Inlines.OpusAssert(_ft > 1);
-        _ft--;
-        ftb = Inlines.EC_ILOG(_ft);
-        if (ftb > EC_UINT_BITS) {
-            ftb -= EC_UINT_BITS;
-            ft = Inlines.CapToUInt32((_ft >> ftb) + 1);
-            fl = Inlines.CapToUInt32(_fl >> ftb);
-            encode(fl, fl + 1, ft);
-            enc_bits(_fl & Inlines.CapToUInt32((1 << ftb) - 1), ftb);
-        } else {
-            encode(_fl, _fl + 1, _ft + 1);
-        }
-    }
-
-    void enc_bits(long _fl, int _bits) {
-        _fl = Inlines.CapToUInt32(_fl);
-        long window;
-        int used;
-        window = end_window;
-        used = nend_bits;
-        Inlines.OpusAssert(_bits > 0);
-
-        if (used + _bits > EC_WINDOW_SIZE) {
-            do {
-                this.error = error | write_byte_at_end(window & EC_SYM_MAX);
-                window >>= EC_SYM_BITS;
-                used -= EC_SYM_BITS;
-            } while (used >= EC_SYM_BITS);
-        }
-
-        window = window | Inlines.CapToUInt32(_fl << used);
-        used += _bits;
-        this.end_window = window;
-        this.nend_bits = used;
-        this.nbits_total += _bits;
-    }
-
-    void enc_shrink(int _size) {
-        Inlines.OpusAssert(offs + end_offs <= _size);
-        System.arraycopy(buf, buf_ptr + _size - end_offs, buf, buf_ptr + storage - end_offs, end_offs);
-        this.storage = _size;
-    }
-
-    int range_bytes() {
-        return offs;
-    }
-
     int get_error() {
         return error;
     }
@@ -607,65 +382,4 @@ class EntropyCoder {
         return nbits - l;
     }
 
-    void enc_done() {
-        long window;
-        int used;
-        long msk;
-        long end;
-        int l;
-        /*We output the minimum number of bits that ensures that the symbols encoded
-           thus far will be decoded correctly regardless of the bits that follow.*/
-        l = EC_CODE_BITS - Inlines.EC_ILOG(rng);
-        msk = Inlines.CapToUInt32((EC_CODE_TOP - 1) >>> l);
-        end = Inlines.CapToUInt32((Inlines.CapToUInt32(val + msk)) & ~msk);
-
-        if ((end | msk) >= val + rng) {
-            l++;
-            msk >>= 1;
-            end = Inlines.CapToUInt32((Inlines.CapToUInt32(val + msk)) & ~msk);
-        }
-
-        while (l > 0) {
-            enc_carry_out((int) (end >> EC_CODE_SHIFT));
-            end = Inlines.CapToUInt32((end << EC_SYM_BITS) & (EC_CODE_TOP - 1));
-            l -= EC_SYM_BITS;
-        }
-
-        /*If we have a buffered byte flush it into the output buffer.*/
-        if (rem >= 0 || ext > 0) {
-            enc_carry_out(0);
-        }
-
-        /*If we have buffered extra bits, flush them as well.*/
-        window = end_window;
-        used = nend_bits;
-
-        while (used >= EC_SYM_BITS) {
-            this.error |= write_byte_at_end(window & EC_SYM_MAX);
-            window = window >> EC_SYM_BITS;
-            used -= EC_SYM_BITS;
-        }
-
-        /*Clear any excess space and add any remaining extra bits to the last byte.*/
-        if (error == 0) {
-            Arrays.fill(buf, buf_ptr + offs, buf_ptr + offs + storage - offs - end_offs, (byte) 0);
-            if (used > 0) {
-                /*If there's no range coder data at all, give up.*/
-                if (end_offs >= storage) {
-                    this.error = -1;
-                } else {
-                    l = -l;
-                    /*If we've busted, don't add too many extra bits to the last byte; it
-                       would corrupt the range coder data, and that's more important.*/
-                    if (offs + end_offs >= storage && l < used) {
-                        window = Inlines.CapToUInt32(window & ((1 << l) - 1));
-                        this.error = -1;
-                    }
-
-                    int z = buf_ptr + storage - end_offs - 1;
-                    buf[z] = (byte) (buf[z] | (byte) (window & 0xFF));
-                }
-            }
-        }
-    }
 }

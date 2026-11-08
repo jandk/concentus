@@ -58,14 +58,6 @@ final class Inlines {
         return ((int) (short) (a) * (b & 0xFFFF));
     }
 
-    static int MULT16_32_Q16(short a, int b) {
-        return ADD32(MULT16_16((a), SHR((b), 16)), SHR(MULT16_16SU((a), ((b) & 0x0000ffff)), 16));
-    }
-
-    static int MULT16_32_Q16(int a, int b) {
-        return ADD32(MULT16_16((a), SHR((b), 16)), SHR(MULT16_16SU((a), ((b) & 0x0000ffff)), 16));
-    }
-
     static int MULT16_32_P16(short a, int b) {
         return ADD32(MULT16_16((a), SHR((b), 16)), PSHR(MULT16_16SU((a), ((b) & 0x0000ffff)), 16));
     }
@@ -84,10 +76,6 @@ final class Inlines {
         return ADD32(ADD32(SHL(MULT16_16(SHR((a), 16), SHR((b), 16)), 1), SHR(MULT16_16SU(SHR((a), 16), ((b) & 0x0000ffff)), 15)), SHR(MULT16_16SU(SHR((b), 16), ((a) & 0x0000ffff)), 15));
     }
 
-    static short NEG16(short x) {
-        return (short) (-x);
-    }
-
     static int NEG16(int x) {
         return -x;
     }
@@ -98,10 +86,6 @@ final class Inlines {
 
     static short EXTRACT16(int x) {
         return ((short) x);
-    }
-
-    static int EXTEND32(short x) {
-        return x;
     }
 
     static int EXTEND32(int x) {
@@ -152,14 +136,6 @@ final class Inlines {
         return (((x) > (a) ? (a) : Math.max((x), -(a))));
     }
 
-    static short SATURATE16(int x) {
-        return (EXTRACT16((x) > 32767 ? 32767 : Math.max((x), -32768)));
-    }
-
-    static int ROUND16(int x, int a) {
-        return PSHR32((x), (a));
-    }
-
     static int HALF16(int x) {
         return (SHR32(x, 1));
     }
@@ -204,10 +180,6 @@ final class Inlines {
         return c + (a * b);
     }
 
-    static int MAC16_32_Q15(int c, int a, int b) {
-        return ADD32((c), ADD32(MULT16_16((a), SHR((b), 15)), SHR(MULT16_16((a), ((b) & 0x00007fff)), 15)));
-    }
-
     static int MULT16_16_Q14(int a, int b) {
         return (SHR(MULT16_16((a), (b)), 14));
     }
@@ -224,14 +196,6 @@ final class Inlines {
         return (SHR(ADD32(16384, MULT16_16((a), (b))), 15));
     }
 
-    static int DIV32_16(int a, int b) {
-        return a / b;
-    }
-
-    static int DIV32(int a, int b) {
-        return a / b;
-    }
-
     static short SIG2WORD16(int x) {
         x = PSHR32(x, 12);
         x = MAX32(x, -32768);
@@ -239,31 +203,11 @@ final class Inlines {
         return EXTRACT16(x);
     }
 
-    static short MAX(short a, short b) {
-        return ((a) > (b) ? (a) : (b));
-    }
-
-    static short MIN16(short a, short b) {
-        return ((a) < (b) ? (a) : (b));
-    }
-
-    static short MAX16(short a, short b) {
-        return ((a) > (b) ? (a) : (b));
-    }
-
     static int MIN16(int a, int b) {
         return (Math.min((a), (b)));
     }
 
     static int MAX16(int a, int b) {
-        return (Math.max((a), (b)));
-    }
-
-    static float MIN16(float a, float b) {
-        return (Math.min((a), (b)));
-    }
-
-    static float MAX16(float a, float b) {
         return (Math.max((a), (b)));
     }
 
@@ -287,26 +231,6 @@ final class Inlines {
         return (Math.max((a), (b)));
     }
 
-    static float MIN32(float a, float b) {
-        return (Math.min((a), (b)));
-    }
-
-    static float MAX32(float a, float b) {
-        return (Math.max((a), (b)));
-    }
-
-    static float ABS16(float x) {
-        return ((x) < 0 ? (-(x)) : (x));
-    }
-
-    static short ABS16(short x) {
-        return (short) (((x) < 0 ? (-(x)) : (x)));
-    }
-
-    static int ABS32(int x) {
-        return ((x) < 0 ? (-(x)) : (x));
-    }
-
     static int celt_udiv(int n, int d) {
         Inlines.OpusAssert(d > 0);
         return n / d;
@@ -326,46 +250,6 @@ final class Inlines {
     static int celt_ilog2(int x) {
         Inlines.OpusAssert(x > 0, "celt_ilog2() only defined for strictly positive numbers");
         return (EC_ILOG(x) - 1);
-    }
-
-    /**
-     * Integer log in base2. Defined for zero, but not for negative numbers
-     */
-    static int celt_zlog2(int x) {
-        return x <= 0 ? 0 : celt_ilog2(x);
-    }
-
-    static int celt_maxabs16(int[] x, int x_ptr, int len) {
-        int i;
-        int maxval = 0;
-        int minval = 0;
-        for (i = x_ptr; i < len + x_ptr; i++) {
-            maxval = MAX32(maxval, x[i]);
-            minval = MIN32(minval, x[i]);
-        }
-        return MAX32(EXTEND32(maxval), -EXTEND32(minval));
-    }
-
-    static int celt_maxabs32(int[] x, int x_ptr, int len) {
-        int i;
-        int maxval = 0;
-        int minval = 0;
-        for (i = x_ptr; i < x_ptr + len; i++) {
-            maxval = MAX32(maxval, x[i]);
-            minval = MIN32(minval, x[i]);
-        }
-        return MAX32(maxval, -minval);
-    }
-
-    static short celt_maxabs32(short[] x, int x_ptr, int len) {
-        int i;
-        short maxval = 0;
-        short minval = 0;
-        for (i = x_ptr; i < x_ptr + len; i++) {
-            maxval = MAX16(maxval, x[i]);
-            minval = MIN16(minval, x[i]);
-        }
-        return MAX(maxval, (short) (-minval));
     }
 
     static int FRAC_MUL16(int a, int b) {
@@ -479,45 +363,6 @@ final class Inlines {
                 SUB16(MULT16_16_Q15(y, 12288), 16384))));
     }
 
-    static int frac_div32(int a, int b) {
-        int rcp;
-        int result, rem;
-        int shift = celt_ilog2(b) - 29;
-        a = VSHR32(a, shift);
-        b = VSHR32(b, shift);
-        /* 16-bit reciprocal */
-        rcp = ROUND16(celt_rcp(ROUND16(b, 16)), 3);
-        result = MULT16_32_Q15(rcp, a);
-        rem = PSHR32(a, 2) - MULT32_32_Q31(result, b);
-        result = ADD32(result, SHL32(MULT16_32_Q15(rcp, rem), 2));
-        if (result >= 536870912) /*  2^29 */ {
-            return 2147483647;          /*  2^31 - 1 */
-        } else if (result <= -536870912) /* -2^29 */ {
-            return -2147483647;         /* -2^31 */
-        } else {
-            return SHL32(result, 2);
-        }
-    }
-
-    private static final short log2_C0 = -6801 + (1 << (3));
-
-    /**
-     * Base-2 logarithm approximation (log2(x)). (Q14 input, Q10 output)
-     */
-    static int celt_log2(int x) {
-        int i;
-        int n, frac;
-        /* -0.41509302963303146, 0.9609890551383969, -0.31836011537636605,
-            0.15530808010959576, -0.08556153059057618 */
-        if (x == 0) {
-            return -32767;
-        }
-        i = celt_ilog2(x);
-        n = VSHR32(x, i - 15) - 32768 - 16384;
-        frac = ADD16(log2_C0, MULT16_16_Q15(n, ADD16(15746, MULT16_16_Q15(n, ADD16(-5217, MULT16_16_Q15(n, ADD16(2545, MULT16_16_Q15(n, -1401))))))));
-        return SHL16((short) (i - 13), 10) + SHR16(frac, 4);
-    }
-
     static int celt_exp2_frac(int x) {
         int frac;
         frac = SHL16(x, 4);
@@ -538,31 +383,6 @@ final class Inlines {
         }
         frac = (short) (celt_exp2_frac((short) (x - SHL16((short) (integer), 10))));
         return VSHR32(EXTEND32(frac), -integer - 2);
-    }
-
-    /* Atan approximation using a 4th order polynomial. Input is in Q15 format
-       and normalized by pi/4. Output is in Q15 format */
-    static int celt_atan01(int x) {
-        return MULT16_16_P15(x, ADD32(32767, MULT16_16_P15(x, ADD32(-21, MULT16_16_P15(x, ADD32(-11943, MULT16_16_P15(4936, x)))))));
-    }
-
-    /* atan2() approximation valid for positive input values */
-    static int celt_atan2p(int y, int x) {
-        if (y < x) {
-            int arg;
-            arg = celt_div(SHL32(EXTEND32(y), 15), x);
-            if (arg >= 32767) {
-                arg = 32767;
-            }
-            return SHR32(celt_atan01(EXTRACT16(arg)), 1);
-        } else {
-            int arg;
-            arg = celt_div(SHL32(EXTEND32(x), 15), y);
-            if (arg >= 32767) {
-                arg = 32767;
-            }
-            return 25736 - SHR16(celt_atan01(EXTRACT16(arg)), 1);
-        }
     }
 
     static int celt_cos_norm(int x) {

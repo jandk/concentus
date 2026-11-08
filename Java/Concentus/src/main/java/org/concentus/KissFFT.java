@@ -376,39 +376,4 @@ class KissFFT {
             m = m2;
         }
     }
-
-    static void opus_fft(FFTState st, int[] fin, int[] fout) {
-        int i;
-        /* Allows us to scale with MULT16_32_Q16() */
-        int scale_shift = st.scale_shift - 1;
-        short scale = st.scale;
-
-        Inlines.OpusAssert(fin != fout, "In-place FFT not supported");
-
-        /* Bit-reverse the input */
-        for (i = 0; i < st.nfft; i++) {
-            fout[(2 * st.bitrev[i])] = Inlines.SHR32(Inlines.MULT16_32_Q16(scale, fin[(2 * i)]), scale_shift);
-            fout[(2 * st.bitrev[i] + 1)] = Inlines.SHR32(Inlines.MULT16_32_Q16(scale, fin[(2 * i) + 1]), scale_shift);
-        }
-
-        opus_fft_impl(st, fout, 0);
-    }
-
-    //static void opus_ifft(FFTState st, Pointer<int> fin, Pointer<int> fout)
-    //{
-    //    int i;
-    //    Inlines.OpusAssert(fin != fout, "In-place iFFT not supported");
-    //    /* Bit-reverse the input */
-    //    for (i = 0; i < st.nfft * 2; i++)
-    //    {
-    //        fout[st.bitrev[i]] = fin[i];
-    //    }
-    //    for (i = 1; i < st.nfft * 2; i += 2)
-    //    {
-    //        fout[i] = -fout[i];
-    //    }
-    //    opus_fft_impl(st, fout.Data, fout.Offset);
-    //    for (i = 1; i < st.nfft * 2; i += 2)
-    //        fout[i] = -fout[i];
-    //}
 }

@@ -36,12 +36,12 @@ final class CeltImdct {
      * block's rising edge is added to. {@code out[.. outPtr + N2)} then holds finished samples and
      * {@code out[outPtr + N2 .. outPtr + N2 + overlap)} this block's windowed tail.
      */
-    void backward(int[] in, int inPtr, int[] out, int outPtr, float[] window, int overlap, int shift, int stride) {
+    void backward(float[] in, int inPtr, float[] out, int outPtr, float[] window, int overlap, int shift, int stride) {
         MDCT m = mdct[shift];
         int n2 = coeffs.length >> shift;
         int n4 = n2 >> 1;
 
-        // TODO float: temporary int <-> float conversion while the rest of the decoder is fixed point
+        /* Short blocks are interleaved */
         for (int k = 0; k < n2; k++) {
             coeffs[k] = in[inPtr + k * stride];
         }
@@ -50,13 +50,13 @@ final class CeltImdct {
         /* The window's rising edge starts overlap/2 before the middle half of the output */
         int s = n4 - (overlap >> 1);
         for (int i = 0; i < overlap; i++) {
-            out[outPtr + i] = (int) Math.rint(out[outPtr + i] + window[i] * y[s + i]);
+            out[outPtr + i] = out[outPtr + i] + window[i] * y[s + i];
         }
         for (int i = overlap; i < n2; i++) {
-            out[outPtr + i] = (int) Math.rint(y[s + i]);
+            out[outPtr + i] = y[s + i];
         }
         for (int i = 0; i < overlap; i++) {
-            out[outPtr + n2 + i] = (int) Math.rint(window[overlap - 1 - i] * y[s + n2 + i]);
+            out[outPtr + n2 + i] = window[overlap - 1 - i] * y[s + n2 + i];
         }
     }
 }

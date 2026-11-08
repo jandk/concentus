@@ -54,12 +54,12 @@ class CeltDecoder {
     int error = 0;
     int postfilter_period = 0;
     int postfilter_period_old = 0;
-    int postfilter_gain = 0;
-    int postfilter_gain_old = 0;
+    float postfilter_gain = 0;
+    float postfilter_gain_old = 0;
     int postfilter_tapset = 0;
     int postfilter_tapset_old = 0;
 
-    final int[] preemph_memD = new int[2];
+    final float[] preemph_memD = new float[2];
 
     /// <summary>
     /// Scratch space used by the decoder. It is actually a variable-sized
@@ -71,7 +71,7 @@ class CeltDecoder {
     /// val16 oldLogE[],        Size = 2*mode.nbEBands
     /// val16 oldLogE2[],       Size = 2*mode.nbEBands
     /// </summary>
-    int[][] decode_mem = null;
+    float[][] decode_mem = null;
 
     CeltImdct imdct = null;
     int[] oldEBands = null;
@@ -109,11 +109,8 @@ class CeltDecoder {
 
         PartialReset();
 
-        // We have to reconstitute the dynamic buffers here. fixme: this could be better implemented
-        this.decode_mem = new int[channels][];
-        for (int c = 0; c < channels; c++) {
-            decode_mem[c] = new int[CeltConstants.DECODE_BUFFER_SIZE + mode.overlap];
-        }
+        // We have to reconstitute the dynamic buffers here.
+        this.decode_mem = new float[channels][CeltConstants.DECODE_BUFFER_SIZE + mode.overlap];
         this.oldEBands = new int[2 * mode.nbEBands];
         this.oldLogE = new int[2 * mode.nbEBands];
         this.oldLogE2 = new int[2 * mode.nbEBands];
@@ -174,7 +171,7 @@ class CeltDecoder {
         int[] fine_priority;
         int[] tf_res;
         short[] collapse_masks;
-        int[][] out_syn = new int[2][];
+        float[][] out_syn = new float[2][];
         int[] out_syn_ptrs = new int[2];
         int[] oldBandE, oldLogE, oldLogE2;
 
@@ -188,7 +185,7 @@ class CeltDecoder {
         int codedBands;
         int alloc_trim;
         int postfilter_pitch;
-        int postfilter_gain;
+        float postfilter_gain;
         int intensity = 0;
         int dual_stereo = 0;
         int total_bits;
@@ -286,7 +283,7 @@ class CeltDecoder {
                 if (dec.tell() + 2 <= total_bits) {
                     postfilter_tapset = dec.dec_icdf(CeltTables.tapset_icdf, 2);
                 }
-                postfilter_gain = Inlines.QCONST16(.09375f, 15) * (qg + 1);
+                postfilter_gain = .09375f * (qg + 1);
             }
             tell = dec.tell();
         }
@@ -423,14 +420,14 @@ class CeltDecoder {
             this.postfilter_period_old = Inlines.IMAX(postfilter_period_old, CeltConstants.COMBFILTER_MINPERIOD);
             CeltCommon.comb_filter(out_syn[c], out_syn_ptrs[c], out_syn[c], out_syn_ptrs[c], postfilter_period_old, postfilter_period, mode.shortMdctSize,
                     postfilter_gain_old, this.postfilter_gain, postfilter_tapset_old, this.postfilter_tapset,
-                    mode.window, overlap);
+                    CeltTablesF.window120, overlap);
             if (LM != 0) {
                 CeltCommon.comb_filter(
                         out_syn[c], out_syn_ptrs[c] + (mode.shortMdctSize),
                         out_syn[c], out_syn_ptrs[c] + (mode.shortMdctSize),
                         postfilter_period, postfilter_pitch, N - mode.shortMdctSize,
                         this.postfilter_gain, postfilter_gain, this.postfilter_tapset, postfilter_tapset,
-                        mode.window, overlap);
+                        CeltTablesF.window120, overlap);
             }
 
         } while (++c < CC);
@@ -467,7 +464,7 @@ class CeltDecoder {
         } while (++c < 2);
         this.rng = (int) dec.rng;
 
-        CeltCommon.deemphasis(out_syn, out_syn_ptrs, pcm, pcm_ptr, N, CC, downsample, mode.preemph, preemph_memD);
+        CeltCommon.deemphasis(out_syn, out_syn_ptrs, pcm, pcm_ptr, N, CC, downsample, CeltTablesF.preemph, preemph_memD);
 
         if (dec.tell() > 8 * len) {
             return OpusError.OPUS_INTERNAL_ERROR;

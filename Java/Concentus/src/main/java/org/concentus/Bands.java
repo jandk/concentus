@@ -67,65 +67,38 @@ class Bands {
 
     /* De-normalise the energy to produce the synthesis from the unit-energy bands */
     static void denormalise_bands(CeltMode m, int[] X,
-                                  int[] freq, int freq_ptr, int[] bandLogE, int bandLogE_ptr, int start,
+                                  float[] freq, int freq_ptr, int[] bandLogE, int bandLogE_ptr, int start,
                                   int end, int M, int downsample, int silence) {
-        int i, N;
-        int bound;
-        int f;
-        int x;
+        int i;
         short[] eBands = m.eBands;
-        N = M * m.shortMdctSize;
-        bound = M * eBands[end];
+        int N = M * m.shortMdctSize;
+        int bound = M * eBands[end];
         if (downsample != 1) {
-            bound = Inlines.IMIN(bound, N / downsample);
+            bound = Math.min(bound, N / downsample);
         }
         if (silence != 0) {
             bound = 0;
             start = end = 0;
         }
-        f = freq_ptr;
-        x = M * eBands[start];
+        int f = freq_ptr;
+        int x = M * eBands[start];
 
         for (i = 0; i < M * eBands[start]; i++) {
             freq[f++] = 0;
         }
 
         for (i = start; i < end; i++) {
-            int j, band_end;
-            int g;
-            int lg;
-            int shift;
 
-            j = M * eBands[i];
-            band_end = M * eBands[i + 1];
-            lg = Inlines.ADD16(bandLogE[bandLogE_ptr + i], Inlines.SHL16(CeltTables.eMeans[i], 6));
+            int j = M * eBands[i];
+            int band_end = M * eBands[i + 1];
+            // TODO: bandLogE is still in Q10
+            float lg = bandLogE[bandLogE_ptr + i] / 1024.0f + CeltTablesF.eMeans[i];
+            float g = InlinesF.celt_exp2(Math.min(32.f, lg));
 
-            /* Handle the integer part of the log energy */
-            shift = 16 - (lg >> CeltConstants.DB_SHIFT);
-            if (shift > 31) {
-                shift = 0;
-                g = 0;
-            } else {
-                /* Handle the fractional part. */
-                g = Inlines.celt_exp2_frac(lg & ((1 << CeltConstants.DB_SHIFT) - 1));
-            }
-            /* Handle extreme gains with negative shift. */
-            if (shift < 0) {
-                /* For shift < -2 we'd be likely to overflow, so we're capping
-                      the gain here. This shouldn't happen unless the bitstream is
-                      already corrupted. */
-                if (shift < -2) {
-                    g = 32767;
-                    shift = -2;
-                }
-                do {
-                    freq[f] = Inlines.SHR32(Inlines.MULT16_16(X[x], g), -shift);
-                } while (++j < band_end);
-            } else {
-                do {
-                    freq[f++] = Inlines.SHR32(Inlines.MULT16_16(X[x++], g), shift);
-                } while (++j < band_end);
-            }
+            do {
+                // TODO: X is still in Q14
+                freq[f++] = X[x++] / 16384.0f * g;
+            } while (++j < band_end);
         }
 
         Inlines.OpusAssert(start <= end);

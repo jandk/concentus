@@ -36,60 +36,41 @@ package org.concentus;
 
 class CeltCommon {
 
-    static void deemphasis(int[][] input, int[] input_ptrs, short[] pcm, int pcm_ptr, int N, int C, int downsample, int[] coef,
-                           int[] mem) {
-        int c;
-        int Nd;
-        int apply_downsampling = 0;
-        int coef0;
-        int[] scratch = new int[N];
-        coef0 = coef[0];
-        Nd = N / downsample;
-        c = 0;
+    static void deemphasis(float[][] input, int[] input_ptrs, short[] pcm, int pcm_ptr, int N, int C, int downsample,
+                           float[] coef, float[] mem) {
+        float coef0 = coef[0];
+        int Nd = N / downsample;
+        float[] scratch = downsample > 1 ? new float[N] : null;
+        int c = 0;
         do {
             int j;
-            int x_ptr;
-            int y;
-            int m = mem[c];
-            int[] x = input[c];
-            x_ptr = input_ptrs[c];
-            y = pcm_ptr + c;
+            float m = mem[c];
+            float[] x = input[c];
+            int x_ptr = input_ptrs[c];
+            int y = pcm_ptr + c;
             if (downsample > 1) {
                 /* Shortcut for the standard (non-custom modes) case */
                 for (j = 0; j < N; j++) {
-                    int tmp = x[x_ptr + j] + m + CeltConstants.VERY_SMALL;
-                    m = Inlines.MULT16_32_Q15(coef0, tmp);
+                    float tmp = x[x_ptr + j] + InlinesF.VERY_SMALL + m;
+                    m = coef0 * tmp;
                     scratch[j] = tmp;
                 }
-                apply_downsampling = 1;
+                /* Perform down-sampling */
+                for (j = 0; j < Nd; j++) {
+                    pcm[y + (j * C)] = InlinesF.FLOAT2INT16(InlinesF.SIG2RES(scratch[j * downsample]));
+                }
             } else {
                 for (j = 0; j < N; j++) {
-                    int tmp = (x[x_ptr + j] + m + CeltConstants.VERY_SMALL); // Opus bug: This can overflow.
-                    if (x[x_ptr + j] > 0 && m > 0 && tmp < 0) // This is a hack to saturate to INT_MAXVALUE
-                    {
-                        tmp = Integer.MAX_VALUE;
-                        m = Integer.MAX_VALUE;
-                    } else {
-                        m = Inlines.MULT16_32_Q15(coef0, tmp);
-                    }
-                    pcm[y + (j * C)] = Inlines.SIG2WORD16(tmp);
+                    float tmp = x[x_ptr + j] + InlinesF.VERY_SMALL + m;
+                    m = coef0 * tmp;
+                    pcm[y + (j * C)] = InlinesF.FLOAT2INT16(InlinesF.SIG2RES(tmp));
                 }
             }
             mem[c] = m;
-
-            if (apply_downsampling != 0) {
-                /* Perform down-sampling */
-                {
-                    for (j = 0; j < Nd; j++) {
-                        pcm[y + (j * C)] = Inlines.SIG2WORD16(scratch[j * downsample]);
-                    }
-                }
-            }
         } while (++c < C);
-
     }
 
-    static void celt_synthesis(CeltMode mode, CeltImdct imdct, int[][] X, int[][] out_syn, int[] out_syn_ptrs,
+    static void celt_synthesis(CeltMode mode, CeltImdct imdct, int[][] X, float[][] out_syn, int[] out_syn_ptrs,
                                int[] oldBandE, int start, int effEnd, int C, int CC,
                                int isTransient, int LM, int downsample,
                                int silence) {
@@ -101,12 +82,12 @@ class CeltCommon {
         int shift;
         int nbEBands;
         int overlap;
-        int[] freq;
+        float[] freq;
 
         overlap = mode.overlap;
         nbEBands = mode.nbEBands;
         N = mode.shortMdctSize << LM;
-        freq = new int[N];
+        freq = new float[N];
         M = 1 << LM;
 
         if (isTransient != 0) {
@@ -131,13 +112,13 @@ class CeltCommon {
             }
         } else if (CC == 1 && C == 2) {
             /* Downmixing a stereo stream to mono */
-            int[] freq2 = new int[N];
+            float[] freq2 = new float[N];
             Bands.denormalise_bands(mode, X[0], freq, 0, oldBandE, 0, start, effEnd, M,
                     downsample, silence);
             Bands.denormalise_bands(mode, X[1], freq2, 0, oldBandE, nbEBands, start, effEnd, M,
                     downsample, silence);
             for (i = 0; i < N; i++) {
-                freq[i] = Inlines.HALF32(Inlines.ADD32(freq[i], freq2[i]));
+                freq[i] = .5f * (freq[i] + freq2[i]);
             }
             for (b = 0; b < B; b++) {
                 imdct.backward(freq, b, out_syn[0], out_syn_ptrs[0] + (NB * b), CeltTablesF.window120, overlap, shift, B);
@@ -216,21 +197,20 @@ class CeltCommon {
         return ret;
     }
 
-    static void comb_filter_const(int[] y, int y_ptr, int[] x, int x_ptr, int T, int N,
-                                  int g10, int g11, int g12) {
-        int x0, x1, x2, x3, x4;
+    static void comb_filter_const(float[] y, int y_ptr, float[] x, int x_ptr, int T, int N,
+                                  float g10, float g11, float g12) {
         int i;
         int xpt = x_ptr - T;
-        x4 = x[xpt - 2];
-        x3 = x[xpt - 1];
-        x2 = x[xpt];
-        x1 = x[xpt + 1];
+        float x4 = x[xpt - 2];
+        float x3 = x[xpt - 1];
+        float x2 = x[xpt];
+        float x1 = x[xpt + 1];
         for (i = 0; i < N; i++) {
-            x0 = x[xpt + i + 2];
+            float x0 = x[xpt + i + 2];
             y[y_ptr + i] = x[x_ptr + i]
-                    + Inlines.MULT16_32_Q15(g10, x2)
-                    + Inlines.MULT16_32_Q15(g11, Inlines.ADD32(x1, x3))
-                    + Inlines.MULT16_32_Q15(g12, Inlines.ADD32(x0, x4));
+                    + g10 * x2
+                    + g11 * (x1 + x3)
+                    + g12 * (x0 + x4);
             x4 = x3;
             x3 = x2;
             x2 = x1;
@@ -238,19 +218,19 @@ class CeltCommon {
         }
     }
 
-    private static final short[][] gains = new short[][]{
-            new short[]{Inlines.QCONST16(0.3066406250f, 15), Inlines.QCONST16(0.2170410156f, 15), Inlines.QCONST16(0.1296386719f, 15)},
-            new short[]{Inlines.QCONST16(0.4638671875f, 15), Inlines.QCONST16(0.2680664062f, 15), Inlines.QCONST16(0.0f, 15)},
-            new short[]{Inlines.QCONST16(0.7998046875f, 15), Inlines.QCONST16(0.1000976562f, 15), Inlines.QCONST16(0.0f, 15)}
+    private static final float[][] gainsF = new float[][]{
+            {0.3066406250f, 0.2170410156f, 0.1296386719f},
+            {0.4638671875f, 0.2680664062f, 0.0000000000f},
+            {0.7998046875f, 0.1000976562f, 0.0000000000f}
     };
 
-    static void comb_filter(int[] y, int y_ptr, int[] x, int x_ptr, int T0, int T1, int N,
-                            int g0, int g1, int tapset0, int tapset1,
-                            int[] window, int overlap) {
+    static void comb_filter(float[] y, int y_ptr, float[] x, int x_ptr, int T0, int T1, int N,
+                            float g0, float g1, int tapset0, int tapset1,
+                            float[] window, int overlap) {
         int i;
         /* printf ("%d %d %f %f\n", T0, T1, g0, g1); */
-        int g00, g01, g02, g10, g11, g12;
-        int x0, x1, x2, x3, x4;
+        float g00, g01, g02, g10, g11, g12;
+        float x0, x1, x2, x3, x4;
 
         if (g0 == 0 && g1 == 0) {
             /* OPT: Happens to work without the OPUS_MOVE(), but only because the current encoder already copies x to y */
@@ -260,12 +240,12 @@ class CeltCommon {
 
             return;
         }
-        g00 = Inlines.MULT16_16_P15(g0, gains[tapset0][0]);
-        g01 = Inlines.MULT16_16_P15(g0, gains[tapset0][1]);
-        g02 = Inlines.MULT16_16_P15(g0, gains[tapset0][2]);
-        g10 = Inlines.MULT16_16_P15(g1, gains[tapset1][0]);
-        g11 = Inlines.MULT16_16_P15(g1, gains[tapset1][1]);
-        g12 = Inlines.MULT16_16_P15(g1, gains[tapset1][2]);
+        g00 = g0 * gainsF[tapset0][0];
+        g01 = g0 * gainsF[tapset0][1];
+        g02 = g0 * gainsF[tapset0][2];
+        g10 = g1 * gainsF[tapset1][0];
+        g11 = g1 * gainsF[tapset1][1];
+        g12 = g1 * gainsF[tapset1][2];
         x1 = x[x_ptr - T1 + 1];
         x2 = x[x_ptr - T1];
         x3 = x[x_ptr - T1 - 1];
@@ -275,16 +255,15 @@ class CeltCommon {
             overlap = 0;
         }
         for (i = 0; i < overlap; i++) {
-            int f;
             x0 = x[x_ptr + i - T1 + 2];
-            f = Inlines.MULT16_16_Q15(window[i], window[i]);
+            float f = window[i] * window[i];
             y[y_ptr + i] = x[x_ptr + i]
-                    + Inlines.MULT16_32_Q15(Inlines.MULT16_16_Q15((short) (CeltConstants.Q15ONE - f), g00), x[x_ptr + i - T0])
-                    + Inlines.MULT16_32_Q15(Inlines.MULT16_16_Q15((short) (CeltConstants.Q15ONE - f), g01), Inlines.ADD32(x[x_ptr + i - T0 + 1], x[x_ptr + i - T0 - 1]))
-                    + Inlines.MULT16_32_Q15(Inlines.MULT16_16_Q15((short) (CeltConstants.Q15ONE - f), g02), Inlines.ADD32(x[x_ptr + i - T0 + 2], x[x_ptr + i - T0 - 2]))
-                    + Inlines.MULT16_32_Q15(Inlines.MULT16_16_Q15(f, g10), x2)
-                    + Inlines.MULT16_32_Q15(Inlines.MULT16_16_Q15(f, g11), Inlines.ADD32(x1, x3))
-                    + Inlines.MULT16_32_Q15(Inlines.MULT16_16_Q15(f, g12), Inlines.ADD32(x0, x4));
+                    + (InlinesF.Q15ONE - f) * g00 * x[x_ptr + i - T0]
+                    + (InlinesF.Q15ONE - f) * g01 * (x[x_ptr + i - T0 + 1] + x[x_ptr + i - T0 - 1])
+                    + (InlinesF.Q15ONE - f) * g02 * (x[x_ptr + i - T0 + 2] + x[x_ptr + i - T0 - 2])
+                    + f * g10 * x2
+                    + f * g11 * (x1 + x3)
+                    + f * g12 * (x0 + x4);
             x4 = x3;
             x3 = x2;
             x2 = x1;

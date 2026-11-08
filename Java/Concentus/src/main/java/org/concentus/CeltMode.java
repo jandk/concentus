@@ -41,7 +41,6 @@ class CeltMode {
 
     int nbEBands = 0;
     int effEBands = 0;
-    int[] preemph = {0, 0, 0, 0};
 
     /// <summary>
     /// Definition for each "pseudo-critical band"
@@ -62,7 +61,6 @@ class CeltMode {
     short[] allocVectors = null;
     short[] logN = null;
 
-    int[] window = null;
     PulseCache cache = new PulseCache();
 
     private CeltMode() {
@@ -75,14 +73,12 @@ class CeltMode {
         mode48000_960_120.overlap = 120;
         mode48000_960_120.nbEBands = 21;
         mode48000_960_120.effEBands = 21;
-        mode48000_960_120.preemph = new int[]{27853, 0, 4096, 8192};
         mode48000_960_120.eBands = CeltTables.eband5ms;
         mode48000_960_120.maxLM = 3;
         mode48000_960_120.shortMdctSize = 120;
         mode48000_960_120.nbAllocVectors = 11;
         mode48000_960_120.allocVectors = CeltTables.band_allocation;
         mode48000_960_120.logN = CeltTables.logN400;
-        mode48000_960_120.window = CeltTables.window120;
         mode48000_960_120.cache = new PulseCache();
         mode48000_960_120.cache.size = 392;
         mode48000_960_120.cache.index = CeltTables.cache_index50;

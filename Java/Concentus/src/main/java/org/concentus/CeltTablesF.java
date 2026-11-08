@@ -1,6 +1,9 @@
 package org.concentus;
 
 final class CeltTablesF {
+    /* Pre-emphasis coefficients as in libopus's float build; 0.8500061035 is the fixed-point Q15 value 27853 */
+    static final float[] preemph = {0.8500061035f, 0.0f, 1.0f, 1.0f};
+
     static final float[] eMeans = {
             6.437500f, 6.250000f, 5.750000f, 5.312500f, 5.062500f,
             4.812500f, 4.500000f, 4.375000f, 4.875000f, 4.687500f,

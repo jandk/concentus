@@ -291,7 +291,7 @@ final class InlinesF {
     }
 
     static float ADD_RES(float a, float b) {
-        return ADD32(a, b);
+        return a + b;
     }
 
     static float ADD32(float a, float b) {
@@ -307,7 +307,7 @@ final class InlinesF {
     }
 
     static float MULT16_RES_Q15(float a, float b) {
-        return MULT16_16_Q15(a, b);
+        return a * b;
     }
 
     static float MULT16_16_Q15(float a, float b) {

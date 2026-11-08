@@ -79,7 +79,7 @@ class ShellCoder {
     }
 
     /// <summary>
-    /// 
+    ///
     /// </summary>
     /// <param name="p_child1">O    pulse amplitude of first child subframe</param>
     /// <param name="p_child2">O    pulse amplitude of second child subframe</param>

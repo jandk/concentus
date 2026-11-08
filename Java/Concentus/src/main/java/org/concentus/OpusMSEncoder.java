@@ -56,7 +56,7 @@ public class OpusMSEncoder {
         for (int c = 0; c < nb_streams; c++) {
             encoders[c] = new OpusEncoder();
         }
-        
+
         int nb_channels = (nb_coupled_streams * 2) /*stereo channels*/ + (nb_streams - nb_coupled_streams) /*mono channels*/;
         window_mem = new int[nb_channels * 120];
         preemph_mem = new int[nb_channels];
@@ -128,10 +128,10 @@ public class OpusMSEncoder {
     }
 
     private static final int[] diff_table/*[17]*/ = {
-                ((short) (0.5 + (0.5000000f) * (((int) 1) << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(0.5000000f, CeltConstants.DB_SHIFT)*/, ((short) (0.5 + (0.2924813f) * (((int) 1) << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(0.2924813f, CeltConstants.DB_SHIFT)*/, ((short) (0.5 + (0.1609640f) * (((int) 1) << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(0.1609640f, CeltConstants.DB_SHIFT)*/, ((short) (0.5 + (0.0849625f) * (((int) 1) << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(0.0849625f, CeltConstants.DB_SHIFT)*/,
-                ((short) (0.5 + (0.0437314f) * (((int) 1) << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(0.0437314f, CeltConstants.DB_SHIFT)*/, ((short) (0.5 + (0.0221971f) * (((int) 1) << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(0.0221971f, CeltConstants.DB_SHIFT)*/, ((short) (0.5 + (0.0111839f) * (((int) 1) << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(0.0111839f, CeltConstants.DB_SHIFT)*/, ((short) (0.5 + (0.0056136f) * (((int) 1) << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(0.0056136f, CeltConstants.DB_SHIFT)*/,
-                ((short) (0.5 + (0.0028123f) * (((int) 1) << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(0.0028123f, CeltConstants.DB_SHIFT)*/,
-                0, 0, 0, 0, 0, 0, 0, 0};
+            ((short) (0.5 + (0.5000000f) * (((int) 1) << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(0.5000000f, CeltConstants.DB_SHIFT)*/, ((short) (0.5 + (0.2924813f) * (((int) 1) << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(0.2924813f, CeltConstants.DB_SHIFT)*/, ((short) (0.5 + (0.1609640f) * (((int) 1) << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(0.1609640f, CeltConstants.DB_SHIFT)*/, ((short) (0.5 + (0.0849625f) * (((int) 1) << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(0.0849625f, CeltConstants.DB_SHIFT)*/,
+            ((short) (0.5 + (0.0437314f) * (((int) 1) << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(0.0437314f, CeltConstants.DB_SHIFT)*/, ((short) (0.5 + (0.0221971f) * (((int) 1) << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(0.0221971f, CeltConstants.DB_SHIFT)*/, ((short) (0.5 + (0.0111839f) * (((int) 1) << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(0.0111839f, CeltConstants.DB_SHIFT)*/, ((short) (0.5 + (0.0056136f) * (((int) 1) << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(0.0056136f, CeltConstants.DB_SHIFT)*/,
+            ((short) (0.5 + (0.0028123f) * (((int) 1) << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(0.0028123f, CeltConstants.DB_SHIFT)*/,
+            0, 0, 0, 0, 0, 0, 0, 0};
 
     /* Computes a rough approximation of log2(2^a + 2^b) */
     static int logSum(int a, int b) {
@@ -161,8 +161,8 @@ public class OpusMSEncoder {
     //    return log2(pow(4, a) + pow(4, b)) / 2;
     //}
     static void surround_analysis(CeltMode celt_mode, short[] pcm, int pcm_ptr,
-            int[] bandLogE, int[] mem, int[] preemph_mem,
-            int len, int overlap, int channels, int rate
+                                  int[] bandLogE, int[] mem, int[] preemph_mem,
+                                  int len, int overlap, int channels, int rate
     ) {
         int c;
         int i;
@@ -292,39 +292,39 @@ public class OpusMSEncoder {
             return OpusError.OPUS_BAD_ARG;
         }
 
-        this.layout.nb_channels = channels;
-        this.layout.nb_streams = streams;
-        this.layout.nb_coupled_streams = coupled_streams;
-        this.subframe_mem[0] = this.subframe_mem[1] = this.subframe_mem[2] = 0;
+        layout.nb_channels = channels;
+        layout.nb_streams = streams;
+        layout.nb_coupled_streams = coupled_streams;
+        subframe_mem[0] = subframe_mem[1] = subframe_mem[2] = 0;
         if (surround == 0) {
             this.lfe_stream = -1;
         }
         this.bitrate_bps = OpusConstants.OPUS_AUTO;
         this.application = application;
         this.variable_duration = OpusFramesize.OPUS_FRAMESIZE_ARG;
-        for (i = 0; i < this.layout.nb_channels; i++) {
-            this.layout.mapping[i] = mapping[i];
+        for (i = 0; i < layout.nb_channels; i++) {
+            layout.mapping[i] = mapping[i];
         }
-        if (OpusMultistream.validate_layout(this.layout) == 0 || validate_encoder_layout(this.layout) == 0) {
+        if (OpusMultistream.validate_layout(layout) == 0 || validate_encoder_layout(layout) == 0) {
             return OpusError.OPUS_BAD_ARG;
         }
 
         encoder_ptr = 0;
 
-        for (i = 0; i < this.layout.nb_coupled_streams; i++) {
-            ret = this.encoders[encoder_ptr].opus_init_encoder(Fs, 2, application);
+        for (i = 0; i < layout.nb_coupled_streams; i++) {
+            ret = encoders[encoder_ptr].opus_init_encoder(Fs, 2, application);
             if (ret != OpusError.OPUS_OK) {
                 return ret;
             }
-            if (i == this.lfe_stream) {
-                this.encoders[encoder_ptr].setIsLFE(true);
+            if (i == lfe_stream) {
+                encoders[encoder_ptr].setIsLFE(true);
             }
             encoder_ptr += 1;
         }
-        for (; i < this.layout.nb_streams; i++) {
-            ret = this.encoders[encoder_ptr].opus_init_encoder(Fs, 1, application);
-            if (i == this.lfe_stream) {
-                this.encoders[encoder_ptr].setIsLFE(true);
+        for (; i < layout.nb_streams; i++) {
+            ret = encoders[encoder_ptr].opus_init_encoder(Fs, 1, application);
+            if (i == lfe_stream) {
+                encoders[encoder_ptr].setIsLFE(true);
             }
             if (ret != OpusError.OPUS_OK) {
                 return ret;
@@ -332,8 +332,8 @@ public class OpusMSEncoder {
             encoder_ptr += 1;
         }
         if (surround != 0) {
-            Arrays.MemSet(this.preemph_mem, 0, channels);
-            Arrays.MemSet(this.window_mem, 0, channels * 120);
+            Arrays.MemSet(preemph_mem, 0, channels);
+            Arrays.MemSet(window_mem, 0, channels * 120);
         }
         this.surround = surround;
         return OpusError.OPUS_OK;
@@ -483,18 +483,18 @@ public class OpusMSEncoder {
         /* Q8 */
         int rate_sum = 0;
 
-        ptr = this.encoders[0];
+        ptr = encoders[0];
         Fs = ptr.getSampleRate();
 
-        if (this.bitrate_bps > this.layout.nb_channels * 40000) {
+        if (bitrate_bps > layout.nb_channels * 40000) {
             stream_offset = 20000;
         } else {
-            stream_offset = this.bitrate_bps / this.layout.nb_channels / 2;
+            stream_offset = bitrate_bps / layout.nb_channels / 2;
         }
         stream_offset += 60 * (Fs / frame_size - 50);
         /* We start by giving each stream (coupled or uncoupled) the same bitrate.
            This models the main saving of coupled channels over uncoupled. */
- /* The LFE stream is an exception to the above and gets fewer bits. */
+        /* The LFE stream is an exception to the above and gets fewer bits. */
         lfe_offset = 3500 + 60 * (Fs / frame_size - 50);
         /* Coupled streams get twice the mono rate after the first 20 kb/s. */
         coupled_ratio = 512;
@@ -502,28 +502,28 @@ public class OpusMSEncoder {
         lfe_ratio = 32;
 
         /* Compute bitrate allocation between streams */
-        if (this.bitrate_bps == OpusConstants.OPUS_AUTO) {
+        if (bitrate_bps == OpusConstants.OPUS_AUTO) {
             channel_rate = Fs + 60 * Fs / frame_size;
-        } else if (this.bitrate_bps == OpusConstants.OPUS_BITRATE_MAX) {
+        } else if (bitrate_bps == OpusConstants.OPUS_BITRATE_MAX) {
             channel_rate = 300000;
         } else {
             int nb_lfe;
             int nb_uncoupled;
             int nb_coupled;
             int total;
-            nb_lfe = (this.lfe_stream != -1) ? 1 : 0;
-            nb_coupled = this.layout.nb_coupled_streams;
-            nb_uncoupled = this.layout.nb_streams - nb_coupled - nb_lfe;
+            nb_lfe = (lfe_stream != -1) ? 1 : 0;
+            nb_coupled = layout.nb_coupled_streams;
+            nb_uncoupled = layout.nb_streams - nb_coupled - nb_lfe;
             total = (nb_uncoupled << 8) /* mono */
                     + coupled_ratio * nb_coupled /* stereo */
                     + nb_lfe * lfe_ratio;
-            channel_rate = 256 * (this.bitrate_bps - lfe_offset * nb_lfe - stream_offset * (nb_coupled + nb_uncoupled)) / total;
+            channel_rate = 256 * (bitrate_bps - lfe_offset * nb_lfe - stream_offset * (nb_coupled + nb_uncoupled)) / total;
         }
 
-        for (i = 0; i < this.layout.nb_streams; i++) {
-            if (i < this.layout.nb_coupled_streams) {
+        for (i = 0; i < layout.nb_streams; i++) {
+            if (i < layout.nb_coupled_streams) {
                 out_rates[i] = stream_offset + (channel_rate * coupled_ratio >> 8);
-            } else if (i != this.lfe_stream) {
+            } else if (i != lfe_stream) {
                 out_rates[i] = stream_offset + channel_rate;
             } else {
                 out_rates[i] = lfe_offset + (channel_rate * lfe_ratio >> 8);
@@ -565,26 +565,26 @@ public class OpusMSEncoder {
         int rate_sum;
         int smallest_packet;
 
-        if (this.surround != 0) {
+        if (surround != 0) {
             preemph_mem = this.preemph_mem;
-            mem = this.window_mem;
+            mem = window_mem;
         }
 
         encoder_ptr = 0;
-        Fs = this.encoders[encoder_ptr].getSampleRate();
-        vbr = this.encoders[encoder_ptr].getUseVBR() ? 1 : 0;
-        celt_mode = this.encoders[encoder_ptr].GetCeltMode();
+        Fs = encoders[encoder_ptr].getSampleRate();
+        vbr = encoders[encoder_ptr].getUseVBR() ? 1 : 0;
+        celt_mode = encoders[encoder_ptr].GetCeltMode();
 
         {
             int delay_compensation;
             int channels;
 
-            channels = this.layout.nb_streams + this.layout.nb_coupled_streams;
-            delay_compensation = this.encoders[encoder_ptr].getLookahead();
+            channels = layout.nb_streams + layout.nb_coupled_streams;
+            delay_compensation = encoders[encoder_ptr].getLookahead();
             delay_compensation -= Fs / 400;
             frame_size = CodecHelpers.compute_frame_size(pcm, pcm_ptr, analysis_frame_size,
-                    this.variable_duration, channels, Fs, this.bitrate_bps,
-                    delay_compensation, this.subframe_mem, this.encoders[encoder_ptr].analysis.enabled);
+                    variable_duration, channels, Fs, bitrate_bps,
+                    delay_compensation, subframe_mem, encoders[encoder_ptr].analysis.enabled);
         }
 
         if (400 * frame_size < Fs) {
@@ -599,49 +599,49 @@ public class OpusMSEncoder {
         }
 
         /* Smallest packet the encoder can produce. */
-        smallest_packet = this.layout.nb_streams * 2 - 1;
+        smallest_packet = layout.nb_streams * 2 - 1;
         if (max_data_bytes < smallest_packet) {
             return OpusError.OPUS_BUFFER_TOO_SMALL;
         }
         buf = new short[2 * frame_size];
 
-        bandSMR = new int[21 * this.layout.nb_channels];
-        if (this.surround != 0) {
-            surround_analysis(celt_mode, pcm, pcm_ptr, bandSMR, mem, preemph_mem, frame_size, 120, this.layout.nb_channels, Fs);
+        bandSMR = new int[21 * layout.nb_channels];
+        if (surround != 0) {
+            surround_analysis(celt_mode, pcm, pcm_ptr, bandSMR, mem, preemph_mem, frame_size, 120, layout.nb_channels, Fs);
         }
 
         /* Compute bitrate allocation between streams (this could be a lot better) */
         rate_sum = surround_rate_allocation(bitrates, frame_size);
 
         if (vbr == 0) {
-            if (this.bitrate_bps == OpusConstants.OPUS_AUTO) {
+            if (bitrate_bps == OpusConstants.OPUS_AUTO) {
                 max_data_bytes = Inlines.IMIN(max_data_bytes, 3 * rate_sum / (3 * 8 * Fs / frame_size));
-            } else if (this.bitrate_bps != OpusConstants.OPUS_BITRATE_MAX) {
+            } else if (bitrate_bps != OpusConstants.OPUS_BITRATE_MAX) {
                 max_data_bytes = Inlines.IMIN(max_data_bytes, Inlines.IMAX(smallest_packet,
-                        3 * this.bitrate_bps / (3 * 8 * Fs / frame_size)));
+                        3 * bitrate_bps / (3 * 8 * Fs / frame_size)));
             }
         }
 
-        for (s = 0; s < this.layout.nb_streams; s++) {
-            OpusEncoder enc = this.encoders[encoder_ptr];
+        for (s = 0; s < layout.nb_streams; s++) {
+            OpusEncoder enc = encoders[encoder_ptr];
             encoder_ptr += 1;
             enc.setBitrate(bitrates[s]);
-            if (this.surround != 0) {
+            if (surround != 0) {
                 int equiv_rate;
-                equiv_rate = this.bitrate_bps;
+                equiv_rate = bitrate_bps;
                 if (frame_size * 50 < Fs) {
-                    equiv_rate -= 60 * (Fs / frame_size - 50) * this.layout.nb_channels;
+                    equiv_rate -= 60 * (Fs / frame_size - 50) * layout.nb_channels;
                 }
-                if (equiv_rate > 10000 * this.layout.nb_channels) {
+                if (equiv_rate > 10000 * layout.nb_channels) {
                     enc.setBandwidth(OpusBandwidth.OPUS_BANDWIDTH_FULLBAND);
-                } else if (equiv_rate > 7000 * this.layout.nb_channels) {
+                } else if (equiv_rate > 7000 * layout.nb_channels) {
                     enc.setBandwidth(OpusBandwidth.OPUS_BANDWIDTH_SUPERWIDEBAND);
-                } else if (equiv_rate > 5000 * this.layout.nb_channels) {
+                } else if (equiv_rate > 5000 * layout.nb_channels) {
                     enc.setBandwidth(OpusBandwidth.OPUS_BANDWIDTH_WIDEBAND);
                 } else {
                     enc.setBandwidth(OpusBandwidth.OPUS_BANDWIDTH_NARROWBAND);
                 }
-                if (s < this.layout.nb_coupled_streams) {
+                if (s < layout.nb_coupled_streams) {
                     /* To preserve the spatial image, force stereo CELT on coupled streams */
                     enc.setForceMode(OpusMode.MODE_CELT_ONLY);
                     enc.setForceChannels(2);
@@ -652,25 +652,25 @@ public class OpusMSEncoder {
         encoder_ptr = 0;
         /* Counting ToC */
         tot_size = 0;
-        for (s = 0; s < this.layout.nb_streams; s++) {
+        for (s = 0; s < layout.nb_streams; s++) {
             OpusEncoder enc;
             int len;
             int curr_max;
             int c1, c2;
 
             rp.Reset();
-            enc = this.encoders[encoder_ptr];
-            if (s < this.layout.nb_coupled_streams) {
+            enc = encoders[encoder_ptr];
+            if (s < layout.nb_coupled_streams) {
                 int i;
                 int left, right;
-                left = OpusMultistream.get_left_channel(this.layout, s, -1);
-                right = OpusMultistream.get_right_channel(this.layout, s, -1);
+                left = OpusMultistream.get_left_channel(layout, s, -1);
+                right = OpusMultistream.get_right_channel(layout, s, -1);
                 opus_copy_channel_in_short(buf, 0, 2,
-                        pcm, pcm_ptr, this.layout.nb_channels, left, frame_size);
+                        pcm, pcm_ptr, layout.nb_channels, left, frame_size);
                 opus_copy_channel_in_short(buf, 1, 2,
-                        pcm, pcm_ptr, this.layout.nb_channels, right, frame_size);
+                        pcm, pcm_ptr, layout.nb_channels, right, frame_size);
                 encoder_ptr += 1;
-                if (this.surround != 0) {
+                if (surround != 0) {
                     for (i = 0; i < 21; i++) {
                         bandLogE[i] = bandSMR[21 * left + i];
                         bandLogE[21 + i] = bandSMR[21 * right + i];
@@ -680,11 +680,11 @@ public class OpusMSEncoder {
                 c2 = right;
             } else {
                 int i;
-                int chan = OpusMultistream.get_mono_channel(this.layout, s, -1);
+                int chan = OpusMultistream.get_mono_channel(layout, s, -1);
                 opus_copy_channel_in_short(buf, 0, 1,
-                        pcm, pcm_ptr, this.layout.nb_channels, chan, frame_size);
+                        pcm, pcm_ptr, layout.nb_channels, chan, frame_size);
                 encoder_ptr += 1;
-                if (this.surround != 0) {
+                if (surround != 0) {
                     for (i = 0; i < 21; i++) {
                         bandLogE[i] = bandSMR[21 * chan + i];
                     }
@@ -692,24 +692,24 @@ public class OpusMSEncoder {
                 c1 = chan;
                 c2 = -1;
             }
-            if (this.surround != 0) {
+            if (surround != 0) {
                 enc.SetEnergyMask(bandLogE);
             }
 
             /* number of bytes left (+Toc) */
             curr_max = max_data_bytes - tot_size;
             /* Reserve one byte for the last stream and two for the others */
-            curr_max -= Inlines.IMAX(0, 2 * (this.layout.nb_streams - s - 1) - 1);
+            curr_max -= Inlines.IMAX(0, 2 * (layout.nb_streams - s - 1) - 1);
             curr_max = Inlines.IMIN(curr_max, MS_FRAME_TMP);
             /* Repacketizer will add one or two bytes for self-delimited frames */
-            if (s != this.layout.nb_streams - 1) {
+            if (s != layout.nb_streams - 1) {
                 curr_max -= curr_max > 253 ? 2 : 1;
             }
-            if (vbr == 0 && s == this.layout.nb_streams - 1) {
+            if (vbr == 0 && s == layout.nb_streams - 1) {
                 enc.setBitrate(curr_max * (8 * Fs / frame_size));
             }
             len = enc.opus_encode_native(buf, 0, frame_size, tmp_data, 0, curr_max, lsb_depth,
-                    pcm, pcm_ptr, analysis_frame_size, c1, c2, this.layout.nb_channels, float_api);
+                    pcm, pcm_ptr, analysis_frame_size, c1, c2, layout.nb_channels, float_api);
             if (len < 0) {
                 return len;
             }
@@ -718,7 +718,7 @@ public class OpusMSEncoder {
                more than one frame at a time (e.g. 60 ms CELT-only) */
             rp.addPacket(tmp_data, 0, len);
             len = rp.opus_repacketizer_out_range_impl(0, rp.getNumFrames(),
-                    data, data_ptr, max_data_bytes - tot_size, (s != this.layout.nb_streams - 1) ? 1 : 0, (vbr == 0 && s == this.layout.nb_streams - 1) ? 1 : 0);
+                    data, data_ptr, max_data_bytes - tot_size, (s != layout.nb_streams - 1) ? 1 : 0, (vbr == 0 && s == layout.nb_streams - 1) ? 1 : 0);
             data_ptr += len;
             tot_size += len;
         }

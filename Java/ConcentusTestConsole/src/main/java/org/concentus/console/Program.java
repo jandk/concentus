@@ -1,11 +1,14 @@
 package org.concentus.console;
 
+import org.concentus.*;
+import org.gagravarr.opus.OpusAudioData;
+import org.gagravarr.opus.OpusFile;
+import org.gagravarr.opus.OpusInfo;
+import org.gagravarr.opus.OpusTags;
+
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import org.concentus.*;
-import org.gagravarr.ogg.*;
-import org.gagravarr.opus.*;
 
 /*
  * To change this license header, choose License Headers in Project Properties.

@@ -64,9 +64,9 @@ class SideInfoIndices {
     /// </summary>
     /// <param name="other"></param>
     void Assign(SideInfoIndices other) {
-        System.arraycopy(other.GainsIndices, 0, this.GainsIndices, 0, SilkConstants.MAX_NB_SUBFR);
-        System.arraycopy(other.LTPIndex, 0, this.LTPIndex, 0, SilkConstants.MAX_NB_SUBFR);
-        System.arraycopy(other.NLSFIndices, 0, this.NLSFIndices, 0, SilkConstants.MAX_LPC_ORDER + 1);
+        System.arraycopy(other.GainsIndices, 0, GainsIndices, 0, SilkConstants.MAX_NB_SUBFR);
+        System.arraycopy(other.LTPIndex, 0, LTPIndex, 0, SilkConstants.MAX_NB_SUBFR);
+        System.arraycopy(other.NLSFIndices, 0, NLSFIndices, 0, SilkConstants.MAX_LPC_ORDER + 1);
         this.lagIndex = other.lagIndex;
         this.contourIndex = other.contourIndex;
         this.signalType = other.signalType;

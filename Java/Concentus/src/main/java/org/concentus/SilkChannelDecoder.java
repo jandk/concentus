@@ -68,7 +68,7 @@ class SilkChannelDecoder {
     short[] pitch_contour_iCDF;
     /* Pointer to iCDF table for pitch contour index                    */
 
- /* For buffering payload in case of more frames per packet */
+    /* For buffering payload in case of more frames per packet */
     int nFramesDecoded = 0;
     int nFramesPerPacket = 0;
 
@@ -85,7 +85,7 @@ class SilkChannelDecoder {
     NLSFCodebook psNLSF_CB = null;
     /* Pointer to NLSF codebook                                         */
 
- /* Quantization indices */
+    /* Quantization indices */
     final SideInfoIndices indices = new SideInfoIndices();
 
     /* CNG state */
@@ -138,7 +138,7 @@ class SilkChannelDecoder {
     /// <returns></returns>
     int silk_init_decoder() {
         /* Clear the entire encoder state, except anything copied */
-        this.Reset();
+        Reset();
 
         /* Used to deactivate LSF interpolation */
         this.first_frame_after_reset = 1;
@@ -160,14 +160,14 @@ class SilkChannelDecoder {
     private void silk_CNG_Reset() {
         int i, NLSF_step_Q15, NLSF_acc_Q15;
 
-        NLSF_step_Q15 = Inlines.silk_DIV32_16(Short.MAX_VALUE, this.LPC_order + 1);
+        NLSF_step_Q15 = Inlines.silk_DIV32_16(Short.MAX_VALUE, LPC_order + 1);
         NLSF_acc_Q15 = 0;
-        for (i = 0; i < this.LPC_order; i++) {
+        for (i = 0; i < LPC_order; i++) {
             NLSF_acc_Q15 += NLSF_step_Q15;
-            this.sCNG.CNG_smth_NLSF_Q15[i] = (short) (NLSF_acc_Q15);
+            sCNG.CNG_smth_NLSF_Q15[i] = (short) (NLSF_acc_Q15);
         }
-        this.sCNG.CNG_smth_Gain_Q16 = 0;
-        this.sCNG.rand_seed = 3176576;
+        sCNG.CNG_smth_Gain_Q16 = 0;
+        sCNG.rand_seed = 3176576;
     }
 
     /// <summary>
@@ -175,11 +175,11 @@ class SilkChannelDecoder {
     /// </summary>
     /// <param name="this">I/O Decoder state</param>
     private void silk_PLC_Reset() {
-        this.sPLC.pitchL_Q8 = Inlines.silk_LSHIFT(this.frame_length, 8 - 1);
-        this.sPLC.prevGain_Q16[0] = ((int) ((1) * ((long) 1 << (16)) + 0.5))/*Inlines.SILK_CONST(1, 16)*/;
-        this.sPLC.prevGain_Q16[1] = ((int) ((1) * ((long) 1 << (16)) + 0.5))/*Inlines.SILK_CONST(1, 16)*/;
-        this.sPLC.subfr_length = 20;
-        this.sPLC.nb_subfr = 2;
+        sPLC.pitchL_Q8 = Inlines.silk_LSHIFT(frame_length, 8 - 1);
+        sPLC.prevGain_Q16[0] = ((int) ((1) * ((long) 1 << (16)) + 0.5))/*Inlines.SILK_CONST(1, 16)*/;
+        sPLC.prevGain_Q16[1] = ((int) ((1) * ((long) 1 << (16)) + 0.5))/*Inlines.SILK_CONST(1, 16)*/;
+        sPLC.subfr_length = 20;
+        sPLC.nb_subfr = 2;
     }
 
     /* Set decoder sampling rate */
@@ -190,28 +190,28 @@ class SilkChannelDecoder {
         int frame_length, ret = 0;
 
         Inlines.OpusAssert(fs_kHz == 8 || fs_kHz == 12 || fs_kHz == 16);
-        Inlines.OpusAssert(this.nb_subfr == SilkConstants.MAX_NB_SUBFR || this.nb_subfr == SilkConstants.MAX_NB_SUBFR / 2);
+        Inlines.OpusAssert(nb_subfr == SilkConstants.MAX_NB_SUBFR || nb_subfr == SilkConstants.MAX_NB_SUBFR / 2);
 
         /* New (sub)frame length */
         this.subfr_length = Inlines.silk_SMULBB(SilkConstants.SUB_FRAME_LENGTH_MS, fs_kHz);
-        frame_length = Inlines.silk_SMULBB(this.nb_subfr, this.subfr_length);
+        frame_length = Inlines.silk_SMULBB(nb_subfr, subfr_length);
 
         /* Initialize resampler when switching or external sampling frequency */
-        if (this.fs_kHz != fs_kHz || this.fs_API_hz != fs_API_Hz) {
+        if (this.fs_kHz != fs_kHz || fs_API_hz != fs_API_Hz) {
             /* Initialize the resampler for dec_API.c preparing resampling from fs_kHz to API_fs_Hz */
-            ret += Resampler.silk_resampler_init(this.resampler_state, Inlines.silk_SMULBB(fs_kHz, 1000), fs_API_Hz, 0);
+            ret += Resampler.silk_resampler_init(resampler_state, Inlines.silk_SMULBB(fs_kHz, 1000), fs_API_Hz, 0);
 
             this.fs_API_hz = fs_API_Hz;
         }
 
         if (this.fs_kHz != fs_kHz || frame_length != this.frame_length) {
             if (fs_kHz == 8) {
-                if (this.nb_subfr == SilkConstants.MAX_NB_SUBFR) {
+                if (nb_subfr == SilkConstants.MAX_NB_SUBFR) {
                     this.pitch_contour_iCDF = SilkTables.silk_pitch_contour_NB_iCDF;
                 } else {
                     this.pitch_contour_iCDF = SilkTables.silk_pitch_contour_10_ms_NB_iCDF;
                 }
-            } else if (this.nb_subfr == SilkConstants.MAX_NB_SUBFR) {
+            } else if (nb_subfr == SilkConstants.MAX_NB_SUBFR) {
                 this.pitch_contour_iCDF = SilkTables.silk_pitch_contour_iCDF;
             } else {
                 this.pitch_contour_iCDF = SilkTables.silk_pitch_contour_10_ms_iCDF;
@@ -239,8 +239,8 @@ class SilkChannelDecoder {
                 this.lagPrev = 100;
                 this.LastGainIndex = 10;
                 this.prevSignalType = SilkConstants.TYPE_NO_VOICE_ACTIVITY;
-                Arrays.MemSet(this.outBuf, (short) 0, SilkConstants.MAX_FRAME_LENGTH + 2 * SilkConstants.MAX_SUB_FRAME_LENGTH);
-                Arrays.MemSet(this.sLPC_Q14_buf, 0, SilkConstants.MAX_LPC_ORDER);
+                Arrays.MemSet(outBuf, (short) 0, SilkConstants.MAX_FRAME_LENGTH + 2 * SilkConstants.MAX_SUB_FRAME_LENGTH);
+                Arrays.MemSet(sLPC_Q14_buf, 0, SilkConstants.MAX_LPC_ORDER);
             }
 
             this.fs_kHz = fs_kHz;
@@ -257,6 +257,7 @@ class SilkChannelDecoder {
      * *************
      */
     /* Decode frame */
+
     /**
      * *************
      */
@@ -271,14 +272,14 @@ class SilkChannelDecoder {
         SilkDecoderControl thisCtrl = new SilkDecoderControl();
         int L, mv_len, ret = 0;
 
-        L = this.frame_length;
+        L = frame_length;
         thisCtrl.LTP_scale_Q14 = 0;
 
         /* Safety checks */
         Inlines.OpusAssert(L > 0 && L <= SilkConstants.MAX_FRAME_LENGTH);
 
         if (lostFlag == DecoderAPIFlag.FLAG_DECODE_NORMAL
-                || (lostFlag == DecoderAPIFlag.FLAG_DECODE_LBRR && this.LBRR_flags[this.nFramesDecoded] == 1)) {
+                || (lostFlag == DecoderAPIFlag.FLAG_DECODE_LBRR && LBRR_flags[nFramesDecoded] == 1)) {
             short[] pulses = new short[(L + SilkConstants.SHELL_CODEC_FRAME_LENGTH - 1) & ~(SilkConstants.SHELL_CODEC_FRAME_LENGTH - 1)];
             /**
              * ******************************************
@@ -287,7 +288,7 @@ class SilkChannelDecoder {
             /**
              * ******************************************
              */
-            DecodeIndices.silk_decode_indices(this, psRangeDec, this.nFramesDecoded, lostFlag, condCoding);
+            DecodeIndices.silk_decode_indices(this, psRangeDec, nFramesDecoded, lostFlag, condCoding);
 
             /**
              * ******************************************
@@ -296,8 +297,8 @@ class SilkChannelDecoder {
             /**
              * ******************************************
              */
-            DecodePulses.silk_decode_pulses(psRangeDec, pulses, this.indices.signalType,
-                    this.indices.quantOffsetType, this.frame_length);
+            DecodePulses.silk_decode_pulses(psRangeDec, pulses, indices.signalType,
+                    indices.quantOffsetType, frame_length);
 
             /**
              * *****************************************
@@ -327,8 +328,8 @@ class SilkChannelDecoder {
             PLC.silk_PLC(this, thisCtrl, pOut, pOut_ptr, 0);
 
             this.lossCnt = 0;
-            this.prevSignalType = this.indices.signalType;
-            Inlines.OpusAssert(this.prevSignalType >= 0 && this.prevSignalType <= 2);
+            this.prevSignalType = indices.signalType;
+            Inlines.OpusAssert(prevSignalType >= 0 && prevSignalType <= 2);
 
             /* A frame has been decoded without errors */
             this.first_frame_after_reset = 0;
@@ -344,10 +345,10 @@ class SilkChannelDecoder {
         /**
          * **********************
          */
-        Inlines.OpusAssert(this.ltp_mem_length >= this.frame_length);
-        mv_len = this.ltp_mem_length - this.frame_length;
-        Arrays.MemMove(this.outBuf, this.frame_length, 0, mv_len);
-        System.arraycopy(pOut, pOut_ptr, this.outBuf, mv_len, this.frame_length);
+        Inlines.OpusAssert(ltp_mem_length >= frame_length);
+        mv_len = ltp_mem_length - frame_length;
+        Arrays.MemMove(outBuf, frame_length, 0, mv_len);
+        System.arraycopy(pOut, pOut_ptr, outBuf, mv_len, frame_length);
 
         /**
          * *********************************************
@@ -368,7 +369,7 @@ class SilkChannelDecoder {
         PLC.silk_PLC_glue_frames(this, pOut, pOut_ptr, L);
 
         /* Update some decoder state variables */
-        this.lagPrev = thisCtrl.pitchL[this.nb_subfr - 1];
+        this.lagPrev = thisCtrl.pitchL[nb_subfr - 1];
 
         /* Set output frame length */
         pN.Val = L;

@@ -386,12 +386,12 @@ class Filters {
             if (fac_Q16 > 0) {
                 if (fac_Q16 < 32768) {
                     /* fac_Q16 is in range of a 16-bit int */
- /* Piece-wise linear interpolation of B and A */
+                    /* Piece-wise linear interpolation of B and A */
                     for (nb = 0; nb < SilkConstants.TRANSITION_NB; nb++) {
                         B_Q28[nb] = Inlines.silk_SMLAWB(
                                 SilkTables.silk_Transition_LP_B_Q28[ind][nb],
                                 SilkTables.silk_Transition_LP_B_Q28[ind + 1][nb]
-                                - SilkTables.silk_Transition_LP_B_Q28[ind][nb],
+                                        - SilkTables.silk_Transition_LP_B_Q28[ind][nb],
                                 fac_Q16);
                     }
 
@@ -399,7 +399,7 @@ class Filters {
                         A_Q28[na] = Inlines.silk_SMLAWB(
                                 SilkTables.silk_Transition_LP_A_Q28[ind][na],
                                 SilkTables.silk_Transition_LP_A_Q28[ind + 1][na]
-                                - SilkTables.silk_Transition_LP_A_Q28[ind][na],
+                                        - SilkTables.silk_Transition_LP_A_Q28[ind][na],
                                 fac_Q16);
                     }
                 } else {
@@ -411,7 +411,7 @@ class Filters {
                         B_Q28[nb] = Inlines.silk_SMLAWB(
                                 SilkTables.silk_Transition_LP_B_Q28[ind + 1][nb],
                                 SilkTables.silk_Transition_LP_B_Q28[ind + 1][nb]
-                                - SilkTables.silk_Transition_LP_B_Q28[ind][nb],
+                                        - SilkTables.silk_Transition_LP_B_Q28[ind][nb],
                                 fac_Q16 - ((int) 1 << 16));
                     }
 
@@ -419,7 +419,7 @@ class Filters {
                         A_Q28[na] = Inlines.silk_SMLAWB(
                                 SilkTables.silk_Transition_LP_A_Q28[ind + 1][na],
                                 SilkTables.silk_Transition_LP_A_Q28[ind + 1][na]
-                                - SilkTables.silk_Transition_LP_A_Q28[ind][na],
+                                        - SilkTables.silk_Transition_LP_A_Q28[ind][na],
                                 fac_Q16 - ((int) 1 << 16));
                     }
                 }
@@ -516,7 +516,7 @@ class Filters {
             rc_mult2 = Inlines.silk_INVERSE32_varQ(rc_mult1_Q30, mult2Q + 30);
 
             /* Update inverse gain */
- /* invGain_Q30 range: [ 0 : 2^30 ] */
+            /* invGain_Q30 range: [ 0 : 2^30 ] */
             invGain_Q30 = Inlines.silk_LSHIFT(Inlines.silk_SMMUL(invGain_Q30, rc_mult1_Q30), 2);
             Inlines.OpusAssert(invGain_Q30 >= 0);
             Inlines.OpusAssert(invGain_Q30 <= (1 << 30));
@@ -544,7 +544,7 @@ class Filters {
         rc_mult1_Q30 = ((int) 1 << 30) - Inlines.silk_SMMUL(rc_Q31, rc_Q31);
 
         /* Update inverse gain */
- /* Range: [ 0 : 2^30 ] */
+        /* Range: [ 0 : 2^30 ] */
         invGain_Q30 = Inlines.silk_LSHIFT(Inlines.silk_SMMUL(invGain_Q30, rc_mult1_Q30), 2);
         Inlines.OpusAssert(invGain_Q30 >= 0);
         Inlines.OpusAssert(invGain_Q30 <= 1 << 30);

@@ -238,3 +238,7 @@ _Pvt_Extensions
 /Java/ContentusTestConsole/ContentusTestConsole/target/
 /Java/ContentusTestConsole/ConcentusTestConsole/target/
 /Java/ConcentusTestConsole/target/
+
+# Jetbrains
+.idea/
+*.iml

@@ -87,10 +87,10 @@ class EntropyCoder {
 
     private final int EC_WINDOW_SIZE = 32;
 
-    ///*The number of bits to use for the range-coded part of uint integers.*/
+    /// *The number of bits to use for the range-coded part of uint integers.*/
     private final int EC_UINT_BITS = 8;
 
-    ///*The resolution of fractional-precision bit usage measurements, i.e.,
+    /// *The resolution of fractional-precision bit usage measurements, i.e.,
     //   3 => 1/8th bits.*/
     static final int BITRES = 3;
 
@@ -115,7 +115,7 @@ class EntropyCoder {
     /*The number of bits available for the last, partial symbol in the code field.*/
     private final int EC_CODE_EXTRA = 0x00000007;
 
-    //////////////// Coder State //////////////////// 
+    /// ///////////// Coder State ////////////////////
 
     /*POINTER to Buffered input/output.*/
     private byte[] buf;
@@ -194,38 +194,38 @@ class EntropyCoder {
     }
 
     byte[] get_buffer() {
-        byte[] convertedBuf = new byte[this.storage];
-        System.arraycopy(this.buf, this.buf_ptr, convertedBuf, 0, this.storage);
+        byte[] convertedBuf = new byte[storage];
+        System.arraycopy(buf, buf_ptr, convertedBuf, 0, storage);
         return convertedBuf;
     }
 
     void write_buffer(byte[] data, int data_ptr, int target_offset, int size) {
-        System.arraycopy(data, data_ptr, this.buf, this.buf_ptr + target_offset, size);
+        System.arraycopy(data, data_ptr, buf, buf_ptr + target_offset, size);
     }
 
     int read_byte() {
-        return this.offs < this.storage ? Inlines.SignedByteToUnsignedInt(this.buf[buf_ptr + this.offs++]) : 0;
+        return offs < storage ? Inlines.SignedByteToUnsignedInt(buf[buf_ptr + this.offs++]) : 0;
     }
 
     int read_byte_from_end() {
-        return this.end_offs < this.storage
-                ? Inlines.SignedByteToUnsignedInt(this.buf[buf_ptr + (this.storage - ++(this.end_offs))]) : 0;
+        return end_offs < storage
+                ? Inlines.SignedByteToUnsignedInt(buf[buf_ptr + (storage - ++(this.end_offs))]) : 0;
     }
 
     int write_byte(long _value) {
-        if (this.offs + this.end_offs >= this.storage) {
+        if (offs + end_offs >= storage) {
             return -1;
         }
-        this.buf[buf_ptr + this.offs++] = (byte) (_value & 0xFF);
+        buf[buf_ptr + this.offs++] = (byte) (_value & 0xFF);
         return 0;
     }
 
     int write_byte_at_end(long _value) {
-        if (this.offs + this.end_offs >= this.storage) {
+        if (offs + end_offs >= storage) {
             return -1;
         }
 
-        this.buf[buf_ptr + (this.storage - ++(this.end_offs))] = (byte) (_value & 0xFF);
+        buf[buf_ptr + (storage - ++(this.end_offs))] = (byte) (_value & 0xFF);
         return 0;
     }
 
@@ -235,22 +235,22 @@ class EntropyCoder {
     /// <param name="this"></param>
     void dec_normalize() {
         /*If the range is too small, rescale it and input some bits.*/
-        while (this.rng <= EC_CODE_BOT) {
+        while (rng <= EC_CODE_BOT) {
             int sym;
             this.nbits_total += EC_SYM_BITS;
-            this.rng = Inlines.CapToUInt32(this.rng << EC_SYM_BITS);
+            this.rng = Inlines.CapToUInt32(rng << EC_SYM_BITS);
 
             /*Use up the remaining bits from our last symbol.*/
-            sym = this.rem;
+            sym = rem;
 
             /*Read the next value from the input.*/
             this.rem = read_byte();
 
             /*Take the rest of the bits we need from this new symbol.*/
-            sym = (sym << EC_SYM_BITS | this.rem) >> (EC_SYM_BITS - EC_CODE_EXTRA);
+            sym = (sym << EC_SYM_BITS | rem) >> (EC_SYM_BITS - EC_CODE_EXTRA);
 
             /*And subtract them from val, capped to be less than EC_CODE_TOP.*/
-            this.val = Inlines.CapToUInt32((((long) this.val << EC_SYM_BITS) + (EC_SYM_MAX & ~sym))
+            this.val = Inlines.CapToUInt32((((long) val << EC_SYM_BITS) + (EC_SYM_MAX & ~sym))
                     & (EC_CODE_TOP - 1));
         }
     }
@@ -270,7 +270,7 @@ class EntropyCoder {
         this.offs = 0;
         this.rng = 1 << EC_CODE_EXTRA;
         this.rem = read_byte();
-        this.val = Inlines.CapToUInt32(this.rng - 1 - (this.rem >> (EC_SYM_BITS - EC_CODE_EXTRA)));
+        this.val = Inlines.CapToUInt32(rng - 1 - (rem >> (EC_SYM_BITS - EC_CODE_EXTRA)));
         this.error = 0;
         /*Normalize the interval.*/
         dec_normalize();
@@ -278,14 +278,14 @@ class EntropyCoder {
 
     long decode(long _ft) {
         _ft = Inlines.CapToUInt32(_ft);
-        this.ext = Inlines.CapToUInt32(this.rng / _ft);
-        long s = Inlines.CapToUInt32(this.val / this.ext);
+        this.ext = Inlines.CapToUInt32(rng / _ft);
+        long s = Inlines.CapToUInt32(val / ext);
         return Inlines.CapToUInt32(_ft - Inlines.EC_MINI(Inlines.CapToUInt32(s + 1), _ft));
     }
 
     long decode_bin(int _bits) {
-        this.ext = this.rng >> _bits;
-        long s = Inlines.CapToUInt32(this.val / this.ext);
+        this.ext = rng >> _bits;
+        long s = Inlines.CapToUInt32(val / ext);
         return Inlines.CapToUInt32(Inlines.CapToUInt32(1L << _bits) - Inlines.EC_MINI(Inlines.CapToUInt32(s + 1), 1L << _bits));
     }
 
@@ -293,9 +293,9 @@ class EntropyCoder {
         _fl = Inlines.CapToUInt32(_fl);
         _fh = Inlines.CapToUInt32(_fh);
         _ft = Inlines.CapToUInt32(_ft);
-        long s = Inlines.CapToUInt32(this.ext * (_ft - _fh));
-        this.val = this.val - s;
-        this.rng = _fl > 0 ? Inlines.CapToUInt32(this.ext * (_fh - _fl)) : this.rng - s;
+        long s = Inlines.CapToUInt32(ext * (_ft - _fh));
+        this.val = val - s;
+        this.rng = _fl > 0 ? Inlines.CapToUInt32(ext * (_fh - _fl)) : rng - s;
         dec_normalize();
     }
 
@@ -310,8 +310,8 @@ class EntropyCoder {
         long d;
         long s;
         int ret;
-        r = this.rng;
-        d = this.val;
+        r = rng;
+        d = val;
         s = r >> (int) _logp;
         ret = d < s ? 1 : 0;
         if (ret == 0) {
@@ -324,8 +324,8 @@ class EntropyCoder {
 
     int dec_icdf(short[] _icdf, int _ftb) {
         long t;
-        long s = this.rng;
-        long d = this.val;
+        long s = rng;
+        long d = val;
         long r = s >> _ftb;
         int ret = -1;
         do {
@@ -340,8 +340,8 @@ class EntropyCoder {
 
     int dec_icdf(short[] _icdf, int _icdf_offset, int _ftb) {
         long t;
-        long s = this.rng;
-        long d = this.val;
+        long s = rng;
+        long d = val;
         long r = s >> _ftb;
         int ret = _icdf_offset - 1;
         do {
@@ -387,8 +387,8 @@ class EntropyCoder {
         long window;
         int available;
         int ret;
-        window = this.end_window;
-        available = this.nend_bits;
+        window = end_window;
+        available = nend_bits;
         if (available < _bits) {
             do {
                 window = Inlines.CapToUInt32(window | (read_byte_from_end() << available));
@@ -400,7 +400,7 @@ class EntropyCoder {
         available = available - _bits;
         this.end_window = Inlines.CapToUInt32(window);
         this.nend_bits = available;
-        this.nbits_total = this.nbits_total + _bits;
+        this.nbits_total = nbits_total + _bits;
         return ret;
     }
 
@@ -426,11 +426,11 @@ class EntropyCoder {
 
             /*Don't output a byte on the first write.
               This compare should be taken care of by branch-prediction thereafter.*/
-            if (this.rem >= 0) {
-                this.error |= write_byte(Inlines.CapToUInt32(this.rem + carry));
+            if (rem >= 0) {
+                this.error |= write_byte(Inlines.CapToUInt32(rem + carry));
             }
 
-            if (this.ext > 0) {
+            if (ext > 0) {
                 long sym;
                 sym = (EC_SYM_MAX + carry) & EC_SYM_MAX;
                 do {
@@ -446,11 +446,11 @@ class EntropyCoder {
 
     void enc_normalize() {
         /*If the range is too small, output some bits and rescale it.*/
-        while (this.rng <= EC_CODE_BOT) {
-            enc_carry_out((int) (this.val >> EC_CODE_SHIFT));
+        while (rng <= EC_CODE_BOT) {
+            enc_carry_out((int) (val >> EC_CODE_SHIFT));
             /*Move the next-to-high-order symbol into the high-order position.*/
-            this.val = Inlines.CapToUInt32((this.val << EC_SYM_BITS) & (EC_CODE_TOP - 1));
-            this.rng = Inlines.CapToUInt32(this.rng << EC_SYM_BITS);
+            this.val = Inlines.CapToUInt32((val << EC_SYM_BITS) & (EC_CODE_TOP - 1));
+            this.rng = Inlines.CapToUInt32(rng << EC_SYM_BITS);
             this.nbits_total += EC_SYM_BITS;
         }
     }
@@ -476,12 +476,12 @@ class EntropyCoder {
         _fl = Inlines.CapToUInt32(_fl);
         _fh = Inlines.CapToUInt32(_fh);
         _ft = Inlines.CapToUInt32(_ft);
-        long r = Inlines.CapToUInt32(this.rng / _ft);
+        long r = Inlines.CapToUInt32(rng / _ft);
         if (_fl > 0) {
-            this.val += Inlines.CapToUInt32(this.rng - (r * (_ft - _fl)));
+            this.val += Inlines.CapToUInt32(rng - (r * (_ft - _fl)));
             this.rng = Inlines.CapToUInt32(r * (_fh - _fl));
         } else {
-            this.rng = Inlines.CapToUInt32(this.rng - (r * (_ft - _fh)));
+            this.rng = Inlines.CapToUInt32(rng - (r * (_ft - _fh)));
         }
 
         enc_normalize();
@@ -490,12 +490,12 @@ class EntropyCoder {
     void encode_bin(long _fl, long _fh, int _bits) {
         _fl = Inlines.CapToUInt32(_fl);
         _fh = Inlines.CapToUInt32(_fh);
-        long r = Inlines.CapToUInt32(this.rng >> (int) _bits);
+        long r = Inlines.CapToUInt32(rng >> (int) _bits);
         if (_fl > 0) {
-            this.val = Inlines.CapToUInt32(this.val + Inlines.CapToUInt32(this.rng - (r * ((1 << (int) _bits) - _fl))));
+            this.val = Inlines.CapToUInt32(val + Inlines.CapToUInt32(rng - (r * ((1 << (int) _bits) - _fl))));
             this.rng = Inlines.CapToUInt32(r * (_fh - _fl));
         } else {
-            this.rng = Inlines.CapToUInt32(this.rng - (r * ((1 << (int) _bits) - _fh)));
+            this.rng = Inlines.CapToUInt32(rng - (r * ((1 << (int) _bits) - _fh)));
         }
 
         enc_normalize();
@@ -503,8 +503,8 @@ class EntropyCoder {
 
     /*The probability of having a "one" is 1/(1<<_logp).*/
     void enc_bit_logp(int _val, int _logp) {
-        long r = this.rng;
-        long l = this.val;
+        long r = rng;
+        long l = val;
         long s = r >> _logp;
         r -= s;
         if (_val != 0) {
@@ -516,23 +516,23 @@ class EntropyCoder {
     }
 
     void enc_icdf(int _s, short[] _icdf, int _ftb) {
-        long r = Inlines.CapToUInt32(this.rng >> _ftb);
+        long r = Inlines.CapToUInt32(rng >> _ftb);
         if (_s > 0) {
-            this.val = this.val + Inlines.CapToUInt32(this.rng - Inlines.CapToUInt32(r * _icdf[_s - 1]));
+            this.val = val + Inlines.CapToUInt32(rng - Inlines.CapToUInt32(r * _icdf[_s - 1]));
             this.rng = (r * Inlines.CapToUInt32(_icdf[_s - 1] - _icdf[_s]));
         } else {
-            this.rng = Inlines.CapToUInt32(this.rng - (r * _icdf[_s]));
+            this.rng = Inlines.CapToUInt32(rng - (r * _icdf[_s]));
         }
         enc_normalize();
     }
 
     void enc_icdf(int _s, short[] _icdf, int icdf_ptr, int _ftb) {
-        long r = Inlines.CapToUInt32(this.rng >> _ftb);
+        long r = Inlines.CapToUInt32(rng >> _ftb);
         if (_s > 0) {
-            this.val = this.val + Inlines.CapToUInt32(this.rng - Inlines.CapToUInt32(r * _icdf[icdf_ptr + _s - 1]));
+            this.val = val + Inlines.CapToUInt32(rng - Inlines.CapToUInt32(r * _icdf[icdf_ptr + _s - 1]));
             this.rng = Inlines.CapToUInt32(r * Inlines.CapToUInt32(_icdf[icdf_ptr + _s - 1] - _icdf[icdf_ptr + _s]));
         } else {
-            this.rng = Inlines.CapToUInt32(this.rng - (r * _icdf[icdf_ptr + _s]));
+            this.rng = Inlines.CapToUInt32(rng - (r * _icdf[icdf_ptr + _s]));
         }
         enc_normalize();
     }
@@ -563,13 +563,13 @@ class EntropyCoder {
         _fl = Inlines.CapToUInt32(_fl);
         long window;
         int used;
-        window = this.end_window;
-        used = this.nend_bits;
+        window = end_window;
+        used = nend_bits;
         Inlines.OpusAssert(_bits > 0);
 
         if (used + _bits > EC_WINDOW_SIZE) {
             do {
-                this.error = this.error | write_byte_at_end(window & EC_SYM_MAX);
+                this.error = error | write_byte_at_end(window & EC_SYM_MAX);
                 window >>= EC_SYM_BITS;
                 used -= EC_SYM_BITS;
             } while (used >= EC_SYM_BITS);
@@ -589,15 +589,15 @@ class EntropyCoder {
         shift = EC_SYM_BITS - _nbits;
         mask = ((1 << _nbits) - 1) << shift;
 
-        if (this.offs > 0) {
+        if (offs > 0) {
             /*The first byte has been finalized.*/
-            this.buf[buf_ptr] = (byte) ((this.buf[buf_ptr] & ~mask) | Inlines.CapToUInt32(_val << shift));
-        } else if (this.rem >= 0) {
+            buf[buf_ptr] = (byte) ((buf[buf_ptr] & ~mask) | Inlines.CapToUInt32(_val << shift));
+        } else if (rem >= 0) {
             /*The first byte is still awaiting carry propagation.*/
-            this.rem = (int) Inlines.CapToUInt32((Inlines.CapToUInt32((this.rem & ~mask) | _val)) << shift);
-        } else if (this.rng <= (EC_CODE_TOP >> (int) _nbits)) {
+            this.rem = (int) Inlines.CapToUInt32((Inlines.CapToUInt32((rem & ~mask) | _val)) << shift);
+        } else if (rng <= (EC_CODE_TOP >> (int) _nbits)) {
             /*The renormalization loop has never been run.*/
-            this.val = Inlines.CapToUInt32((this.val & ~(mask << EC_CODE_SHIFT))
+            this.val = Inlines.CapToUInt32((val & ~(mask << EC_CODE_SHIFT))
                     | Inlines.CapToUInt32(Inlines.CapToUInt32(_val) << (EC_CODE_SHIFT + shift)));
         } else {
             /*The encoder hasn't even encoded _nbits of data yet.*/
@@ -606,17 +606,17 @@ class EntropyCoder {
     }
 
     void enc_shrink(int _size) {
-        Inlines.OpusAssert(this.offs + this.end_offs <= _size);
-        Arrays.MemMove(this.buf, buf_ptr + (int) _size - (int) this.end_offs, buf_ptr + (int) this.storage - (int) this.end_offs, (int) this.end_offs);
+        Inlines.OpusAssert(offs + end_offs <= _size);
+        Arrays.MemMove(buf, buf_ptr + (int) _size - (int) end_offs, buf_ptr + (int) storage - (int) end_offs, (int) end_offs);
         this.storage = _size;
     }
 
     int range_bytes() {
-        return this.offs;
+        return offs;
     }
 
     int get_error() {
-        return this.error;
+        return error;
     }
 
     /// <summary>
@@ -629,7 +629,7 @@ class EntropyCoder {
     /// <param name="this"></param>
     /// <returns>The number of bits.</returns>
     int tell() {
-        int returnVal = this.nbits_total - Inlines.EC_ILOG(this.rng);
+        int returnVal = nbits_total - Inlines.EC_ILOG(rng);
         return returnVal;
     }
 
@@ -647,9 +647,9 @@ class EntropyCoder {
         int r;
         int l;
         long b;
-        nbits = this.nbits_total << BITRES;
-        l = Inlines.EC_ILOG(this.rng);
-        r = (int) (this.rng >> (l - 16));
+        nbits = nbits_total << BITRES;
+        l = Inlines.EC_ILOG(rng);
+        r = (int) (rng >> (l - 16));
         b = Inlines.CapToUInt32((r >> 12) - 8);
         b = Inlines.CapToUInt32(b + (r > correction[(int) b] ? 1 : 0));
         l = (int) ((l << 3) + b);
@@ -664,14 +664,14 @@ class EntropyCoder {
         int l;
         /*We output the minimum number of bits that ensures that the symbols encoded
            thus far will be decoded correctly regardless of the bits that follow.*/
-        l = EC_CODE_BITS - Inlines.EC_ILOG(this.rng);
+        l = EC_CODE_BITS - Inlines.EC_ILOG(rng);
         msk = Inlines.CapToUInt32((EC_CODE_TOP - 1) >>> l);
-        end = Inlines.CapToUInt32((Inlines.CapToUInt32(this.val + msk)) & ~msk);
+        end = Inlines.CapToUInt32((Inlines.CapToUInt32(val + msk)) & ~msk);
 
-        if ((end | msk) >= this.val + this.rng) {
+        if ((end | msk) >= val + rng) {
             l++;
             msk >>= 1;
-            end = Inlines.CapToUInt32((Inlines.CapToUInt32(this.val + msk)) & ~msk);
+            end = Inlines.CapToUInt32((Inlines.CapToUInt32(val + msk)) & ~msk);
         }
 
         while (l > 0) {
@@ -681,13 +681,13 @@ class EntropyCoder {
         }
 
         /*If we have a buffered byte flush it into the output buffer.*/
-        if (this.rem >= 0 || this.ext > 0) {
+        if (rem >= 0 || ext > 0) {
             enc_carry_out(0);
         }
 
         /*If we have buffered extra bits, flush them as well.*/
-        window = this.end_window;
-        used = this.nend_bits;
+        window = end_window;
+        used = nend_bits;
 
         while (used >= EC_SYM_BITS) {
             this.error |= write_byte_at_end(window & EC_SYM_MAX);
@@ -696,23 +696,23 @@ class EntropyCoder {
         }
 
         /*Clear any excess space and add any remaining extra bits to the last byte.*/
-        if (this.error == 0) {
-            Arrays.MemSetWithOffset(this.buf, (byte) 0, buf_ptr + (int) this.offs, (int) this.storage - (int) this.offs - (int) this.end_offs);
+        if (error == 0) {
+            Arrays.MemSetWithOffset(buf, (byte) 0, buf_ptr + (int) offs, (int) storage - (int) offs - (int) end_offs);
             if (used > 0) {
                 /*If there's no range coder data at all, give up.*/
-                if (this.end_offs >= this.storage) {
+                if (end_offs >= storage) {
                     this.error = -1;
                 } else {
                     l = -l;
                     /*If we've busted, don't add too many extra bits to the last byte; it
                        would corrupt the range coder data, and that's more important.*/
-                    if (this.offs + this.end_offs >= this.storage && l < used) {
+                    if (offs + end_offs >= storage && l < used) {
                         window = Inlines.CapToUInt32(window & ((1 << l) - 1));
                         this.error = -1;
                     }
 
-                    int z = buf_ptr + this.storage - this.end_offs - 1;
-                    this.buf[z] = (byte) (this.buf[z] | (byte) (window & 0xFF));
+                    int z = buf_ptr + storage - end_offs - 1;
+                    buf[z] = (byte) (buf[z] | (byte) (window & 0xFF));
                 }
             }
         }

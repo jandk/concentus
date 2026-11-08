@@ -74,10 +74,10 @@ class SilkNSQState {
         this.rand_seed = other.rand_seed;
         this.prev_gain_Q16 = other.prev_gain_Q16;
         this.rewhite_flag = other.rewhite_flag;
-        System.arraycopy(other.xq, 0, this.xq, 0, 2 * SilkConstants.MAX_FRAME_LENGTH);
-        System.arraycopy(other.sLTP_shp_Q14, 0, this.sLTP_shp_Q14, 0, 2 * SilkConstants.MAX_FRAME_LENGTH);
-        System.arraycopy(other.sLPC_Q14, 0, this.sLPC_Q14, 0, SilkConstants.MAX_SUB_FRAME_LENGTH + SilkConstants.NSQ_LPC_BUF_LENGTH);
-        System.arraycopy(other.sAR2_Q14, 0, this.sAR2_Q14, 0, SilkConstants.MAX_SHAPE_LPC_ORDER);
+        System.arraycopy(other.xq, 0, xq, 0, 2 * SilkConstants.MAX_FRAME_LENGTH);
+        System.arraycopy(other.sLTP_shp_Q14, 0, sLTP_shp_Q14, 0, 2 * SilkConstants.MAX_FRAME_LENGTH);
+        System.arraycopy(other.sLPC_Q14, 0, sLPC_Q14, 0, SilkConstants.MAX_SUB_FRAME_LENGTH + SilkConstants.NSQ_LPC_BUF_LENGTH);
+        System.arraycopy(other.sAR2_Q14, 0, sAR2_Q14, 0, SilkConstants.MAX_SHAPE_LPC_ORDER);
     }
 
     private class NSQ_del_dec_struct {
@@ -113,7 +113,7 @@ class SilkNSQState {
         }
 
         void Assign(NSQ_del_dec_struct other) {
-            this.PartialCopyFrom(other, 0);
+            PartialCopyFrom(other, 0);
         }
     }
 
@@ -166,9 +166,9 @@ class SilkNSQState {
         this.rand_seed = psIndices.Seed;
 
         /* Set unvoiced lag to the previous one, overwrite later for voiced */
-        lag = this.lagPrev;
+        lag = lagPrev;
 
-        Inlines.OpusAssert(this.prev_gain_Q16 != 0);
+        Inlines.OpusAssert(prev_gain_Q16 != 0);
 
         offset_Q10 = SilkTables.silk_Quantization_Offsets_Q10[psIndices.signalType >> 1][psIndices.quantOffsetType];
 
@@ -206,7 +206,7 @@ class SilkNSQState {
                     start_idx = psEncC.ltp_mem_length - lag - psEncC.predictLPCOrder - SilkConstants.LTP_ORDER / 2;
                     Inlines.OpusAssert(start_idx > 0);
 
-                    Filters.silk_LPC_analysis_filter(sLTP, start_idx, this.xq, start_idx + k * psEncC.subfr_length,
+                    Filters.silk_LPC_analysis_filter(sLTP, start_idx, xq, start_idx + k * psEncC.subfr_length,
                             PredCoef_Q12[A_Q12], 0, psEncC.ltp_mem_length - start_idx, psEncC.predictLPCOrder);
 
                     this.rewhite_flag = 1;
@@ -221,7 +221,7 @@ class SilkNSQState {
                     x_sc_Q10,
                     pulses,
                     pulses_ptr,
-                    this.xq,
+                    xq,
                     pxq,
                     sLTP_Q15,
                     PredCoef_Q12[A_Q12],
@@ -249,14 +249,15 @@ class SilkNSQState {
         this.lagPrev = pitchL[psEncC.nb_subfr - 1];
 
         /* Save quantized speech and noise shaping signals */
-        Arrays.MemMove(this.xq, psEncC.frame_length, 0, psEncC.ltp_mem_length);
-        Arrays.MemMove(this.sLTP_shp_Q14, psEncC.frame_length, 0, psEncC.ltp_mem_length);
+        Arrays.MemMove(xq, psEncC.frame_length, 0, psEncC.ltp_mem_length);
+        Arrays.MemMove(sLTP_shp_Q14, psEncC.frame_length, 0, psEncC.ltp_mem_length);
     }
 
     /**
      * ********************************
      */
     /* silk_noise_shape_quantizer  */
+
     /**
      * ********************************
      */
@@ -293,8 +294,8 @@ class SilkNSQState {
         int shp_lag_ptr;
         int pred_lag_ptr;
 
-        shp_lag_ptr = this.sLTP_shp_buf_idx - lag + SilkConstants.HARM_SHAPE_FIR_TAPS / 2;
-        pred_lag_ptr = this.sLTP_buf_idx - lag + SilkConstants.LTP_ORDER / 2;
+        shp_lag_ptr = sLTP_shp_buf_idx - lag + SilkConstants.HARM_SHAPE_FIR_TAPS / 2;
+        pred_lag_ptr = sLTP_buf_idx - lag + SilkConstants.LTP_ORDER / 2;
         Gain_Q10 = Inlines.silk_RSHIFT(Gain_Q16, 6);
 
         /* Set up short term AR state */
@@ -302,35 +303,35 @@ class SilkNSQState {
 
         for (i = 0; i < length; i++) {
             /* Generate dither */
-            this.rand_seed = Inlines.silk_RAND(this.rand_seed);
+            this.rand_seed = Inlines.silk_RAND(rand_seed);
 
             /* Short-term prediction */
             Inlines.OpusAssert(predictLPCOrder == 10 || predictLPCOrder == 16);
             /* Avoids introducing a bias because Inlines.silk_SMLAWB() always rounds to -inf */
             LPC_pred_Q10 = Inlines.silk_RSHIFT(predictLPCOrder, 1);
-            LPC_pred_Q10 = Inlines.silk_SMLAWB(LPC_pred_Q10, this.sLPC_Q14[psLPC_Q14 - 0], a_Q12[0]);
-            LPC_pred_Q10 = Inlines.silk_SMLAWB(LPC_pred_Q10, this.sLPC_Q14[psLPC_Q14 - 1], a_Q12[1]);
-            LPC_pred_Q10 = Inlines.silk_SMLAWB(LPC_pred_Q10, this.sLPC_Q14[psLPC_Q14 - 2], a_Q12[2]);
-            LPC_pred_Q10 = Inlines.silk_SMLAWB(LPC_pred_Q10, this.sLPC_Q14[psLPC_Q14 - 3], a_Q12[3]);
-            LPC_pred_Q10 = Inlines.silk_SMLAWB(LPC_pred_Q10, this.sLPC_Q14[psLPC_Q14 - 4], a_Q12[4]);
-            LPC_pred_Q10 = Inlines.silk_SMLAWB(LPC_pred_Q10, this.sLPC_Q14[psLPC_Q14 - 5], a_Q12[5]);
-            LPC_pred_Q10 = Inlines.silk_SMLAWB(LPC_pred_Q10, this.sLPC_Q14[psLPC_Q14 - 6], a_Q12[6]);
-            LPC_pred_Q10 = Inlines.silk_SMLAWB(LPC_pred_Q10, this.sLPC_Q14[psLPC_Q14 - 7], a_Q12[7]);
-            LPC_pred_Q10 = Inlines.silk_SMLAWB(LPC_pred_Q10, this.sLPC_Q14[psLPC_Q14 - 8], a_Q12[8]);
-            LPC_pred_Q10 = Inlines.silk_SMLAWB(LPC_pred_Q10, this.sLPC_Q14[psLPC_Q14 - 9], a_Q12[9]);
+            LPC_pred_Q10 = Inlines.silk_SMLAWB(LPC_pred_Q10, sLPC_Q14[psLPC_Q14 - 0], a_Q12[0]);
+            LPC_pred_Q10 = Inlines.silk_SMLAWB(LPC_pred_Q10, sLPC_Q14[psLPC_Q14 - 1], a_Q12[1]);
+            LPC_pred_Q10 = Inlines.silk_SMLAWB(LPC_pred_Q10, sLPC_Q14[psLPC_Q14 - 2], a_Q12[2]);
+            LPC_pred_Q10 = Inlines.silk_SMLAWB(LPC_pred_Q10, sLPC_Q14[psLPC_Q14 - 3], a_Q12[3]);
+            LPC_pred_Q10 = Inlines.silk_SMLAWB(LPC_pred_Q10, sLPC_Q14[psLPC_Q14 - 4], a_Q12[4]);
+            LPC_pred_Q10 = Inlines.silk_SMLAWB(LPC_pred_Q10, sLPC_Q14[psLPC_Q14 - 5], a_Q12[5]);
+            LPC_pred_Q10 = Inlines.silk_SMLAWB(LPC_pred_Q10, sLPC_Q14[psLPC_Q14 - 6], a_Q12[6]);
+            LPC_pred_Q10 = Inlines.silk_SMLAWB(LPC_pred_Q10, sLPC_Q14[psLPC_Q14 - 7], a_Q12[7]);
+            LPC_pred_Q10 = Inlines.silk_SMLAWB(LPC_pred_Q10, sLPC_Q14[psLPC_Q14 - 8], a_Q12[8]);
+            LPC_pred_Q10 = Inlines.silk_SMLAWB(LPC_pred_Q10, sLPC_Q14[psLPC_Q14 - 9], a_Q12[9]);
             if (predictLPCOrder == 16) {
-                LPC_pred_Q10 = Inlines.silk_SMLAWB(LPC_pred_Q10, this.sLPC_Q14[psLPC_Q14 - 10], a_Q12[10]);
-                LPC_pred_Q10 = Inlines.silk_SMLAWB(LPC_pred_Q10, this.sLPC_Q14[psLPC_Q14 - 11], a_Q12[11]);
-                LPC_pred_Q10 = Inlines.silk_SMLAWB(LPC_pred_Q10, this.sLPC_Q14[psLPC_Q14 - 12], a_Q12[12]);
-                LPC_pred_Q10 = Inlines.silk_SMLAWB(LPC_pred_Q10, this.sLPC_Q14[psLPC_Q14 - 13], a_Q12[13]);
-                LPC_pred_Q10 = Inlines.silk_SMLAWB(LPC_pred_Q10, this.sLPC_Q14[psLPC_Q14 - 14], a_Q12[14]);
-                LPC_pred_Q10 = Inlines.silk_SMLAWB(LPC_pred_Q10, this.sLPC_Q14[psLPC_Q14 - 15], a_Q12[15]);
+                LPC_pred_Q10 = Inlines.silk_SMLAWB(LPC_pred_Q10, sLPC_Q14[psLPC_Q14 - 10], a_Q12[10]);
+                LPC_pred_Q10 = Inlines.silk_SMLAWB(LPC_pred_Q10, sLPC_Q14[psLPC_Q14 - 11], a_Q12[11]);
+                LPC_pred_Q10 = Inlines.silk_SMLAWB(LPC_pred_Q10, sLPC_Q14[psLPC_Q14 - 12], a_Q12[12]);
+                LPC_pred_Q10 = Inlines.silk_SMLAWB(LPC_pred_Q10, sLPC_Q14[psLPC_Q14 - 13], a_Q12[13]);
+                LPC_pred_Q10 = Inlines.silk_SMLAWB(LPC_pred_Q10, sLPC_Q14[psLPC_Q14 - 14], a_Q12[14]);
+                LPC_pred_Q10 = Inlines.silk_SMLAWB(LPC_pred_Q10, sLPC_Q14[psLPC_Q14 - 15], a_Q12[15]);
             }
 
             /* Long-term prediction */
             if (signalType == SilkConstants.TYPE_VOICED) {
                 /* Unrolled loop */
- /* Avoids introducing a bias because Inlines.silk_SMLAWB() always rounds to -inf */
+                /* Avoids introducing a bias because Inlines.silk_SMLAWB() always rounds to -inf */
                 LTP_pred_Q13 = 2;
                 LTP_pred_Q13 = Inlines.silk_SMLAWB(LTP_pred_Q13, sLTP_Q15[pred_lag_ptr], b_Q14[b_Q14_ptr]);
                 LTP_pred_Q13 = Inlines.silk_SMLAWB(LTP_pred_Q13, sLTP_Q15[pred_lag_ptr - 1], b_Q14[b_Q14_ptr + 1]);
@@ -345,27 +346,27 @@ class SilkNSQState {
             /* Noise shape feedback */
             Inlines.OpusAssert((shapingLPCOrder & 1) == 0);
             /* check that order is even */
-            tmp2 = this.sLPC_Q14[psLPC_Q14];
-            tmp1 = this.sAR2_Q14[0];
-            this.sAR2_Q14[0] = tmp2;
+            tmp2 = sLPC_Q14[psLPC_Q14];
+            tmp1 = sAR2_Q14[0];
+            sAR2_Q14[0] = tmp2;
             n_AR_Q12 = Inlines.silk_RSHIFT(shapingLPCOrder, 1);
             n_AR_Q12 = Inlines.silk_SMLAWB(n_AR_Q12, tmp2, AR_shp_Q13[AR_shp_Q13_ptr]);
             for (j = 2; j < shapingLPCOrder; j += 2) {
-                tmp2 = this.sAR2_Q14[j - 1];
-                this.sAR2_Q14[j - 1] = tmp1;
+                tmp2 = sAR2_Q14[j - 1];
+                sAR2_Q14[j - 1] = tmp1;
                 n_AR_Q12 = Inlines.silk_SMLAWB(n_AR_Q12, tmp1, AR_shp_Q13[AR_shp_Q13_ptr + j - 1]);
-                tmp1 = this.sAR2_Q14[j + 0];
-                this.sAR2_Q14[j + 0] = tmp2;
+                tmp1 = sAR2_Q14[j + 0];
+                sAR2_Q14[j + 0] = tmp2;
                 n_AR_Q12 = Inlines.silk_SMLAWB(n_AR_Q12, tmp2, AR_shp_Q13[AR_shp_Q13_ptr + j]);
             }
-            this.sAR2_Q14[shapingLPCOrder - 1] = tmp1;
+            sAR2_Q14[shapingLPCOrder - 1] = tmp1;
             n_AR_Q12 = Inlines.silk_SMLAWB(n_AR_Q12, tmp1, AR_shp_Q13[AR_shp_Q13_ptr + shapingLPCOrder - 1]);
 
             n_AR_Q12 = Inlines.silk_LSHIFT32(n_AR_Q12, 1);
             /* Q11 . Q12 */
             n_AR_Q12 = Inlines.silk_SMLAWB(n_AR_Q12, this.sLF_AR_shp_Q14, Tilt_Q14);
 
-            n_LF_Q12 = Inlines.silk_SMULWB(this.sLTP_shp_Q14[this.sLTP_shp_buf_idx - 1], LF_shp_Q14);
+            n_LF_Q12 = Inlines.silk_SMULWB(sLTP_shp_Q14[sLTP_shp_buf_idx - 1], LF_shp_Q14);
             n_LF_Q12 = Inlines.silk_SMLAWT(n_LF_Q12, this.sLF_AR_shp_Q14, LF_shp_Q14);
 
             Inlines.OpusAssert(lag > 0 || signalType != SilkConstants.TYPE_VOICED);
@@ -377,8 +378,8 @@ class SilkNSQState {
             /* Q12 */
             if (lag > 0) {
                 /* Symmetric, packed FIR coefficients */
-                n_LTP_Q13 = Inlines.silk_SMULWB(Inlines.silk_ADD32(this.sLTP_shp_Q14[shp_lag_ptr], this.sLTP_shp_Q14[shp_lag_ptr - 2]), HarmShapeFIRPacked_Q14);
-                n_LTP_Q13 = Inlines.silk_SMLAWT(n_LTP_Q13, this.sLTP_shp_Q14[shp_lag_ptr - 1], HarmShapeFIRPacked_Q14);
+                n_LTP_Q13 = Inlines.silk_SMULWB(Inlines.silk_ADD32(sLTP_shp_Q14[shp_lag_ptr], sLTP_shp_Q14[shp_lag_ptr - 2]), HarmShapeFIRPacked_Q14);
+                n_LTP_Q13 = Inlines.silk_SMLAWT(n_LTP_Q13, sLTP_shp_Q14[shp_lag_ptr - 1], HarmShapeFIRPacked_Q14);
                 n_LTP_Q13 = Inlines.silk_LSHIFT(n_LTP_Q13, 1);
                 shp_lag_ptr += 1;
 
@@ -396,8 +397,8 @@ class SilkNSQState {
             r_Q10 = Inlines.silk_SUB32(x_sc_Q10[i], tmp1);
             /* residual error Q10 */
 
- /* Flip sign depending on dither */
-            if (this.rand_seed < 0) {
+            /* Flip sign depending on dither */
+            if (rand_seed < 0) {
                 r_Q10 = -r_Q10;
             }
             r_Q10 = Inlines.silk_LIMIT_32(r_Q10, -(31 << 10), 30 << 10);
@@ -442,7 +443,7 @@ class SilkNSQState {
 
             /* Excitation */
             exc_Q14 = Inlines.silk_LSHIFT(q1_Q10, 4);
-            if (this.rand_seed < 0) {
+            if (rand_seed < 0) {
                 exc_Q14 = -exc_Q14;
             }
 
@@ -455,21 +456,21 @@ class SilkNSQState {
 
             /* Update states */
             psLPC_Q14 += 1;
-            this.sLPC_Q14[psLPC_Q14] = xq_Q14;
+            sLPC_Q14[psLPC_Q14] = xq_Q14;
             sLF_AR_shp_Q14 = Inlines.silk_SUB_LSHIFT32(xq_Q14, n_AR_Q12, 2);
             this.sLF_AR_shp_Q14 = sLF_AR_shp_Q14;
 
-            this.sLTP_shp_Q14[this.sLTP_shp_buf_idx] = Inlines.silk_SUB_LSHIFT32(sLF_AR_shp_Q14, n_LF_Q12, 2);
-            sLTP_Q15[this.sLTP_buf_idx] = Inlines.silk_LSHIFT(LPC_exc_Q14, 1);
+            sLTP_shp_Q14[sLTP_shp_buf_idx] = Inlines.silk_SUB_LSHIFT32(sLF_AR_shp_Q14, n_LF_Q12, 2);
+            sLTP_Q15[sLTP_buf_idx] = Inlines.silk_LSHIFT(LPC_exc_Q14, 1);
             this.sLTP_shp_buf_idx++;
             this.sLTP_buf_idx++;
 
             /* Make dither dependent on quantized signal */
-            this.rand_seed = Inlines.silk_ADD32_ovflw(this.rand_seed, pulses[pulses_ptr + i]);
+            this.rand_seed = Inlines.silk_ADD32_ovflw(rand_seed, pulses[pulses_ptr + i]);
         }
 
         /* Update LPC synth buffer */
-        System.arraycopy(this.sLPC_Q14, length, this.sLPC_Q14, 0, SilkConstants.NSQ_LPC_BUF_LENGTH);
+        System.arraycopy(sLPC_Q14, length, sLPC_Q14, 0, SilkConstants.NSQ_LPC_BUF_LENGTH);
     }
 
     private void silk_nsq_scale_states(
@@ -493,8 +494,8 @@ class SilkNSQState {
         Inlines.OpusAssert(inv_gain_Q31 != 0);
 
         /* Calculate gain adjustment factor */
-        if (Gains_Q16[subfr] != this.prev_gain_Q16) {
-            gain_adj_Q16 = Inlines.silk_DIV32_varQ(this.prev_gain_Q16, Gains_Q16[subfr], 16);
+        if (Gains_Q16[subfr] != prev_gain_Q16) {
+            gain_adj_Q16 = Inlines.silk_DIV32_varQ(prev_gain_Q16, Gains_Q16[subfr], 16);
         } else {
             gain_adj_Q16 = (int) 1 << 16;
         }
@@ -509,12 +510,12 @@ class SilkNSQState {
         this.prev_gain_Q16 = Gains_Q16[subfr];
 
         /* After rewhitening the LTP state is un-scaled, so scale with inv_gain_Q16 */
-        if (this.rewhite_flag != 0) {
+        if (rewhite_flag != 0) {
             if (subfr == 0) {
                 /* Do LTP downscaling */
                 inv_gain_Q31 = Inlines.silk_LSHIFT(Inlines.silk_SMULWB(inv_gain_Q31, LTP_scale_Q14), 2);
             }
-            for (i = this.sLTP_buf_idx - lag - SilkConstants.LTP_ORDER / 2; i < this.sLTP_buf_idx; i++) {
+            for (i = sLTP_buf_idx - lag - SilkConstants.LTP_ORDER / 2; i < sLTP_buf_idx; i++) {
                 Inlines.OpusAssert(i < SilkConstants.MAX_FRAME_LENGTH);
                 sLTP_Q15[i] = Inlines.silk_SMULWB(inv_gain_Q31, sLTP[i]);
             }
@@ -523,25 +524,25 @@ class SilkNSQState {
         /* Adjust for changing gain */
         if (gain_adj_Q16 != (int) 1 << 16) {
             /* Scale long-term shaping state */
-            for (i = this.sLTP_shp_buf_idx - psEncC.ltp_mem_length; i < this.sLTP_shp_buf_idx; i++) {
-                this.sLTP_shp_Q14[i] = Inlines.silk_SMULWW(gain_adj_Q16, this.sLTP_shp_Q14[i]);
+            for (i = sLTP_shp_buf_idx - psEncC.ltp_mem_length; i < sLTP_shp_buf_idx; i++) {
+                sLTP_shp_Q14[i] = Inlines.silk_SMULWW(gain_adj_Q16, sLTP_shp_Q14[i]);
             }
 
             /* Scale long-term prediction state */
-            if (signal_type == SilkConstants.TYPE_VOICED && this.rewhite_flag == 0) {
-                for (i = this.sLTP_buf_idx - lag - SilkConstants.LTP_ORDER / 2; i < this.sLTP_buf_idx; i++) {
+            if (signal_type == SilkConstants.TYPE_VOICED && rewhite_flag == 0) {
+                for (i = sLTP_buf_idx - lag - SilkConstants.LTP_ORDER / 2; i < sLTP_buf_idx; i++) {
                     sLTP_Q15[i] = Inlines.silk_SMULWW(gain_adj_Q16, sLTP_Q15[i]);
                 }
             }
 
-            this.sLF_AR_shp_Q14 = Inlines.silk_SMULWW(gain_adj_Q16, this.sLF_AR_shp_Q14);
+            this.sLF_AR_shp_Q14 = Inlines.silk_SMULWW(gain_adj_Q16, sLF_AR_shp_Q14);
 
             /* Scale short-term prediction and shaping states */
             for (i = 0; i < SilkConstants.NSQ_LPC_BUF_LENGTH; i++) {
-                this.sLPC_Q14[i] = Inlines.silk_SMULWW(gain_adj_Q16, this.sLPC_Q14[i]);
+                sLPC_Q14[i] = Inlines.silk_SMULWW(gain_adj_Q16, sLPC_Q14[i]);
             }
             for (i = 0; i < SilkConstants.MAX_SHAPE_LPC_ORDER; i++) {
-                this.sAR2_Q14[i] = Inlines.silk_SMULWW(gain_adj_Q16, this.sAR2_Q14[i]);
+                sAR2_Q14[i] = Inlines.silk_SMULWW(gain_adj_Q16, sAR2_Q14[i]);
             }
         }
     }
@@ -579,9 +580,9 @@ class SilkNSQState {
         NSQ_del_dec_struct psDD;
 
         /* Set unvoiced lag to the previous one, overwrite later for voiced */
-        lag = this.lagPrev;
+        lag = lagPrev;
 
-        Inlines.OpusAssert(this.prev_gain_Q16 != 0);
+        Inlines.OpusAssert(prev_gain_Q16 != 0);
 
         /* Initialize delayed decision states */
         psDelDec = new NSQ_del_dec_struct[psEncC.nStatesDelayedDecision];
@@ -594,10 +595,10 @@ class SilkNSQState {
             psDD.Seed = (k + psIndices.Seed) & 3;
             psDD.SeedInit = psDD.Seed;
             psDD.RD_Q10 = 0;
-            psDD.LF_AR_Q14 = this.sLF_AR_shp_Q14;
-            psDD.Shape_Q14[0] = this.sLTP_shp_Q14[psEncC.ltp_mem_length - 1];
-            System.arraycopy(this.sLPC_Q14, 0, psDD.sLPC_Q14, 0, SilkConstants.NSQ_LPC_BUF_LENGTH);
-            System.arraycopy(this.sAR2_Q14, 0, psDD.sAR2_Q14, 0, psEncC.shapingLPCOrder);
+            psDD.LF_AR_Q14 = sLF_AR_shp_Q14;
+            psDD.Shape_Q14[0] = sLTP_shp_Q14[psEncC.ltp_mem_length - 1];
+            System.arraycopy(sLPC_Q14, 0, psDD.sLPC_Q14, 0, SilkConstants.NSQ_LPC_BUF_LENGTH);
+            System.arraycopy(sAR2_Q14, 0, psDD.sAR2_Q14, 0, psEncC.shapingLPCOrder);
         }
 
         offset_Q10 = SilkTables.silk_Quantization_Offsets_Q10[psIndices.signalType >> 1][psIndices.quantOffsetType];
@@ -648,7 +649,7 @@ class SilkNSQState {
                 if ((k & (3 - Inlines.silk_LSHIFT(LSF_interpolation_flag, 1))) == 0) {
                     if (k == 2) {
                         /* RESET DELAYED DECISIONS */
- /* Find winner */
+                        /* Find winner */
                         RDmin_Q10 = psDelDec[0].RD_Q10;
                         Winner_ind = 0;
                         for (i = 1; i < psEncC.nStatesDelayedDecision; i++) {
@@ -670,9 +671,9 @@ class SilkNSQState {
                         for (i = 0; i < decisionDelay; i++) {
                             last_smple_idx = (last_smple_idx - 1) & SilkConstants.DECISION_DELAY_MASK;
                             pulses[pulses_ptr + i - decisionDelay] = (byte) Inlines.silk_RSHIFT_ROUND(psDD.Q_Q10[last_smple_idx], 10);
-                            this.xq[pxq + i - decisionDelay] = (short) Inlines.silk_SAT16(Inlines.silk_RSHIFT_ROUND(
+                            xq[pxq + i - decisionDelay] = (short) Inlines.silk_SAT16(Inlines.silk_RSHIFT_ROUND(
                                     Inlines.silk_SMULWW(psDD.Xq_Q14[last_smple_idx], Gains_Q16[1]), 14));
-                            this.sLTP_shp_Q14[this.sLTP_shp_buf_idx - decisionDelay + i] = psDD.Shape_Q14[last_smple_idx];
+                            sLTP_shp_Q14[sLTP_shp_buf_idx - decisionDelay + i] = psDD.Shape_Q14[last_smple_idx];
                         }
 
                         subfr = 0;
@@ -682,7 +683,7 @@ class SilkNSQState {
                     start_idx = psEncC.ltp_mem_length - lag - psEncC.predictLPCOrder - SilkConstants.LTP_ORDER / 2;
                     Inlines.OpusAssert(start_idx > 0);
 
-                    Filters.silk_LPC_analysis_filter(sLTP, start_idx, this.xq, start_idx + k * psEncC.subfr_length,
+                    Filters.silk_LPC_analysis_filter(sLTP, start_idx, xq, start_idx + k * psEncC.subfr_length,
                             PredCoef_Q12[A_Q12], 0, psEncC.ltp_mem_length - start_idx, psEncC.predictLPCOrder);
 
                     this.sLTP_buf_idx = psEncC.ltp_mem_length;
@@ -713,7 +714,7 @@ class SilkNSQState {
                     x_sc_Q10,
                     pulses,
                     pulses_ptr,
-                    this.xq,
+                    xq,
                     pxq,
                     sLTP_Q15,
                     delayedGain_Q10,
@@ -762,26 +763,27 @@ class SilkNSQState {
         for (i = 0; i < decisionDelay; i++) {
             last_smple_idx = (last_smple_idx - 1) & SilkConstants.DECISION_DELAY_MASK;
             pulses[pulses_ptr + i - decisionDelay] = (byte) Inlines.silk_RSHIFT_ROUND(psDD.Q_Q10[last_smple_idx], 10);
-            this.xq[pxq + i - decisionDelay] = (short) Inlines.silk_SAT16(Inlines.silk_RSHIFT_ROUND(
+            xq[pxq + i - decisionDelay] = (short) Inlines.silk_SAT16(Inlines.silk_RSHIFT_ROUND(
                     Inlines.silk_SMULWW(psDD.Xq_Q14[last_smple_idx], Gain_Q10), 8));
-            this.sLTP_shp_Q14[this.sLTP_shp_buf_idx - decisionDelay + i] = psDD.Shape_Q14[last_smple_idx];
+            sLTP_shp_Q14[sLTP_shp_buf_idx - decisionDelay + i] = psDD.Shape_Q14[last_smple_idx];
         }
-        System.arraycopy(psDD.sLPC_Q14, psEncC.subfr_length, this.sLPC_Q14, 0, SilkConstants.NSQ_LPC_BUF_LENGTH);
-        System.arraycopy(psDD.sAR2_Q14, 0, this.sAR2_Q14, 0, psEncC.shapingLPCOrder);
+        System.arraycopy(psDD.sLPC_Q14, psEncC.subfr_length, sLPC_Q14, 0, SilkConstants.NSQ_LPC_BUF_LENGTH);
+        System.arraycopy(psDD.sAR2_Q14, 0, sAR2_Q14, 0, psEncC.shapingLPCOrder);
 
         /* Update states */
         this.sLF_AR_shp_Q14 = psDD.LF_AR_Q14;
         this.lagPrev = pitchL[psEncC.nb_subfr - 1];
 
         /* Save quantized speech signal */
-        Arrays.MemMove(this.xq, psEncC.frame_length, 0, psEncC.ltp_mem_length);
-        Arrays.MemMove(this.sLTP_shp_Q14, psEncC.frame_length, 0, psEncC.ltp_mem_length);
+        Arrays.MemMove(xq, psEncC.frame_length, 0, psEncC.ltp_mem_length);
+        Arrays.MemMove(sLTP_shp_Q14, psEncC.frame_length, 0, psEncC.ltp_mem_length);
     }
 
     /**
      * ***************************************
      */
     /* Noise shape quantizer for one subframe */
+
     /**
      * ***************************************
      */
@@ -835,17 +837,17 @@ class SilkNSQState {
             sampleStates[c] = new NSQ_sample_struct();
         }
 
-        shp_lag_ptr = this.sLTP_shp_buf_idx - lag + SilkConstants.HARM_SHAPE_FIR_TAPS / 2;
-        pred_lag_ptr = this.sLTP_buf_idx - lag + SilkConstants.LTP_ORDER / 2;
+        shp_lag_ptr = sLTP_shp_buf_idx - lag + SilkConstants.HARM_SHAPE_FIR_TAPS / 2;
+        pred_lag_ptr = sLTP_buf_idx - lag + SilkConstants.LTP_ORDER / 2;
         Gain_Q10 = Inlines.silk_RSHIFT(Gain_Q16, 6);
 
         for (i = 0; i < length; i++) {
             /* Perform common calculations used in all states */
 
- /* Long-term prediction */
+            /* Long-term prediction */
             if (signalType == SilkConstants.TYPE_VOICED) {
                 /* Unrolled loop */
- /* Avoids introducing a bias because Inlines.silk_SMLAWB() always rounds to -inf */
+                /* Avoids introducing a bias because Inlines.silk_SMLAWB() always rounds to -inf */
                 LTP_pred_Q14 = 2;
                 LTP_pred_Q14 = Inlines.silk_SMLAWB(LTP_pred_Q14, sLTP_Q15[pred_lag_ptr], b_Q14[b_Q14_ptr + 0]);
                 LTP_pred_Q14 = Inlines.silk_SMLAWB(LTP_pred_Q14, sLTP_Q15[pred_lag_ptr - 1], b_Q14[b_Q14_ptr + 1]);
@@ -862,8 +864,8 @@ class SilkNSQState {
             /* Long-term shaping */
             if (lag > 0) {
                 /* Symmetric, packed FIR coefficients */
-                n_LTP_Q14 = Inlines.silk_SMULWB(Inlines.silk_ADD32(this.sLTP_shp_Q14[shp_lag_ptr], this.sLTP_shp_Q14[shp_lag_ptr - 2]), HarmShapeFIRPacked_Q14);
-                n_LTP_Q14 = Inlines.silk_SMLAWT(n_LTP_Q14, this.sLTP_shp_Q14[shp_lag_ptr - 1], HarmShapeFIRPacked_Q14);
+                n_LTP_Q14 = Inlines.silk_SMULWB(Inlines.silk_ADD32(sLTP_shp_Q14[shp_lag_ptr], sLTP_shp_Q14[shp_lag_ptr - 2]), HarmShapeFIRPacked_Q14);
+                n_LTP_Q14 = Inlines.silk_SMLAWT(n_LTP_Q14, sLTP_shp_Q14[shp_lag_ptr - 1], HarmShapeFIRPacked_Q14);
                 n_LTP_Q14 = Inlines.silk_SUB_LSHIFT32(LTP_pred_Q14, n_LTP_Q14, 2);
                 /* Q12 . Q14 */
                 shp_lag_ptr += 1;
@@ -911,10 +913,10 @@ class SilkNSQState {
                 /* Q10 . Q14 */
 
 
- /* Noise shape feedback */
+                /* Noise shape feedback */
                 Inlines.OpusAssert((shapingLPCOrder & 1) == 0);
                 /* check that order is even */
- /* Output of lowpass section */
+                /* Output of lowpass section */
                 tmp2 = Inlines.silk_SMLAWB(psDD.sLPC_Q14[psLPC_Q14], psDD_sAR2[0], warping_Q16);
                 /* Output of allpass section */
                 tmp1 = Inlines.silk_SMLAWB(psDD_sAR2[0], psDD_sAR2[1] - tmp2, warping_Q16);
@@ -949,8 +951,8 @@ class SilkNSQState {
                 n_LF_Q14 = Inlines.silk_LSHIFT(n_LF_Q14, 2);
                 /* Q12 . Q14 */
 
- /* Input minus prediction plus noise feedback                       */
- /* r = x[ i ] - LTP_pred - LPC_pred + n_AR + n_Tilt + n_LF + n_LTP  */
+                /* Input minus prediction plus noise feedback                       */
+                /* r = x[ i ] - LTP_pred - LPC_pred + n_AR + n_Tilt + n_LF + n_LTP  */
                 tmp1 = Inlines.silk_ADD32(n_AR_Q14, n_LF_Q14);
                 /* Q14 */
                 tmp2 = Inlines.silk_ADD32(n_LTP_Q14, LPC_pred_Q14);
@@ -963,7 +965,7 @@ class SilkNSQState {
                 r_Q10 = Inlines.silk_SUB32(x_Q10[i], tmp1);
                 /* residual error Q10 */
 
- /* Flip sign depending on dither */
+                /* Flip sign depending on dither */
                 if (psDD.Seed < 0) {
                     r_Q10 = -r_Q10;
                 }
@@ -1015,7 +1017,7 @@ class SilkNSQState {
 
                 /* Update states for best quantization */
 
- /* Quantized excitation */
+                /* Quantized excitation */
                 exc_Q14 = Inlines.silk_LSHIFT32(sampleStates[SS_left].Q_Q10, 4);
                 if (psDD.Seed < 0) {
                     exc_Q14 = -exc_Q14;
@@ -1034,7 +1036,7 @@ class SilkNSQState {
 
                 /* Update states for second best quantization */
 
- /* Quantized excitation */
+                /* Quantized excitation */
                 exc_Q14 = Inlines.silk_LSHIFT32(sampleStates[SS_right].Q_Q10, 4);
                 if (psDD.Seed < 0) {
                     exc_Q14 = -exc_Q14;
@@ -1058,7 +1060,7 @@ class SilkNSQState {
             last_smple_idx = (smpl_buf_idx.Val + decisionDelay) & SilkConstants.DECISION_DELAY_MASK;
             /* Index to decisionDelay old samples   */
 
- /* Find winner */
+            /* Find winner */
             RDmin_Q10 = sampleStates[0].RD_Q10;
             Winner_ind = 0;
             for (k = 1; k < nStatesDelayedDecision; k++) {
@@ -1110,8 +1112,8 @@ class SilkNSQState {
                 pulses[pulses_ptr + i - decisionDelay] = (byte) Inlines.silk_RSHIFT_ROUND(psDD.Q_Q10[last_smple_idx], 10);
                 xq[xq_ptr + i - decisionDelay] = (short) Inlines.silk_SAT16(Inlines.silk_RSHIFT_ROUND(
                         Inlines.silk_SMULWW(psDD.Xq_Q14[last_smple_idx], delayedGain_Q10[last_smple_idx]), 8));
-                this.sLTP_shp_Q14[this.sLTP_shp_buf_idx - decisionDelay] = psDD.Shape_Q14[last_smple_idx];
-                sLTP_Q15[this.sLTP_buf_idx - decisionDelay] = psDD.Pred_Q15[last_smple_idx];
+                sLTP_shp_Q14[sLTP_shp_buf_idx - decisionDelay] = psDD.Shape_Q14[last_smple_idx];
+                sLTP_Q15[sLTP_buf_idx - decisionDelay] = psDD.Pred_Q15[last_smple_idx];
             }
             this.sLTP_shp_buf_idx++;
             this.sLTP_buf_idx++;
@@ -1165,8 +1167,8 @@ class SilkNSQState {
         Inlines.OpusAssert(inv_gain_Q31 != 0);
 
         /* Calculate gain adjustment factor */
-        if (Gains_Q16[subfr] != this.prev_gain_Q16) {
-            gain_adj_Q16 = Inlines.silk_DIV32_varQ(this.prev_gain_Q16, Gains_Q16[subfr], 16);
+        if (Gains_Q16[subfr] != prev_gain_Q16) {
+            gain_adj_Q16 = Inlines.silk_DIV32_varQ(prev_gain_Q16, Gains_Q16[subfr], 16);
         } else {
             gain_adj_Q16 = (int) 1 << 16;
         }
@@ -1181,12 +1183,12 @@ class SilkNSQState {
         this.prev_gain_Q16 = Gains_Q16[subfr];
 
         /* After rewhitening the LTP state is un-scaled, so scale with inv_gain_Q16 */
-        if (this.rewhite_flag != 0) {
+        if (rewhite_flag != 0) {
             if (subfr == 0) {
                 /* Do LTP downscaling */
                 inv_gain_Q31 = Inlines.silk_LSHIFT(Inlines.silk_SMULWB(inv_gain_Q31, LTP_scale_Q14), 2);
             }
-            for (i = this.sLTP_buf_idx - lag - SilkConstants.LTP_ORDER / 2; i < this.sLTP_buf_idx; i++) {
+            for (i = sLTP_buf_idx - lag - SilkConstants.LTP_ORDER / 2; i < sLTP_buf_idx; i++) {
                 Inlines.OpusAssert(i < SilkConstants.MAX_FRAME_LENGTH);
                 sLTP_Q15[i] = Inlines.silk_SMULWB(inv_gain_Q31, sLTP[i]);
             }
@@ -1195,13 +1197,13 @@ class SilkNSQState {
         /* Adjust for changing gain */
         if (gain_adj_Q16 != (int) 1 << 16) {
             /* Scale long-term shaping state */
-            for (i = this.sLTP_shp_buf_idx - psEncC.ltp_mem_length; i < this.sLTP_shp_buf_idx; i++) {
-                this.sLTP_shp_Q14[i] = Inlines.silk_SMULWW(gain_adj_Q16, this.sLTP_shp_Q14[i]);
+            for (i = sLTP_shp_buf_idx - psEncC.ltp_mem_length; i < sLTP_shp_buf_idx; i++) {
+                sLTP_shp_Q14[i] = Inlines.silk_SMULWW(gain_adj_Q16, sLTP_shp_Q14[i]);
             }
 
             /* Scale long-term prediction state */
-            if (signal_type == SilkConstants.TYPE_VOICED && this.rewhite_flag == 0) {
-                for (i = this.sLTP_buf_idx - lag - SilkConstants.LTP_ORDER / 2; i < this.sLTP_buf_idx - decisionDelay; i++) {
+            if (signal_type == SilkConstants.TYPE_VOICED && rewhite_flag == 0) {
+                for (i = sLTP_buf_idx - lag - SilkConstants.LTP_ORDER / 2; i < sLTP_buf_idx - decisionDelay; i++) {
                     sLTP_Q15[i] = Inlines.silk_SMULWW(gain_adj_Q16, sLTP_Q15[i]);
                 }
             }

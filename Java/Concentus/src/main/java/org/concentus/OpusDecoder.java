@@ -36,17 +36,17 @@ package org.concentus;
 
 /**
  * The Opus decoder structure.
- * 
+ * <p>
  * Opus is a stateful codec with overlapping blocks and as a result Opus
- *  packets are not coded independently of each other. Packets must be
- *  passed into the decoder serially and in the correct order for a correct
- *  decode. Lost packets can be replaced with loss concealment by calling
- *  the decoder with a null reference and zero length for the missing packet.
- * 
+ * packets are not coded independently of each other. Packets must be
+ * passed into the decoder serially and in the correct order for a correct
+ * decode. Lost packets can be replaced with loss concealment by calling
+ * the decoder with a null reference and zero length for the missing packet.
+ * <p>
  * A single codec state may only be accessed from a single thread at
- *  a time and any required locking must be performed by the caller. Separate
- *  streams must be decoded with separate decoder states and can be decoded
- *  in parallel.
+ * a time and any required locking must be performed by the caller. Separate
+ * streams must be decoded with separate decoder states and can be decoded
+ * in parallel.
  */
 public class OpusDecoder {
 
@@ -110,16 +110,16 @@ public class OpusDecoder {
                 || (channels != 1 && channels != 2)) {
             return OpusError.OPUS_BAD_ARG;
         }
-        this.reset();
+        reset();
 
         /* Initialize SILK encoder */
-        silk_dec = this.SilkDecoder;
-        celt_dec = this.Celt_Decoder;
+        silk_dec = SilkDecoder;
+        celt_dec = Celt_Decoder;
         this.stream_channels = this.channels = channels;
 
         this.Fs = Fs;
-        this.DecControl.API_sampleRate = this.Fs;
-        this.DecControl.nChannelsAPI = this.channels;
+        DecControl.API_sampleRate = this.Fs;
+        DecControl.nChannelsAPI = this.channels;
 
         /* Reset decoder */
         ret = DecodeAPI.silk_InitDecoder(silk_dec);
@@ -150,8 +150,8 @@ public class OpusDecoder {
      * filling in either mono or interleaved stereo pcm buffers, at the caller's
      * request.
      *
-     * @param Fs Sample rate to decode at (Hz). This must be one of 8000, 12000,
-     * 16000, 24000, or 48000.
+     * @param Fs       Sample rate to decode at (Hz). This must be one of 8000, 12000,
+     *                 16000, 24000, or 48000.
      * @param channels Number of channels (1 or 2) to decode.
      * @throws OpusException
      */
@@ -164,7 +164,7 @@ public class OpusDecoder {
             throw new IllegalArgumentException("Number of channels must be 1 or 2");
         }
 
-        ret = this.opus_decoder_init(Fs, channels);
+        ret = opus_decoder_init(Fs, channels);
         if (ret != OpusError.OPUS_OK) {
             if (ret == OpusError.OPUS_BAD_ARG) {
                 throw new IllegalArgumentException("OPUS_BAD_ARG when creating decoder");
@@ -176,7 +176,7 @@ public class OpusDecoder {
     private static final byte[] SILENCE = new byte[]{-1, -1};
 
     int opus_decode_frame(byte[] data, int data_ptr,
-            int len, short[] pcm, int pcm_ptr, int frame_size, int decode_fec) {
+                          int len, short[] pcm, int pcm_ptr, int frame_size, int decode_fec) {
         SilkDecoder silk_dec;
         CeltDecoder celt_dec;
         int i, silk_ret = 0, celt_ret = 0;
@@ -205,9 +205,9 @@ public class OpusDecoder {
         int redundant_rng = 0;
         int celt_accum;
 
-        silk_dec = this.SilkDecoder;
-        celt_dec = this.Celt_Decoder;
-        F20 = this.Fs / 50;
+        silk_dec = SilkDecoder;
+        celt_dec = Celt_Decoder;
+        F20 = Fs / 50;
         F10 = F20 >> 1;
         F5 = F10 >> 1;
         F2_5 = F5 >> 1;
@@ -216,7 +216,7 @@ public class OpusDecoder {
             return OpusError.OPUS_BUFFER_TOO_SMALL;
         }
         /* Limit frame_size to avoid excessive stack allocations. */
-        frame_size = Inlines.IMIN(frame_size, this.Fs / 25 * 3);
+        frame_size = Inlines.IMIN(frame_size, Fs / 25 * 3);
         /* Payloads of 1 (2 including ToC) or 0 trigger the PLC/DTX */
         if (len <= 1) {
             data = null;
@@ -229,11 +229,11 @@ public class OpusDecoder {
             dec.dec_init(data, data_ptr, len);
         } else {
             audiosize = frame_size;
-            mode = this.prev_mode;
+            mode = prev_mode;
 
             if (mode == OpusMode.MODE_UNKNOWN) {
                 /* If we haven't got any packet yet, all we can do is return zeros */
-                for (i = pcm_ptr; i < pcm_ptr + (audiosize * this.channels); i++) {
+                for (i = pcm_ptr; i < pcm_ptr + (audiosize * channels); i++) {
                     pcm[i] = 0;
                 }
 
@@ -249,7 +249,7 @@ public class OpusDecoder {
 
                         return ret;
                     }
-                    pcm_ptr += ret * this.channels;
+                    pcm_ptr += ret * channels;
                     audiosize -= ret;
                 } while (audiosize > 0);
 
@@ -269,14 +269,14 @@ public class OpusDecoder {
 
         pcm_transition_silk_size = 0;
         pcm_transition_celt_size = 0;
-        if (data != null && (this.prev_mode != OpusMode.MODE_UNKNOWN && this.prev_mode != OpusMode.MODE_AUTO) && ((mode == OpusMode.MODE_CELT_ONLY && this.prev_mode != OpusMode.MODE_CELT_ONLY && (this.prev_redundancy == 0))
-                || (mode != OpusMode.MODE_CELT_ONLY && this.prev_mode == OpusMode.MODE_CELT_ONLY))) {
+        if (data != null && (prev_mode != OpusMode.MODE_UNKNOWN && prev_mode != OpusMode.MODE_AUTO) && ((mode == OpusMode.MODE_CELT_ONLY && prev_mode != OpusMode.MODE_CELT_ONLY && (prev_redundancy == 0))
+                || (mode != OpusMode.MODE_CELT_ONLY && prev_mode == OpusMode.MODE_CELT_ONLY))) {
             transition = 1;
             /* Decide where to allocate the stack memory for pcm_transition */
             if (mode == OpusMode.MODE_CELT_ONLY) {
-                pcm_transition_celt_size = F5 * this.channels;
+                pcm_transition_celt_size = F5 * channels;
             } else {
-                pcm_transition_silk_size = F5 * this.channels;
+                pcm_transition_silk_size = F5 * channels;
             }
         }
         pcm_transition_celt = new short[pcm_transition_celt_size];
@@ -293,7 +293,7 @@ public class OpusDecoder {
         }
 
         /* Don't allocate any memory when in CELT-only mode */
-        pcm_silk_size = (mode != OpusMode.MODE_CELT_ONLY && (celt_accum == 0)) ? Inlines.IMAX(F10, frame_size) * this.channels : 0;
+        pcm_silk_size = (mode != OpusMode.MODE_CELT_ONLY && (celt_accum == 0)) ? Inlines.IMAX(F10, frame_size) * channels : 0;
         pcm_silk = new short[pcm_silk_size];
 
         /* SILK processing */
@@ -310,29 +310,29 @@ public class OpusDecoder {
                 pcm_ptr2_ptr = 0;
             }
 
-            if (this.prev_mode == OpusMode.MODE_CELT_ONLY) {
+            if (prev_mode == OpusMode.MODE_CELT_ONLY) {
                 DecodeAPI.silk_InitDecoder(silk_dec);
             }
 
             /* The SILK PLC cannot produce frames of less than 10 ms */
-            this.DecControl.payloadSize_ms = Inlines.IMAX(10, 1000 * audiosize / this.Fs);
+            DecControl.payloadSize_ms = Inlines.IMAX(10, 1000 * audiosize / Fs);
 
             if (data != null) {
-                this.DecControl.nChannelsInternal = this.stream_channels;
+                DecControl.nChannelsInternal = stream_channels;
                 if (mode == OpusMode.MODE_SILK_ONLY) {
-                    if (this.bandwidth == OpusBandwidth.OPUS_BANDWIDTH_NARROWBAND) {
-                        this.DecControl.internalSampleRate = 8000;
-                    } else if (this.bandwidth == OpusBandwidth.OPUS_BANDWIDTH_MEDIUMBAND) {
-                        this.DecControl.internalSampleRate = 12000;
-                    } else if (this.bandwidth == OpusBandwidth.OPUS_BANDWIDTH_WIDEBAND) {
-                        this.DecControl.internalSampleRate = 16000;
+                    if (bandwidth == OpusBandwidth.OPUS_BANDWIDTH_NARROWBAND) {
+                        DecControl.internalSampleRate = 8000;
+                    } else if (bandwidth == OpusBandwidth.OPUS_BANDWIDTH_MEDIUMBAND) {
+                        DecControl.internalSampleRate = 12000;
+                    } else if (bandwidth == OpusBandwidth.OPUS_BANDWIDTH_WIDEBAND) {
+                        DecControl.internalSampleRate = 16000;
                     } else {
-                        this.DecControl.internalSampleRate = 16000;
+                        DecControl.internalSampleRate = 16000;
                         Inlines.OpusAssert(false);
                     }
                 } else {
                     /* Hybrid mode */
-                    this.DecControl.internalSampleRate = 16000;
+                    DecControl.internalSampleRate = 16000;
                 }
             }
 
@@ -342,7 +342,7 @@ public class OpusDecoder {
                 /* Call SILK decoder */
                 int first_frame = (decoded_samples == 0) ? 1 : 0;
                 BoxedValueInt boxed_silk_frame_size = new BoxedValueInt(0);
-                silk_ret = DecodeAPI.silk_Decode(silk_dec, this.DecControl,
+                silk_ret = DecodeAPI.silk_Decode(silk_dec, DecControl,
                         lost_flag, first_frame, dec, pcm_ptr2, pcm_ptr2_ptr, boxed_silk_frame_size);
                 silk_frame_size = boxed_silk_frame_size.Val;
 
@@ -350,13 +350,13 @@ public class OpusDecoder {
                     if (lost_flag != 0) {
                         /* PLC failure should not be fatal */
                         silk_frame_size = frame_size;
-                        Arrays.MemSetWithOffset(pcm_ptr2, (short) 0, pcm_ptr2_ptr, frame_size * this.channels);
+                        Arrays.MemSetWithOffset(pcm_ptr2, (short) 0, pcm_ptr2_ptr, frame_size * channels);
                     } else {
 
                         return OpusError.OPUS_INTERNAL_ERROR;
                     }
                 }
-                pcm_ptr2_ptr += (silk_frame_size * this.channels);
+                pcm_ptr2_ptr += (silk_frame_size * channels);
                 decoded_samples += silk_frame_size;
             } while (decoded_samples < frame_size);
         }
@@ -396,7 +396,7 @@ public class OpusDecoder {
         {
             int endband = 21;
 
-            switch (this.bandwidth) {
+            switch (bandwidth) {
                 case OPUS_BANDWIDTH_NARROWBAND:
                     endband = 13;
                     break;
@@ -412,7 +412,7 @@ public class OpusDecoder {
                     break;
             }
             celt_dec.SetEndBand(endband);
-            celt_dec.SetChannels(this.stream_channels);
+            celt_dec.SetChannels(stream_channels);
         }
 
         if (redundancy != 0) {
@@ -428,7 +428,7 @@ public class OpusDecoder {
         }
 
         /* Only allocation memory for redundancy if/when needed */
-        redundant_audio_size = redundancy != 0 ? F5 * this.channels : 0;
+        redundant_audio_size = redundancy != 0 ? F5 * channels : 0;
         redundant_audio = new short[redundant_audio_size];
 
         /* 5 ms redundant frame for CELT->SILK*/
@@ -445,7 +445,7 @@ public class OpusDecoder {
         if (mode != OpusMode.MODE_SILK_ONLY) {
             int celt_frame_size = Inlines.IMIN(F20, frame_size);
             /* Make sure to discard any previous CELT state */
-            if (mode != this.prev_mode && (this.prev_mode != OpusMode.MODE_AUTO && this.prev_mode != OpusMode.MODE_UNKNOWN) && this.prev_redundancy == 0) {
+            if (mode != prev_mode && (prev_mode != OpusMode.MODE_AUTO && prev_mode != OpusMode.MODE_UNKNOWN) && prev_redundancy == 0) {
                 celt_dec.ResetState();
             }
             /* Decode CELT */
@@ -453,20 +453,20 @@ public class OpusDecoder {
                     len, pcm, pcm_ptr, celt_frame_size, dec, celt_accum);
         } else {
             if (celt_accum == 0) {
-                for (i = pcm_ptr; i < (frame_size * this.channels) + pcm_ptr; i++) {
+                for (i = pcm_ptr; i < (frame_size * channels) + pcm_ptr; i++) {
                     pcm[i] = 0;
                 }
             }
             /* For hybrid -> SILK transitions, we let the CELT MDCT
                do a fade-out by decoding a silence frame */
-            if (this.prev_mode == OpusMode.MODE_HYBRID && !(redundancy != 0 && celt_to_silk != 0 && this.prev_redundancy != 0)) {
+            if (prev_mode == OpusMode.MODE_HYBRID && !(redundancy != 0 && celt_to_silk != 0 && prev_redundancy != 0)) {
                 celt_dec.SetStartBand(0);
                 celt_dec.celt_decode_with_ec(SILENCE, 0, 2, pcm, pcm_ptr, F2_5, null, celt_accum);
             }
         }
 
         if (mode != OpusMode.MODE_CELT_ONLY && celt_accum == 0) {
-            for (i = 0; i < frame_size * this.channels; i++) {
+            for (i = 0; i < frame_size * channels; i++) {
                 pcm[pcm_ptr + i] = Inlines.SAT16(Inlines.ADD32(pcm[pcm_ptr + i], pcm_silk[i]));
             }
         }
@@ -480,26 +480,26 @@ public class OpusDecoder {
 
             celt_dec.celt_decode_with_ec(data, data_ptr + len, redundancy_bytes, redundant_audio, 0, F5, null, 0);
             redundant_rng = celt_dec.GetFinalRange();
-            CodecHelpers.smooth_fade(pcm, pcm_ptr + this.channels * (frame_size - F2_5), redundant_audio, this.channels * F2_5,
-                    pcm, (pcm_ptr + this.channels * (frame_size - F2_5)), F2_5, this.channels, window, this.Fs);
+            CodecHelpers.smooth_fade(pcm, pcm_ptr + channels * (frame_size - F2_5), redundant_audio, channels * F2_5,
+                    pcm, (pcm_ptr + channels * (frame_size - F2_5)), F2_5, channels, window, Fs);
         }
         if (redundancy != 0 && celt_to_silk != 0) {
-            for (c = 0; c < this.channels; c++) {
+            for (c = 0; c < channels; c++) {
                 for (i = 0; i < F2_5; i++) {
-                    pcm[this.channels * i + c + pcm_ptr] = redundant_audio[this.channels * i + c];
+                    pcm[channels * i + c + pcm_ptr] = redundant_audio[channels * i + c];
                 }
             }
-            CodecHelpers.smooth_fade(redundant_audio, (this.channels * F2_5), pcm, (pcm_ptr + (this.channels * F2_5)),
-                    pcm, (pcm_ptr + (this.channels * F2_5)), F2_5, this.channels, window, this.Fs);
+            CodecHelpers.smooth_fade(redundant_audio, (channels * F2_5), pcm, (pcm_ptr + (channels * F2_5)),
+                    pcm, (pcm_ptr + (channels * F2_5)), F2_5, channels, window, Fs);
         }
         if (transition != 0) {
             if (audiosize >= F5) {
-                for (i = 0; i < this.channels * F2_5; i++) {
+                for (i = 0; i < channels * F2_5; i++) {
                     pcm[i] = pcm_transition[i];
                 }
-                CodecHelpers.smooth_fade(pcm_transition, (this.channels * F2_5), pcm, (pcm_ptr + (this.channels * F2_5)),
-                        pcm, (pcm_ptr + (this.channels * F2_5)), F2_5,
-                        this.channels, window, this.Fs);
+                CodecHelpers.smooth_fade(pcm_transition, (channels * F2_5), pcm, (pcm_ptr + (channels * F2_5)),
+                        pcm, (pcm_ptr + (channels * F2_5)), F2_5,
+                        channels, window, Fs);
             } else {
                 /* Not enough time to do a clean transition, but we do it anyway
                    This will not preserve amplitude perfectly and may introduce
@@ -508,14 +508,14 @@ public class OpusDecoder {
                    transition is pretty silly in the first place */
                 CodecHelpers.smooth_fade(pcm_transition, 0, pcm, pcm_ptr,
                         pcm, pcm_ptr, F2_5,
-                        this.channels, window, this.Fs);
+                        channels, window, Fs);
             }
         }
 
-        if (this.decode_gain != 0) {
+        if (decode_gain != 0) {
             int gain;
-            gain = Inlines.celt_exp2(Inlines.MULT16_16_P15(((short) (0.5 + (6.48814081e-4f) * ((1) << (25))))/*Inlines.QCONST16(6.48814081e-4f, 25)*/, this.decode_gain));
-            for (i = pcm_ptr; i < pcm_ptr + (frame_size * this.channels); i++) {
+            gain = Inlines.celt_exp2(Inlines.MULT16_16_P15(((short) (0.5 + (6.48814081e-4f) * ((1) << (25))))/*Inlines.QCONST16(6.48814081e-4f, 25)*/, decode_gain));
+            for (i = pcm_ptr; i < pcm_ptr + (frame_size * channels); i++) {
                 int x;
                 x = Inlines.MULT16_32_P16(pcm[i], gain);
                 pcm[i] = (short) Inlines.SATURATE(x, 32767);
@@ -535,8 +535,8 @@ public class OpusDecoder {
     }
 
     int opus_decode_native(byte[] data, int data_ptr,
-            int len, short[] pcm_out, int pcm_out_ptr, int frame_size, int decode_fec,
-            int self_delimited, BoxedValueInt packet_offset, int soft_clip) {
+                           int len, short[] pcm_out, int pcm_out_ptr, int frame_size, int decode_fec,
+                           int self_delimited, BoxedValueInt packet_offset, int soft_clip) {
         int i, nb_samples;
         int count, offset;
         int packet_frame_size, packet_stream_channels;
@@ -550,14 +550,14 @@ public class OpusDecoder {
             return OpusError.OPUS_BAD_ARG;
         }
         /* For FEC/PLC, frame_size has to be to have a multiple of 2.5 ms */
-        if ((decode_fec != 0 || len == 0 || data == null) && frame_size % (this.Fs / 400) != 0) {
+        if ((decode_fec != 0 || len == 0 || data == null) && frame_size % (Fs / 400) != 0) {
             return OpusError.OPUS_BAD_ARG;
         }
         if (len == 0 || data == null) {
             int pcm_count = 0;
             do {
                 int ret;
-                ret = opus_decode_frame(null, 0, 0, pcm_out, pcm_out_ptr + (pcm_count * this.channels), frame_size - pcm_count, 0);
+                ret = opus_decode_frame(null, 0, 0, pcm_out, pcm_out_ptr + (pcm_count * channels), frame_size - pcm_count, 0);
                 if (ret < 0) {
                     return ret;
                 }
@@ -572,7 +572,7 @@ public class OpusDecoder {
 
         packet_mode = OpusPacketInfo.getEncoderMode(data, data_ptr);
         packet_bandwidth = OpusPacketInfo.getBandwidth(data, data_ptr);
-        packet_frame_size = OpusPacketInfo.getNumSamplesPerFrame(data, data_ptr, this.Fs);
+        packet_frame_size = OpusPacketInfo.getNumSamplesPerFrame(data, data_ptr, Fs);
         packet_stream_channels = OpusPacketInfo.getNumEncodedChannels(data, data_ptr);
 
         BoxedValueByte boxed_toc = new BoxedValueByte((byte) 0);
@@ -592,11 +592,11 @@ public class OpusDecoder {
             int duration_copy;
             int ret;
             /* If no FEC can be present, run the PLC (recursive call) */
-            if (frame_size < packet_frame_size || packet_mode == OpusMode.MODE_CELT_ONLY || this.mode == OpusMode.MODE_CELT_ONLY) {
+            if (frame_size < packet_frame_size || packet_mode == OpusMode.MODE_CELT_ONLY || mode == OpusMode.MODE_CELT_ONLY) {
                 return opus_decode_native(null, 0, 0, pcm_out, pcm_out_ptr, frame_size, 0, 0, dummy, soft_clip);
             }
             /* Otherwise, run the PLC on everything except the size for which we might have FEC */
-            duration_copy = this.last_packet_duration;
+            duration_copy = last_packet_duration;
             if (frame_size - packet_frame_size != 0) {
                 ret = opus_decode_native(null, 0, 0, pcm_out, pcm_out_ptr, frame_size - packet_frame_size, 0, 0, dummy, soft_clip);
                 if (ret < 0) {
@@ -610,7 +610,7 @@ public class OpusDecoder {
             this.bandwidth = packet_bandwidth;
             this.frame_size = packet_frame_size;
             this.stream_channels = packet_stream_channels;
-            ret = opus_decode_frame(data, data_ptr, size[0], pcm_out, pcm_out_ptr + (this.channels * (frame_size - packet_frame_size)),
+            ret = opus_decode_frame(data, data_ptr, size[0], pcm_out, pcm_out_ptr + (channels * (frame_size - packet_frame_size)),
                     packet_frame_size, 1);
             if (ret < 0) {
                 return ret;
@@ -633,7 +633,7 @@ public class OpusDecoder {
         nb_samples = 0;
         for (i = 0; i < count; i++) {
             int ret;
-            ret = opus_decode_frame(data, data_ptr, size[i], pcm_out, pcm_out_ptr + (nb_samples * this.channels), frame_size - nb_samples, 0);
+            ret = opus_decode_frame(data, data_ptr, size[i], pcm_out, pcm_out_ptr + (nb_samples * channels), frame_size - nb_samples, 0);
             if (ret < 0) {
                 return ret;
             }
@@ -653,7 +653,7 @@ public class OpusDecoder {
     /// <param name="in_data_offset"></param>
     /// <param name="len"></param>
     /// <param name="out_pcm">
-    /// 
+    ///
     /// exact sizing.</param>
     /// <param name="out_pcm_offset"></param>
     /// <param name="frame_size"></param>
@@ -662,27 +662,28 @@ public class OpusDecoder {
     /// <returns>The number of decoded samples</returns>
     /**
      * Decodes an Opus packet.
-     * @param in_data The input payload. This may be NULL if that previous packet was lost in transit (when PLC is enabled)
+     *
+     * @param in_data        The input payload. This may be NULL if that previous packet was lost in transit (when PLC is enabled)
      * @param in_data_offset The offset to use when reading the input payload. Usually 0
-     * @param len The number of bytes in the payload (the packet size)
-     * @param out_pcm A buffer to put the output PCM, in a short array. The output size is (# of samples) * (# of channels).
-     *      You can use the OpusPacketInfo helpers to get a hint of the frame size before you decode the packet if you need exact sizing.
+     * @param len            The number of bytes in the payload (the packet size)
+     * @param out_pcm        A buffer to put the output PCM, in a short array. The output size is (# of samples) * (# of channels).
+     *                       You can use the OpusPacketInfo helpers to get a hint of the frame size before you decode the packet if you need exact sizing.
      * @param out_pcm_offset The offset to use when writing to the output buffer
-     * @param frame_size The number of samples (per channel) of available space in the output PCM buf.
-     * If this is less than the maximum packet duration (120ms; 5760 for 48khz), this function will
-     * not be capable of decoding some packets. In the case of PLC (data == NULL) or FEC (decode_fec == true),
-     * then frame_size needs to be exactly the duration of the audio that is missing, otherwise the decoder will
-     * not be in an optimal state to decode the next incoming packet. For the PLC and FEC cases, frame_size *must*
-     * be a multiple of 2.5 ms.
-     * @param decode_fec Indicates that we want to recreate the PREVIOUS (lost) packet using FEC data from THIS packet. Using this packet
-     * recovery scheme, you will actually decode this packet twice, first with decode_fec TRUE and then again with FALSE. If FEC data is not
-     * available in this packet, the decoder will simply generate a best-effort recreation of the lost packet. In that case,
-     * the length of frame_size must be EXACTLY the length of the audio that was lost, or else the decoder will be in an inconsistent state.
+     * @param frame_size     The number of samples (per channel) of available space in the output PCM buf.
+     *                       If this is less than the maximum packet duration (120ms; 5760 for 48khz), this function will
+     *                       not be capable of decoding some packets. In the case of PLC (data == NULL) or FEC (decode_fec == true),
+     *                       then frame_size needs to be exactly the duration of the audio that is missing, otherwise the decoder will
+     *                       not be in an optimal state to decode the next incoming packet. For the PLC and FEC cases, frame_size *must*
+     *                       be a multiple of 2.5 ms.
+     * @param decode_fec     Indicates that we want to recreate the PREVIOUS (lost) packet using FEC data from THIS packet. Using this packet
+     *                       recovery scheme, you will actually decode this packet twice, first with decode_fec TRUE and then again with FALSE. If FEC data is not
+     *                       available in this packet, the decoder will simply generate a best-effort recreation of the lost packet. In that case,
+     *                       the length of frame_size must be EXACTLY the length of the audio that was lost, or else the decoder will be in an inconsistent state.
      * @return The number of decoded samples (per channel)
-     * @throws OpusException 
+     * @throws OpusException
      */
     public int decode(byte[] in_data, int in_data_offset,
-            int len, short[] out_pcm, int out_pcm_offset, int frame_size, boolean decode_fec) throws OpusException {
+                      int len, short[] out_pcm, int out_pcm_offset, int frame_size, boolean decode_fec) throws OpusException {
         if (frame_size <= 0) {
             throw new IllegalArgumentException("Frame size must be > 0");
         }
@@ -707,35 +708,36 @@ public class OpusDecoder {
 
     /**
      * Decodes an Opus packet.
-     * @param in_data The input payload. This may be NULL if that previous packet was lost in transit (when PLC is enabled)
+     *
+     * @param in_data        The input payload. This may be NULL if that previous packet was lost in transit (when PLC is enabled)
      * @param in_data_offset The offset to use when reading the input payload. Usually 0
-     * @param len The number of bytes in the payload (the packet size)
-     * @param out_pcm A buffer to put the output PCM, in a byte array. The output size is (# of samples) * (# of channels) * 2.
-     *      You can use the OpusPacketInfo helpers to get a hint of the frame size before you decode the packet if you need exact sizing.
+     * @param len            The number of bytes in the payload (the packet size)
+     * @param out_pcm        A buffer to put the output PCM, in a byte array. The output size is (# of samples) * (# of channels) * 2.
+     *                       You can use the OpusPacketInfo helpers to get a hint of the frame size before you decode the packet if you need exact sizing.
      * @param out_pcm_offset The offset to use when writing to the output buffer
-     * @param frame_size The number of samples (per channel) of available space in the output PCM buf.
-     * If this is less than the maximum packet duration (120ms; 5760 for 48khz), this function will
-     * not be capable of decoding some packets. In the case of PLC (data == NULL) or FEC (decode_fec == true),
-     * then frame_size needs to be exactly the duration of the audio that is missing, otherwise the decoder will
-     * not be in an optimal state to decode the next incoming packet. For the PLC and FEC cases, frame_size *must*
-     * be a multiple of 2.5 ms.
-     * @param decode_fec Indicates that we want to recreate the PREVIOUS (lost) packet using FEC data from THIS packet. Using this packet
-     * recovery scheme, you will actually decode this packet twice, first with decode_fec TRUE and then again with FALSE. If FEC data is not
-     * available in this packet, the decoder will simply generate a best-effort recreation of the lost packet. In that case, the
-     * length of frame_size must be EXACTLY the length of the audio that was lost, or else the decoder will be in an inconsistent state.
+     * @param frame_size     The number of samples (per channel) of available space in the output PCM buf.
+     *                       If this is less than the maximum packet duration (120ms; 5760 for 48khz), this function will
+     *                       not be capable of decoding some packets. In the case of PLC (data == NULL) or FEC (decode_fec == true),
+     *                       then frame_size needs to be exactly the duration of the audio that is missing, otherwise the decoder will
+     *                       not be in an optimal state to decode the next incoming packet. For the PLC and FEC cases, frame_size *must*
+     *                       be a multiple of 2.5 ms.
+     * @param decode_fec     Indicates that we want to recreate the PREVIOUS (lost) packet using FEC data from THIS packet. Using this packet
+     *                       recovery scheme, you will actually decode this packet twice, first with decode_fec TRUE and then again with FALSE. If FEC data is not
+     *                       available in this packet, the decoder will simply generate a best-effort recreation of the lost packet. In that case, the
+     *                       length of frame_size must be EXACTLY the length of the audio that was lost, or else the decoder will be in an inconsistent state.
      * @return The number of decoded samples (per channel)
-     * @throws OpusException 
+     * @throws OpusException
      */
     public int decode(byte[] in_data, int in_data_offset, int len, byte[] out_pcm,
-    		int out_pcm_offset, int frame_size, boolean decode_fec) throws OpusException {
-    	short[] spcm = new short[Math.min(frame_size, 5760) * channels];
-    	int decSamples = decode(in_data, in_data_offset, len, spcm, 0, frame_size, decode_fec);
-    	//Convert short array to byte array
-    	for (int c = 0, idx = out_pcm_offset; c < spcm.length; c++) {
-    		out_pcm[idx++] = (byte) (spcm[c] & 0xff);
-    		out_pcm[idx++] = (byte) ((spcm[c] >> 8) & 0xff);
-    	}
-    	return decSamples;
+                      int out_pcm_offset, int frame_size, boolean decode_fec) throws OpusException {
+        short[] spcm = new short[Math.min(frame_size, 5760) * channels];
+        int decSamples = decode(in_data, in_data_offset, len, spcm, 0, frame_size, decode_fec);
+        //Convert short array to byte array
+        for (int c = 0, idx = out_pcm_offset; c < spcm.length; c++) {
+            out_pcm[idx++] = (byte) (spcm[c] & 0xff);
+            out_pcm[idx++] = (byte) ((spcm[c] >> 8) & 0xff);
+        }
+        return decSamples;
     }
 
     public OpusBandwidth getBandwidth() {

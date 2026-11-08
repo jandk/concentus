@@ -56,7 +56,7 @@ class SilkConstants {
     public static final int MAX_CONSECUTIVE_DTX = 20;
     /* eq 400 ms */
 
- /* Maximum sampling frequency */
+    /* Maximum sampling frequency */
     public static final int MAX_FS_KHZ = 16;
     public static final int MAX_API_FS_KHZ = 48;
 
@@ -79,13 +79,13 @@ class SilkConstants {
     public static final float STEREO_RATIO_SMOOTH_COEF = 0.01f;
     /* smoothing coef for signal norms and stereo width */
 
- /* Range of pitch lag estimates */
+    /* Range of pitch lag estimates */
     public static final int PITCH_EST_MIN_LAG_MS = 2;
     /* 2 ms . 500 Hz */
     public static final int PITCH_EST_MAX_LAG_MS = 18;
     /* 18 ms . 56 Hz */
 
- /* Maximum number of subframes */
+    /* Maximum number of subframes */
     public static final int MAX_NB_SUBFR = 4;
 
     /* Number of samples per frame */

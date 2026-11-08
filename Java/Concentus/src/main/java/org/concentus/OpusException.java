@@ -32,8 +32,8 @@ package org.concentus;
 
 public class OpusException extends Exception {
 
-    private String _message;
-    private int _opus_error_code;
+    private final String _message;
+    private final int _opus_error_code;
 
     public OpusException() {
         this("", 0);

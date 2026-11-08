@@ -79,9 +79,9 @@ class SilkResamplerState {
         Fs_out_kHz = other.Fs_out_kHz;
         inputDelay = other.inputDelay;
         Coefs = other.Coefs;
-        System.arraycopy(other.sIIR, 0, this.sIIR, 0, SilkConstants.SILK_RESAMPLER_MAX_IIR_ORDER);
-        System.arraycopy(other.sFIR_i32, 0, this.sFIR_i32, 0, SilkConstants.SILK_RESAMPLER_MAX_FIR_ORDER);
-        System.arraycopy(other.sFIR_i16, 0, this.sFIR_i16, 0, SilkConstants.SILK_RESAMPLER_MAX_FIR_ORDER);
-        System.arraycopy(other.delayBuf, 0, this.delayBuf, 0, 48);
+        System.arraycopy(other.sIIR, 0, sIIR, 0, SilkConstants.SILK_RESAMPLER_MAX_IIR_ORDER);
+        System.arraycopy(other.sFIR_i32, 0, sFIR_i32, 0, SilkConstants.SILK_RESAMPLER_MAX_FIR_ORDER);
+        System.arraycopy(other.sFIR_i16, 0, sFIR_i16, 0, SilkConstants.SILK_RESAMPLER_MAX_FIR_ORDER);
+        System.arraycopy(other.delayBuf, 0, delayBuf, 0, 48);
     }
 }

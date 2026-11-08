@@ -148,8 +148,8 @@ class Bands {
 
     /* De-normalise the energy to produce the synthesis from the unit-energy bands */
     static void denormalise_bands(CeltMode m, int[] X,
-            int[] freq, int freq_ptr, int[] bandLogE, int bandLogE_ptr, int start,
-            int end, int M, int downsample, int silence) {
+                                  int[] freq, int freq_ptr, int[] bandLogE, int bandLogE_ptr, int start,
+                                  int end, int M, int downsample, int silence) {
         int i, N;
         int bound;
         int f;
@@ -215,8 +215,8 @@ class Bands {
 
     /* This prevents energy collapse for transients with multiple short MDCTs */
     static void anti_collapse(CeltMode m, int[][] X_, short[] collapse_masks, int LM, int C, int size,
-            int start, int end, int[] logE, int[] prev1logE,
-            int[] prev2logE, int[] pulses, int seed) {
+                              int start, int end, int[] logE, int[] prev1logE,
+                              int[] prev2logE, int[] pulses, int seed) {
         int c, i, j, k;
         for (i = start; i < end; i++) {
             int N0;
@@ -370,8 +370,8 @@ class Bands {
 
     /* Decide whether we should spread the pulses in the current frame */
     static int spreading_decision(CeltMode m, int[][] X, BoxedValueInt average,
-            int last_decision, BoxedValueInt hf_average, BoxedValueInt tapset_decision, int update_hf,
-            int end, int C, int M) {
+                                  int last_decision, BoxedValueInt hf_average, BoxedValueInt tapset_decision, int update_hf,
+                                  int end, int C, int M) {
         int i, c;
         int sum = 0, nbBands = 0;
         short[] eBands = m.eBands;
@@ -588,7 +588,9 @@ class Bands {
         public int remaining_bits;
         public int[][] bandE;
         public int seed;
-    };
+    }
+
+    ;
 
     public static class split_ctx {
 
@@ -598,12 +600,14 @@ class Bands {
         public int delta;
         public int itheta;
         public int qalloc;
-    };
+    }
+
+    ;
 
     static void compute_theta(band_ctx ctx, split_ctx sctx,
-            int[] X, int X_ptr, int[] Y, int Y_ptr, int N, BoxedValueInt b, int B, int B0,
-            int LM,
-            int stereo, BoxedValueInt fill) {
+                              int[] X, int X_ptr, int[] Y, int Y_ptr, int N, BoxedValueInt b, int B, int B0,
+                              int LM,
+                              int stereo, BoxedValueInt fill) {
         int qn;
         int itheta = 0;
         int delta;
@@ -783,7 +787,7 @@ class Bands {
     }
 
     static int quant_band_n1(band_ctx ctx, int[] X, int X_ptr, int[] Y, int Y_ptr, int b,
-            int[] lowband_out, int lowband_out_ptr) {
+                             int[] lowband_out, int lowband_out_ptr) {
         int resynth = ctx.encode == 0 ? 1 : 0;
         int c;
         int stereo;
@@ -827,9 +831,9 @@ class Bands {
        the two half-bands. It can be called recursively so bands can end up being
        split in 8 parts. */
     static int quant_partition(band_ctx ctx, int[] X, int X_ptr,
-            int N, int b, int B, int[] lowband, int lowband_ptr,
-            int LM,
-            int gain, int fill) {
+                               int N, int b, int B, int[] lowband, int lowband_ptr,
+                               int LM,
+                               int gain, int fill) {
         int cache_ptr;
         int q;
         int curr_bits;
@@ -994,15 +998,15 @@ class Bands {
     private static final byte[] bit_interleave_table = {0, 1, 1, 1, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3};
 
     private static final short[] bit_deinterleave_table = {
-        0x00, 0x03, 0x0C, 0x0F, 0x30, 0x33, 0x3C, 0x3F,
-        0xC0, 0xC3, 0xCC, 0xCF, 0xF0, 0xF3, 0xFC, 0xFF
+            0x00, 0x03, 0x0C, 0x0F, 0x30, 0x33, 0x3C, 0x3F,
+            0xC0, 0xC3, 0xCC, 0xCF, 0xF0, 0xF3, 0xFC, 0xFF
     };
 
     /* This function is responsible for encoding and decoding a band for the mono case. */
     static int quant_band(band_ctx ctx, int[] X, int X_ptr,
-            int N, int b, int B, int[] lowband, int lowband_ptr,
-            int LM, int[] lowband_out, int lowband_out_ptr,
-            int gain, int[] lowband_scratch, int lowband_scratch_ptr, int fill) {
+                          int N, int b, int B, int[] lowband, int lowband_ptr,
+                          int LM, int[] lowband_out, int lowband_out_ptr,
+                          int gain, int[] lowband_scratch, int lowband_scratch_ptr, int fill) {
         int N0 = N;
         int N_B = N;
         int N_B0;
@@ -1128,9 +1132,9 @@ class Bands {
 
     /* This function is responsible for encoding and decoding a band for the stereo case. */
     static int quant_band_stereo(band_ctx ctx, int[] X, int X_ptr, int[] Y, int Y_ptr,
-            int N, int b, int B, int[] lowband, int lowband_ptr,
-            int LM, int[] lowband_out, int lowband_out_ptr,
-            int[] lowband_scratch, int lowband_scratch_ptr, int fill) {
+                                 int N, int b, int B, int[] lowband, int lowband_ptr,
+                                 int LM, int[] lowband_out, int lowband_out_ptr,
+                                 int[] lowband_scratch, int lowband_scratch_ptr, int fill) {
         int imid = 0, iside = 0;
         int inv = 0;
         int mid = 0, side = 0;
@@ -1291,11 +1295,11 @@ class Bands {
     }
 
     static void quant_all_bands(int encode, CeltMode m, int start, int end,
-            int[] X_, int[] Y_, short[] collapse_masks,
-            int[][] bandE, int[] pulses, int shortBlocks, int spread,
-            int dual_stereo, int intensity, int[] tf_res, int total_bits,
-            int balance, EntropyCoder ec, int LM, int codedBands,
-            BoxedValueInt seed) {
+                                int[] X_, int[] Y_, short[] collapse_masks,
+                                int[][] bandE, int[] pulses, int shortBlocks, int spread,
+                                int dual_stereo, int intensity, int[] tf_res, int total_bits,
+                                int balance, EntropyCoder ec, int LM, int codedBands,
+                                BoxedValueInt seed) {
         int i;
         int remaining_bits;
         short[] eBands = m.eBands;
@@ -1403,9 +1407,13 @@ class Bands {
                 /* This ensures we never repeat spectral content within one band */
                 effective_lowband = Inlines.IMAX(0, M * eBands[lowband_offset] - norm_offset - N);
                 fold_start = lowband_offset;
-                while (M * eBands[--fold_start] > effective_lowband + norm_offset) ;
+                while (M * eBands[--fold_start] > effective_lowband + norm_offset) {
+                    ;
+                }
                 fold_end = lowband_offset - 1;
-                while (M * eBands[++fold_end] < effective_lowband + norm_offset + N) ;
+                while (M * eBands[++fold_end] < effective_lowband + norm_offset + N) {
+                    ;
+                }
                 x_cm = y_cm = 0;
                 fold_i = fold_start;
                 do {

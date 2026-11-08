@@ -113,7 +113,7 @@ class Resampler {
             /* Upsample */
             if (Fs_Hz_out == Inlines.silk_MUL(Fs_Hz_in, 2)) {
                 /* Fs_out : Fs_in = 2 : 1 */
- /* Special case: directly use 2x upsampler */
+                /* Special case: directly use 2x upsampler */
                 S.resampler_function = USE_silk_resampler_private_up2_HQ_wrapper;
             } else {
                 /* Default resampler */
@@ -232,9 +232,9 @@ class Resampler {
     /// <summary>
     /// Downsample by a factor 2
     /// </summary>
-    /// <param name="S">I/O  State vector [ 2 ]</param>
-    /// <param name="output">O    Output signal [ floor(len/2) ]</param>
-    /// <param name="input">I    Input signal [ len ]</param>
+    /// <param name="S">I/O  State vector [2]</param>
+    /// <param name="output">O    Output signal [floor(len/2)]</param>
+    /// <param name="input">I    Input signal [len]</param>
     /// <param name="inLen">I    Number of input samples</param>
     static void silk_resampler_down2(
             int[] S,
@@ -276,9 +276,9 @@ class Resampler {
     /// <summary>
     /// Downsample by a factor 2/3, low quality
     /// </summary>
-    /// <param name="S">I/O  State vector [ 6 ]</param>
-    /// <param name="output">O    Output signal [ floor(2*inLen/3) ]</param>
-    /// <param name="input">I    Input signal [ inLen ]</param>
+    /// <param name="S">I/O  State vector [6]</param>
+    /// <param name="output">O    Output signal [floor(2*inLen/3)]</param>
+    /// <param name="input">I    Input signal [inLen]</param>
     /// <param name="inLen">I    Number of input samples</param>
     static void silk_resampler_down2_3(
             int[] S,
@@ -345,7 +345,7 @@ class Resampler {
     /// <summary>
     /// Second order AR filter with single delay elements
     /// </summary>
-    /// <param name="S">I/O  State vector [ 2 ]</param>
+    /// <param name="S">I/O  State vector [2]</param>
     /// <param name="out_Q8">O    Output signal</param>
     /// <param name="input">I    Input signal</param>
     /// <param name="A_Q14">I    AR coefficients, Q14</param>
@@ -611,9 +611,9 @@ class Resampler {
     /// Uses 2nd order allpass filters for the 2x upsampling, followed by a
     /// notch filter just above Nyquist.
     /// </summary>
-    /// <param name="S">I/O  Resampler state [ 6 ]</param>
+    /// <param name="S">I/O  Resampler state [6]</param>
     /// <param name="output">O    Output signal [ 2 * len ]</param>
-    /// <param name="input">I    Input signal [ len ]</param>
+    /// <param name="input">I    Input signal [len]</param>
     /// <param name="len">I    Number of input samples</param>
     static void silk_resampler_private_up2_HQ(
             int[] S,

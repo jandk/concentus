@@ -35,6 +35,7 @@ package org.concentus;
  * *********************
  */
 /* Encoder control FIX  */
+
 /**
  * *********************
  */

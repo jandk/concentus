@@ -91,10 +91,10 @@ class CeltMode {
         mode48000_960_120.mdct.n = 1920;
         mode48000_960_120.mdct.maxshift = 3;
         mode48000_960_120.mdct.kfft = new FFTState[]{
-            CeltTables.fft_state48000_960_0,
-            CeltTables.fft_state48000_960_1,
-            CeltTables.fft_state48000_960_2,
-            CeltTables.fft_state48000_960_3,};
+                CeltTables.fft_state48000_960_0,
+                CeltTables.fft_state48000_960_1,
+                CeltTables.fft_state48000_960_2,
+                CeltTables.fft_state48000_960_3,};
 
         mode48000_960_120.mdct.trig = CeltTables.mdct_twiddles960;
         mode48000_960_120.cache = new PulseCache();
@@ -103,5 +103,6 @@ class CeltMode {
         mode48000_960_120.cache.bits = CeltTables.cache_bits50;
         mode48000_960_120.cache.caps = CeltTables.cache_caps50;
     }
-;
+
+    ;
 }

@@ -61,26 +61,26 @@ public class OpusMSDecoder {
             throw new IllegalArgumentException("Invalid channel or coupled stream count");
         }
 
-        this.layout.nb_channels = channels;
-        this.layout.nb_streams = streams;
-        this.layout.nb_coupled_streams = coupled_streams;
+        layout.nb_channels = channels;
+        layout.nb_streams = streams;
+        layout.nb_coupled_streams = coupled_streams;
 
-        for (i = 0; i < this.layout.nb_channels; i++) {
-            this.layout.mapping[i] = mapping[i];
+        for (i = 0; i < layout.nb_channels; i++) {
+            layout.mapping[i] = mapping[i];
         }
-        if (OpusMultistream.validate_layout(this.layout) == 0) {
+        if (OpusMultistream.validate_layout(layout) == 0) {
             throw new IllegalArgumentException("Invalid surround channel layout");
         }
 
-        for (i = 0; i < this.layout.nb_coupled_streams; i++) {
-            ret = this.decoders[decoder_ptr].opus_decoder_init(Fs, 2);
+        for (i = 0; i < layout.nb_coupled_streams; i++) {
+            ret = decoders[decoder_ptr].opus_decoder_init(Fs, 2);
             if (ret != OpusError.OPUS_OK) {
                 return ret;
             }
             decoder_ptr++;
         }
-        for (; i < this.layout.nb_streams; i++) {
-            ret = this.decoders[decoder_ptr].opus_decoder_init(Fs, 1);
+        for (; i < layout.nb_streams; i++) {
+            ret = decoders[decoder_ptr].opus_decoder_init(Fs, 1);
             if (ret != OpusError.OPUS_OK) {
                 return ret;
             }
@@ -122,7 +122,7 @@ public class OpusMSDecoder {
     }
 
     static int opus_multistream_packet_validate(byte[] data, int data_ptr,
-            int len, int nb_streams, int Fs) {
+                                                int len, int nb_streams, int Fs) {
         int s;
         int count;
         BoxedValueByte toc = new BoxedValueByte((byte) 0);
@@ -172,7 +172,7 @@ public class OpusMSDecoder {
         short[] buf;
 
         /* Limit frame_size to avoid excessive stack allocations. */
-        Fs = this.getSampleRate();
+        Fs = getSampleRate();
         frame_size = Inlines.IMIN(frame_size, Fs / 25 * 3);
         buf = new short[2 * frame_size];
         decoder_ptr = 0;
@@ -183,22 +183,22 @@ public class OpusMSDecoder {
         if (len < 0) {
             return OpusError.OPUS_BAD_ARG;
         }
-        if (do_plc == 0 && len < 2 * this.layout.nb_streams - 1) {
+        if (do_plc == 0 && len < 2 * layout.nb_streams - 1) {
             return OpusError.OPUS_INVALID_PACKET;
         }
         if (do_plc == 0) {
-            int ret = opus_multistream_packet_validate(data, data_ptr, len, this.layout.nb_streams, Fs);
+            int ret = opus_multistream_packet_validate(data, data_ptr, len, layout.nb_streams, Fs);
             if (ret < 0) {
                 return ret;
             } else if (ret > frame_size) {
                 return OpusError.OPUS_BUFFER_TOO_SMALL;
             }
         }
-        for (s = 0; s < this.layout.nb_streams; s++) {
+        for (s = 0; s < layout.nb_streams; s++) {
             OpusDecoder dec;
             int ret;
 
-            dec = this.decoders[decoder_ptr++];
+            dec = decoders[decoder_ptr++];
 
             if (do_plc == 0 && len <= 0) {
                 return OpusError.OPUS_INTERNAL_ERROR;
@@ -206,26 +206,26 @@ public class OpusMSDecoder {
             BoxedValueInt packet_offset = new BoxedValueInt(0);
             ret = dec.opus_decode_native(
                     data, data_ptr, len, buf, 0, frame_size, decode_fec,
-                    (s != this.layout.nb_streams - 1) ? 1 : 0, packet_offset, soft_clip);
+                    (s != layout.nb_streams - 1) ? 1 : 0, packet_offset, soft_clip);
             data_ptr += packet_offset.Val;
             len -= packet_offset.Val;
             if (ret <= 0) {
                 return ret;
             }
             frame_size = ret;
-            if (s < this.layout.nb_coupled_streams) {
+            if (s < layout.nb_coupled_streams) {
                 int chan, prev;
                 prev = -1;
                 /* Copy "left" audio to the channel(s) where it belongs */
-                while ((chan = OpusMultistream.get_left_channel(this.layout, s, prev)) != -1) {
-                    opus_copy_channel_out_short(pcm, pcm_ptr, this.layout.nb_channels, chan,
+                while ((chan = OpusMultistream.get_left_channel(layout, s, prev)) != -1) {
+                    opus_copy_channel_out_short(pcm, pcm_ptr, layout.nb_channels, chan,
                             buf, 0, 2, frame_size);
                     prev = chan;
                 }
                 prev = -1;
                 /* Copy "right" audio to the channel(s) where it belongs */
-                while ((chan = OpusMultistream.get_right_channel(this.layout, s, prev)) != -1) {
-                    opus_copy_channel_out_short(pcm, pcm_ptr, this.layout.nb_channels, chan,
+                while ((chan = OpusMultistream.get_right_channel(layout, s, prev)) != -1) {
+                    opus_copy_channel_out_short(pcm, pcm_ptr, layout.nb_channels, chan,
                             buf, 1, 2, frame_size);
                     prev = chan;
                 }
@@ -233,17 +233,17 @@ public class OpusMSDecoder {
                 int chan, prev;
                 prev = -1;
                 /* Copy audio to the channel(s) where it belongs */
-                while ((chan = OpusMultistream.get_mono_channel(this.layout, s, prev)) != -1) {
-                    opus_copy_channel_out_short(pcm, pcm_ptr, this.layout.nb_channels, chan,
+                while ((chan = OpusMultistream.get_mono_channel(layout, s, prev)) != -1) {
+                    opus_copy_channel_out_short(pcm, pcm_ptr, layout.nb_channels, chan,
                             buf, 0, 1, frame_size);
                     prev = chan;
                 }
             }
         }
         /* Handle muted channels */
-        for (c = 0; c < this.layout.nb_channels; c++) {
-            if (this.layout.mapping[c] == 255) {
-                opus_copy_channel_out_short(pcm, pcm_ptr, this.layout.nb_channels, c,
+        for (c = 0; c < layout.nb_channels; c++) {
+            if (layout.mapping[c] == 255) {
+                opus_copy_channel_out_short(pcm, pcm_ptr, layout.nb_channels, c,
                         null, 0, 0, frame_size);
             }
         }

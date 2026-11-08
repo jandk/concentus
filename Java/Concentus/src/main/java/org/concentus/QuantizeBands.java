@@ -40,7 +40,7 @@ class QuantizeBands {
     private static final int[] pred_coef = new int[]{29440, 26112, 21248, 16384};
     private static final int[] beta_coef = new int[]{30147, 22282, 12124, 6554};
     private static final int beta_intra = 4915;
-    private static short[] small_energy_icdf = {2, 1, 0};
+    private static final short[] small_energy_icdf = {2, 1, 0};
 
     static int loss_distortion(int[][] eBands, int[][] oldEBands, int start, int end, int len, int C) {
         int c, i;
@@ -57,10 +57,10 @@ class QuantizeBands {
     }
 
     static int quant_coarse_energy_impl(CeltMode m, int start, int end,
-            int[][] eBands, int[][] oldEBands,
-            int budget, int tell,
-            short[] prob_model, int[][] error, EntropyCoder enc,
-            int C, int LM, int intra, int max_decay, int lfe) {
+                                        int[][] eBands, int[][] oldEBands,
+                                        int budget, int tell,
+                                        short[] prob_model, int[][] error, EntropyCoder enc,
+                                        int C, int LM, int intra, int max_decay, int lfe) {
         int i, c;
         int badness = 0;
         int[] prev = {0, 0};
@@ -150,9 +150,9 @@ class QuantizeBands {
     }
 
     static void quant_coarse_energy(CeltMode m, int start, int end, int effEnd,
-            int[][] eBands, int[][] oldEBands, int budget,
-            int[][] error, EntropyCoder enc, int C, int LM, int nbAvailableBytes,
-            int force_intra, BoxedValueInt delayedIntra, int two_pass, int loss_rate, int lfe) {
+                                    int[][] eBands, int[][] oldEBands, int budget,
+                                    int[][] error, EntropyCoder enc, int C, int LM, int nbAvailableBytes,
+                                    int force_intra, BoxedValueInt delayedIntra, int two_pass, int loss_rate, int lfe) {
         int intra;
         int max_decay;
         int[][] oldEBands_intra;
@@ -379,8 +379,8 @@ class QuantizeBands {
                 int offset;
                 q2 = dec.dec_bits(fine_quant[i]);
                 offset = Inlines.SUB16((Inlines.SHR32(
-                        Inlines.SHL32(q2, CeltConstants.DB_SHIFT)
-                        + ((short) (0.5 + (.5f) * (((int) 1) << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(.5f, CeltConstants.DB_SHIFT)*/, fine_quant[i])),
+                                Inlines.SHL32(q2, CeltConstants.DB_SHIFT)
+                                        + ((short) (0.5 + (.5f) * (((int) 1) << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(.5f, CeltConstants.DB_SHIFT)*/, fine_quant[i])),
                         ((short) (0.5 + (.5f) * (((int) 1) << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(.5f, CeltConstants.DB_SHIFT)*/); // opus bug: unnecessary extend32
                 oldEBands[i + c * m.nbEBands] += offset;
             } while (++c < C);
@@ -419,7 +419,7 @@ class QuantizeBands {
     /// <param name="bandLogE"></param>
     /// <param name="C"></param>
     static void amp2Log2(CeltMode m, int effEnd, int end,
-            int[][] bandE, int[][] bandLogE, int C) {
+                         int[][] bandE, int[][] bandLogE, int C) {
         int c, i;
         c = 0;
         do {
@@ -444,7 +444,7 @@ class QuantizeBands {
     /// <param name="bandLogE"></param>
     /// <param name="C"></param>
     static void amp2Log2(CeltMode m, int effEnd, int end,
-            int[] bandE, int[] bandLogE, int bandLogE_ptr, int C) {
+                         int[] bandE, int[] bandLogE, int bandLogE_ptr, int C) {
         int c, i;
         c = 0;
         do {

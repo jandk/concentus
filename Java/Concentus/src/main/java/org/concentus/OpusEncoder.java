@@ -58,7 +58,7 @@ public class OpusEncoder {
 
     // partial reset happens below this line
     int stream_channels;
-    short hybrid_stereo_width_Q14;
+    short prev_stereo_width_Q14;
     final int[] hp_mem = new int[4];
     int prev_framesize;
     OpusBandwidth bandwidth;
@@ -98,7 +98,7 @@ public class OpusEncoder {
     /// </summary>
     void PartialReset() {
         stream_channels = 0;
-        hybrid_stereo_width_Q14 = 0;
+        prev_stereo_width_Q14 = 0;
         Arrays.fill(hp_mem, 0, 4, 0);
         prev_framesize = 0;
         bandwidth = OpusBandwidth.OPUS_BANDWIDTH_UNKNOWN;
@@ -115,7 +115,7 @@ public class OpusEncoder {
 
         Celt_Encoder.ResetState();
         stream_channels = channels;
-        hybrid_stereo_width_Q14 = 1 << 14;
+        prev_stereo_width_Q14 = 1 << 14;
         first = 1;
         bandwidth = OpusBandwidth.OPUS_BANDWIDTH_FULLBAND;
     }
@@ -190,7 +190,7 @@ public class OpusEncoder {
         this.lsb_depth = 24;
         this.variable_duration = OpusFramesize.OPUS_FRAMESIZE_ARG;
 
-        this.hybrid_stereo_width_Q14 = 1 << 14;
+        this.prev_stereo_width_Q14 = 1 << 14;
         this.first = 1;
         this.bandwidth = OpusBandwidth.OPUS_BANDWIDTH_FULLBAND;
 
@@ -558,15 +558,15 @@ public class OpusEncoder {
         if (energy_masking == null && channels == 2) {
             /* Apply stereo width reduction (at low bitrates) */
             int stereo_width_Q14 = Inlines.IMIN((1 << 14), 2 * Inlines.IMAX(0, equiv_rate - 30000));
-            if (hybrid_stereo_width_Q14 < (1 << 14) || stereo_width_Q14 < (1 << 14)) {
+            if (prev_stereo_width_Q14 < (1 << 14) || stereo_width_Q14 < (1 << 14)) {
                 int g1, g2;
-                g1 = hybrid_stereo_width_Q14;
+                g1 = prev_stereo_width_Q14;
                 g2 = stereo_width_Q14;
                 g1 = g1 == 16384 ? CeltConstants.Q15ONE : Inlines.SHL16(g1, 1);
                 g2 = g2 == 16384 ? CeltConstants.Q15ONE : Inlines.SHL16(g2, 1);
                 CodecHelpers.stereo_fade(pcm_buf, g1, g2, celt_mode.overlap,
                         frame_size, channels, celt_mode.window, Fs);
-                this.hybrid_stereo_width_Q14 = (short) stereo_width_Q14;
+                this.prev_stereo_width_Q14 = (short) stereo_width_Q14;
             }
         }
 
@@ -618,9 +618,8 @@ public class OpusEncoder {
      *
      * @param in_pcm          16-bit input signal (Interleaved if stereo), in a short array. Length should be at least frame_size * channels
      * @param pcm_offset      Offset to use when reading the in_pcm buffer
-     * @param frame_size      The number of samples _per channel_ in the inpus signal. The frame size must be a valid Opus framesize for the given sample rate.
-     *                        For example, at 48Khz the permitted values are 120, 240, 480, 960, 1920, and 2880. Passing in a duration of less than 10ms
-     *                        (480 samples at 48Khz) will prevent the encoder from using FEC, DTX, or hybrid modes.
+     * @param frame_size      The number of samples _per channel_ in the input signal. The frame size must be a valid Opus framesize for the given sample rate.
+     *                        For example, at 48Khz the permitted values are 120, 240, 480, 960, 1920, and 2880.
      * @param out_data        Destination buffer for the output payload. This must contain at least max_data_bytes
      * @param out_data_offset The offset to use when writing to the output data buffer
      * @param max_data_bytes  The maximum amount of space allocated for the output payload. This may be used to impose
@@ -666,9 +665,8 @@ public class OpusEncoder {
      *
      * @param in_pcm          16-bit input signal (Interleaved if stereo), in a little endian byte array. Length should be at least frame_size * channels * 2
      * @param pcm_offset      Offset to use when reading the in_pcm buffer
-     * @param frame_size      The number of samples _per channel_ in the inpus signal. The frame size must be a valid Opus framesize for the given sample rate.
-     *                        For example, at 48Khz the permitted values are 120, 240, 480, 960, 1920, and 2880. Passing in a duration of less than 10ms
-     *                        (480 samples at 48Khz) will prevent the encoder from using FEC, DTX, or hybrid modes.
+     * @param frame_size      The number of samples _per channel_ in the input signal. The frame size must be a valid Opus framesize for the given sample rate.
+     *                        For example, at 48Khz the permitted values are 120, 240, 480, 960, 1920, and 2880.
      * @param out_data        Destination buffer for the output payload. This must contain at least max_data_bytes
      * @param out_data_offset The offset to use when writing to the output data buffer
      * @param max_data_bytes  The maximum amount of space allocated for the output payload. This may be used to impose
@@ -761,7 +759,7 @@ public class OpusEncoder {
 
     /// <summary>
     /// Gets or sets the expected amount of packet loss in the transmission medium, from 0 to 100.
-    /// Only applies if UseInbandFEC is also enabled, and the encoder is in SILK mode.
+    /// A higher value makes CELT spend more bits on intra-coded band energies, so frames depend less on earlier ones.
     /// </summary>
     public int getPacketLossPercent() {
         return silk_mode.packetLossPercentage;

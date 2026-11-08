@@ -64,15 +64,4 @@ class CeltConstants {
     public static final int FINE_OFFSET = 21;
     public static final int QTHETA_OFFSET = 4;
     public static final int QTHETA_OFFSET_TWOPHASE = 16;
-
-    /* The maximum pitch lag to allow in the pitch-based PLC. It's possible to save
-CPU time in the PLC pitch search by making this smaller than MAX_PERIOD. The
-current value corresponds to a pitch of 66.67 Hz. */
-    public static final int PLC_PITCH_LAG_MAX = 720;
-
-    /* The minimum pitch lag to allow in the pitch-based PLC. This corresponds to a
-       pitch of 480 Hz. */
-    public static final int PLC_PITCH_LAG_MIN = 100;
-
-    public static final int LPC_ORDER = 24;
 }

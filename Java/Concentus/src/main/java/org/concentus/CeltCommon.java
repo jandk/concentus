@@ -1076,19 +1076,6 @@ class CeltCommon {
         }
     }
 
-    static int celt_plc_pitch_search(int[][] decode_mem, int C) {
-        BoxedValueInt pitch_index = new BoxedValueInt(0);
-        int[] lp_pitch_buf = new int[CeltConstants.DECODE_BUFFER_SIZE >> 1];
-        Pitch.pitch_downsample(decode_mem, lp_pitch_buf,
-                CeltConstants.DECODE_BUFFER_SIZE, C);
-        Pitch.pitch_search(lp_pitch_buf, CeltConstants.PLC_PITCH_LAG_MAX >> 1, lp_pitch_buf,
-                CeltConstants.DECODE_BUFFER_SIZE - CeltConstants.PLC_PITCH_LAG_MAX,
-                CeltConstants.PLC_PITCH_LAG_MAX - CeltConstants.PLC_PITCH_LAG_MIN, pitch_index);
-        pitch_index.Val = CeltConstants.PLC_PITCH_LAG_MAX - pitch_index.Val;
-
-        return pitch_index.Val;
-    }
-
     static int resampling_factor(int rate) {
         int ret;
         switch (rate) {

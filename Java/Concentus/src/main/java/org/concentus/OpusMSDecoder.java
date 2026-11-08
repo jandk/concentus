@@ -161,13 +161,11 @@ public class OpusMSDecoder {
             int len,
             short[] pcm,
             int pcm_ptr,
-            int frame_size,
-            int decode_fec
+            int frame_size
     ) {
         int Fs;
         int s, c;
         int decoder_ptr;
-        int do_plc = 0;
         short[] buf;
 
         /* Limit frame_size to avoid excessive stack allocations. */
@@ -176,16 +174,14 @@ public class OpusMSDecoder {
         buf = new short[2 * frame_size];
         decoder_ptr = 0;
 
-        if (len == 0) {
-            do_plc = 1;
-        }
-        if (len < 0) {
+        /* There is no packet loss concealment: every call must have a packet */
+        if (data == null || len <= 0) {
             return OpusError.OPUS_BAD_ARG;
         }
-        if (do_plc == 0 && len < 2 * layout.nb_streams - 1) {
+        if (len < 2 * layout.nb_streams - 1) {
             return OpusError.OPUS_INVALID_PACKET;
         }
-        if (do_plc == 0) {
+        {
             int ret = opus_multistream_packet_validate(data, data_ptr, len, layout.nb_streams, Fs);
             if (ret < 0) {
                 return ret;
@@ -199,12 +195,12 @@ public class OpusMSDecoder {
 
             dec = decoders[decoder_ptr++];
 
-            if (do_plc == 0 && len <= 0) {
+            if (len <= 0) {
                 return OpusError.OPUS_INTERNAL_ERROR;
             }
             BoxedValueInt packet_offset = new BoxedValueInt(0);
             ret = dec.opus_decode_native(
-                    data, data_ptr, len, buf, 0, frame_size, decode_fec,
+                    data, data_ptr, len, buf, 0, frame_size,
                     (s != layout.nb_streams - 1) ? 1 : 0, packet_offset);
             data_ptr += packet_offset.Val;
             len -= packet_offset.Val;
@@ -278,11 +274,10 @@ public class OpusMSDecoder {
             int len,
             short[] out_pcm,
             int out_pcm_offset,
-            int frame_size,
-            int decode_fec
+            int frame_size
     ) {
         return opus_multistream_decode_native(data, data_offset, len,
-                out_pcm, out_pcm_offset, frame_size, decode_fec);
+                out_pcm, out_pcm_offset, frame_size);
     }
 
     public OpusBandwidth getBandwidth() {

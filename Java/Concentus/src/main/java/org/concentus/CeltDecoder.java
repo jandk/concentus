@@ -52,8 +52,6 @@ class CeltDecoder {
     /* Everything beyond this point gets cleared on a reset */
     int rng = 0;
     int error = 0;
-    int last_pitch_index = 0;
-    int loss_count = 0;
     int postfilter_period = 0;
     int postfilter_period_old = 0;
     int postfilter_gain = 0;
@@ -69,18 +67,14 @@ class CeltDecoder {
     /// I have laid them out into separate variables here,
     /// but these were the original definitions:
     /// val32 decode_mem[],     Size = channels*(DECODE_BUFFER_SIZE+mode.overlap)
-    /// val16 lpc[],            Size = channels*LPC_ORDER
     /// val16 oldEBands[],      Size = 2*mode.nbEBands
     /// val16 oldLogE[],        Size = 2*mode.nbEBands
     /// val16 oldLogE2[],       Size = 2*mode.nbEBands
-    /// val16 backgroundLogE[], Size = 2*mode.nbEBands
     /// </summary>
     int[][] decode_mem = null;
-    int[][] lpc = null; // Porting note: Split two-part array into separate arrays (one per channel)
     int[] oldEBands = null;
     int[] oldLogE = null;
     int[] oldLogE2 = null;
-    int[] backgroundLogE = null;
 
     private void Reset() {
         mode = null;
@@ -95,8 +89,6 @@ class CeltDecoder {
     private void PartialReset() {
         rng = 0;
         error = 0;
-        last_pitch_index = 0;
-        loss_count = 0;
         postfilter_period = 0;
         postfilter_period_old = 0;
         postfilter_gain = 0;
@@ -105,11 +97,9 @@ class CeltDecoder {
         postfilter_tapset_old = 0;
         Arrays.fill(preemph_memD, 0, 2, 0);
         decode_mem = null;
-        lpc = null;
         oldEBands = null;
         oldLogE = null;
         oldLogE2 = null;
-        backgroundLogE = null;
     }
 
     void ResetState() {
@@ -119,15 +109,12 @@ class CeltDecoder {
 
         // We have to reconstitute the dynamic buffers here. fixme: this could be better implemented
         this.decode_mem = new int[channels][];
-        this.lpc = new int[channels][];
         for (int c = 0; c < channels; c++) {
             decode_mem[c] = new int[CeltConstants.DECODE_BUFFER_SIZE + mode.overlap];
-            lpc[c] = new int[CeltConstants.LPC_ORDER];
         }
         this.oldEBands = new int[2 * mode.nbEBands];
         this.oldLogE = new int[2 * mode.nbEBands];
         this.oldLogE2 = new int[2 * mode.nbEBands];
-        this.backgroundLogE = new int[2 * mode.nbEBands];
 
         for (i = 0; i < 2 * mode.nbEBands; i++) {
             oldLogE[i] = oldLogE2[i] = -((short) (0.5 + (28.0f) * (1 << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(28.0f, CeltConstants.DB_SHIFT)*/;
@@ -162,265 +149,13 @@ class CeltDecoder {
         this.downsample = 1;
         this.end = this.mode.effEBands;
 
-        this.loss_count = 0;
-
         //this.decode_mem = new int[channels * (CeltConstants.DECODE_BUFFER_SIZE + mode.overlap));
-        //this.lpc = new int[channels * CeltConstants.LPC_ORDER);
         //this.oldEBands = new int[2 * mode.nbEBands);
         //this.oldLogE = new int[2 * mode.nbEBands);
         //this.oldLogE2 = new int[2 * mode.nbEBands);
-        //this.backgroundLogE = new int[2 * mode.nbEBands);
         ResetState();
 
         return OpusError.OPUS_OK;
-    }
-
-    void celt_decode_lost(int N, int LM) {
-        int c;
-        int i;
-        int C = channels;
-        int[][] out_syn = new int[2][];
-        int[] out_syn_ptrs = new int[2];
-        CeltMode mode;
-        int nbEBands;
-        int overlap;
-        int noise_based;
-        short[] eBands;
-
-        mode = this.mode;
-        nbEBands = mode.nbEBands;
-        overlap = mode.overlap;
-        eBands = mode.eBands;
-
-        c = 0;
-        do {
-            out_syn[c] = decode_mem[c];
-            out_syn_ptrs[c] = CeltConstants.DECODE_BUFFER_SIZE - N;
-        } while (++c < C);
-
-        noise_based = loss_count >= 5 ? 1 : 0;
-        if (noise_based != 0) {
-            /* Noise-based PLC/CNG */
-            int[][] X;
-            int seed;
-            int end;
-            int effEnd;
-            int decay;
-            end = this.end;
-            effEnd = Inlines.IMAX(0, Inlines.IMIN(end, mode.effEBands));
-
-            X = new int[C][N];
-
-            /* Energy decay */
-            decay = ((short) (0.5 + (0.5f) * (1 << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(0.5f, CeltConstants.DB_SHIFT)*/;
-            c = 0;
-            do {
-                for (i = 0; i < end; i++) {
-                    oldEBands[c * nbEBands + i] = Inlines.MAX16(backgroundLogE[c * nbEBands + i], oldEBands[c * nbEBands + i] - decay);
-                }
-            } while (++c < C);
-            seed = rng;
-            for (c = 0; c < C; c++) {
-                for (i = 0; i < effEnd; i++) {
-                    int j;
-                    int boffs;
-                    int blen;
-                    boffs = (eBands[i] << LM);
-                    blen = (eBands[i + 1] - eBands[i]) << LM;
-                    for (j = 0; j < blen; j++) {
-                        seed = Bands.celt_lcg_rand(seed);
-                        X[c][boffs + j] = (seed >> 20);
-                    }
-
-                    VQ.renormalise_vector(X[c], 0, blen, CeltConstants.Q15ONE);
-                }
-            }
-            this.rng = seed;
-
-            c = 0;
-            do {
-                System.arraycopy(decode_mem[c], N, decode_mem[c], 0, CeltConstants.DECODE_BUFFER_SIZE - N + (overlap >> 1));
-            } while (++c < C);
-
-            CeltCommon.celt_synthesis(mode, X, out_syn, out_syn_ptrs, oldEBands, 0, effEnd, C, C, 0, LM, downsample, 0);
-        } else {
-            /* Pitch-based PLC */
-            int[] window;
-            int fade = CeltConstants.Q15ONE;
-            int pitch_index;
-            int[] etmp;
-            int[] exc;
-
-            if (loss_count == 0) {
-                this.last_pitch_index = pitch_index = CeltCommon.celt_plc_pitch_search(decode_mem, C);
-            } else {
-                pitch_index = last_pitch_index;
-                fade = ((short) (0.5 + (.8f) * (1 << (15))))/*Inlines.QCONST16(.8f, 15)*/;
-            }
-
-            etmp = new int[overlap];
-            exc = new int[CeltConstants.MAX_PERIOD];
-            window = mode.window;
-            c = 0;
-            do {
-                int decay;
-                int attenuation;
-                int S1 = 0;
-                int[] buf;
-                int extrapolation_offset;
-                int extrapolation_len;
-                int exc_length;
-                int j;
-
-                buf = decode_mem[c];
-                for (i = 0; i < CeltConstants.MAX_PERIOD; i++) {
-                    exc[i] = Inlines.ROUND16(buf[CeltConstants.DECODE_BUFFER_SIZE - CeltConstants.MAX_PERIOD + i], CeltConstants.SIG_SHIFT);
-                }
-
-                if (loss_count == 0) {
-                    int[] ac = new int[CeltConstants.LPC_ORDER + 1];
-                    /* Compute LPC coefficients for the last MAX_PERIOD samples before
-                       the first loss so we can work in the excitation-filter domain. */
-                    Autocorrelation._celt_autocorr(exc, ac, window, overlap,
-                            CeltConstants.LPC_ORDER, CeltConstants.MAX_PERIOD);
-                    /* Add a noise floor of -40 dB. */
-                    ac[0] += Inlines.SHR32(ac[0], 13);
-                    /* Use lag windowing to stabilize the Levinson-Durbin recursion. */
-                    for (i = 1; i <= CeltConstants.LPC_ORDER; i++) {
-                        /*ac[i] *= exp(-.5*(2*M_PI*.002*i)*(2*M_PI*.002*i));*/
-                        ac[i] -= Inlines.MULT16_32_Q15(2 * i * i, ac[i]);
-                    }
-                    CeltLPC.celt_lpc(lpc[c], ac, CeltConstants.LPC_ORDER);
-                }
-                /* We want the excitation for 2 pitch periods in order to look for a
-                   decaying signal, but we can't get more than MAX_PERIOD. */
-                exc_length = Inlines.IMIN(2 * pitch_index, CeltConstants.MAX_PERIOD);
-                /* Initialize the LPC history with the samples just before the start
-                   of the region for which we're computing the excitation. */
-                {
-                    int[] lpc_mem = new int[CeltConstants.LPC_ORDER];
-                    for (i = 0; i < CeltConstants.LPC_ORDER; i++) {
-                        lpc_mem[i]
-                                = Inlines.ROUND16(buf[CeltConstants.DECODE_BUFFER_SIZE - exc_length - 1 - i], CeltConstants.SIG_SHIFT);
-                    }
-
-                    /* Compute the excitation for exc_length samples before the loss. */
-                    Kernels.celt_fir(exc, (CeltConstants.MAX_PERIOD - exc_length), lpc[c], 0,
-                            exc, (CeltConstants.MAX_PERIOD - exc_length), exc_length, CeltConstants.LPC_ORDER, lpc_mem);
-                }
-
-                /* Check if the waveform is decaying, and if so how fast.
-                   We do this to avoid adding energy when concealing in a segment
-                   with decaying energy. */
-                {
-                    int E1 = 1, E2 = 1;
-                    int decay_length;
-                    int shift = Inlines.IMAX(0, 2 * Inlines.celt_zlog2(Inlines.celt_maxabs16(exc, (CeltConstants.MAX_PERIOD - exc_length), exc_length)) - 20);
-                    decay_length = exc_length >> 1;
-                    for (i = 0; i < decay_length; i++) {
-                        int e;
-                        e = exc[CeltConstants.MAX_PERIOD - decay_length + i];
-                        E1 += Inlines.SHR32(Inlines.MULT16_16(e, e), shift);
-                        e = exc[CeltConstants.MAX_PERIOD - 2 * decay_length + i];
-                        E2 += Inlines.SHR32(Inlines.MULT16_16(e, e), shift);
-                    }
-                    E1 = Inlines.MIN32(E1, E2);
-                    decay = Inlines.celt_sqrt(Inlines.frac_div32(Inlines.SHR32(E1, 1), E2));
-                }
-
-                /* Move the decoder memory one frame to the left to give us room to
-                   add the data for the new frame. We ignore the overlap that extends
-                   past the end of the buffer, because we aren't going to use it. */
-                System.arraycopy(buf, N, buf, 0, CeltConstants.DECODE_BUFFER_SIZE - N);
-
-                /* Extrapolate from the end of the excitation with a period of
-                   "pitch_index", scaling down each period by an additional factor of
-                   "decay". */
-                extrapolation_offset = CeltConstants.MAX_PERIOD - pitch_index;
-                /* We need to extrapolate enough samples to cover a complete MDCT
-                   window (including overlap/2 samples on both sides). */
-                extrapolation_len = N + overlap;
-                /* We also apply fading if this is not the first loss. */
-                attenuation = Inlines.MULT16_16_Q15(fade, decay);
-                for (i = j = 0; i < extrapolation_len; i++, j++) {
-                    int tmp;
-                    if (j >= pitch_index) {
-                        j -= pitch_index;
-                        attenuation = Inlines.MULT16_16_Q15(attenuation, decay);
-                    }
-                    buf[CeltConstants.DECODE_BUFFER_SIZE - N + i]
-                            = Inlines.SHL32((Inlines.MULT16_16_Q15(attenuation,
-                            exc[extrapolation_offset + j])), CeltConstants.SIG_SHIFT);
-                    /* Compute the energy of the previously decoded signal whose
-                       excitation we're copying. */
-                    tmp = Inlines.ROUND16(
-                            buf[CeltConstants.DECODE_BUFFER_SIZE - CeltConstants.MAX_PERIOD - N + extrapolation_offset + j],
-                            CeltConstants.SIG_SHIFT);
-                    S1 += Inlines.SHR32(Inlines.MULT16_16(tmp, tmp), 8);
-                }
-
-                {
-                    int[] lpc_mem = new int[CeltConstants.LPC_ORDER];
-                    /* Copy the last decoded samples (prior to the overlap region) to
-                       synthesis filter memory so we can have a continuous signal. */
-                    for (i = 0; i < CeltConstants.LPC_ORDER; i++) {
-                        lpc_mem[i] = Inlines.ROUND16(buf[CeltConstants.DECODE_BUFFER_SIZE - N - 1 - i], CeltConstants.SIG_SHIFT);
-                    }
-                    /* Apply the synthesis filter to convert the excitation back into
-                       the signal domain. */
-                    CeltLPC.celt_iir(buf, CeltConstants.DECODE_BUFFER_SIZE - N, lpc[c],
-                            buf, CeltConstants.DECODE_BUFFER_SIZE - N, extrapolation_len, CeltConstants.LPC_ORDER,
-                            lpc_mem);
-                }
-
-                /* Check if the synthesis energy is higher than expected, which can
-                   happen with the signal changes during our window. If so,
-                   attenuate. */
-                {
-                    int S2 = 0;
-                    for (i = 0; i < extrapolation_len; i++) {
-                        int tmp = Inlines.ROUND16(buf[CeltConstants.DECODE_BUFFER_SIZE - N + i], CeltConstants.SIG_SHIFT);
-                        S2 += Inlines.SHR32(Inlines.MULT16_16(tmp, tmp), 8);
-                    }
-                    /* This checks for an "explosion" in the synthesis. */
-                    if (!(S1 > Inlines.SHR32(S2, 2))) {
-                        for (i = 0; i < extrapolation_len; i++) {
-                            buf[CeltConstants.DECODE_BUFFER_SIZE - N + i] = 0;
-                        }
-                    } else if (S1 < S2) {
-                        int ratio = Inlines.celt_sqrt(Inlines.frac_div32(Inlines.SHR32(S1, 1) + 1, S2 + 1));
-                        for (i = 0; i < overlap; i++) {
-                            int tmp_g = CeltConstants.Q15ONE
-                                    - Inlines.MULT16_16_Q15(window[i], CeltConstants.Q15ONE - ratio);
-                            buf[CeltConstants.DECODE_BUFFER_SIZE - N + i]
-                                    = Inlines.MULT16_32_Q15(tmp_g, buf[CeltConstants.DECODE_BUFFER_SIZE - N + i]);
-                        }
-                        for (i = overlap; i < extrapolation_len; i++) {
-                            buf[CeltConstants.DECODE_BUFFER_SIZE - N + i]
-                                    = Inlines.MULT16_32_Q15(ratio, buf[CeltConstants.DECODE_BUFFER_SIZE - N + i]);
-                        }
-                    }
-                }
-
-                /* Apply the pre-filter to the MDCT overlap for the next frame because
-                   the post-filter will be re-applied in the decoder after the MDCT
-                   overlap. */
-                CeltCommon.comb_filter(etmp, 0, buf, CeltConstants.DECODE_BUFFER_SIZE,
-                        postfilter_period, postfilter_period, overlap,
-                        -postfilter_gain, -postfilter_gain,
-                        postfilter_tapset, postfilter_tapset, null, 0);
-
-                /* Simulate TDAC on the concealed audio so that it blends with the
-                   MDCT of the next frame. */
-                for (i = 0; i < overlap / 2; i++) {
-                    buf[CeltConstants.DECODE_BUFFER_SIZE + i]
-                            = Inlines.MULT16_32_Q15(window[i], etmp[overlap - 1 - i])
-                            + Inlines.MULT16_32_Q15(window[overlap - i - 1], etmp[i]);
-                }
-            } while (++c < C);
-        }
-
-        this.loss_count = loss_count + 1;
     }
 
     int celt_decode_with_ec(byte[] data, int data_ptr,
@@ -438,7 +173,7 @@ class CeltDecoder {
         short[] collapse_masks;
         int[][] out_syn = new int[2][];
         int[] out_syn_ptrs = new int[2];
-        int[] oldBandE, oldLogE, oldLogE2, backgroundLogE;
+        int[] oldBandE, oldLogE, oldLogE2;
 
         int shortBlocks;
         int isTransient;
@@ -477,7 +212,6 @@ class CeltDecoder {
         oldBandE = oldEBands;
         oldLogE = this.oldLogE;
         oldLogE2 = this.oldLogE2;
-        backgroundLogE = this.backgroundLogE;
 
         {
             for (LM = 0; LM <= mode.maxLM; LM++) {
@@ -505,13 +239,6 @@ class CeltDecoder {
         effEnd = end;
         if (effEnd > mode.effEBands) {
             effEnd = mode.effEBands;
-        }
-
-        if (data == null || len <= 1) {
-            celt_decode_lost(N, LM);
-            CeltCommon.deemphasis(out_syn, out_syn_ptrs, pcm, pcm_ptr, N, CC, downsample, mode.preemph, preemph_memD);
-
-            return frame_size / downsample;
         }
 
         if (dec == null) {
@@ -720,20 +447,8 @@ class CeltDecoder {
         }
 
         if (isTransient == 0) {
-            int max_background_increase;
             System.arraycopy(oldLogE, 0, oldLogE2, 0, 2 * nbEBands);
             System.arraycopy(oldBandE, 0, oldLogE, 0, 2 * nbEBands);
-            /* In normal circumstances, we only allow the noise floor to increase by
-               up to 2.4 dB/second, but when we're in DTX, we allow up to 6 dB
-               increase for each update.*/
-            if (loss_count < 10) {
-                max_background_increase = M * ((short) (0.5 + (0.001f) * (1 << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(0.001f, CeltConstants.DB_SHIFT)*/;
-            } else {
-                max_background_increase = ((short) (0.5 + (1.0f) * (1 << (CeltConstants.DB_SHIFT))))/*Inlines.QCONST16(1.0f, CeltConstants.DB_SHIFT)*/;
-            }
-            for (i = 0; i < 2 * nbEBands; i++) {
-                backgroundLogE[i] = Inlines.MIN16(backgroundLogE[i] + max_background_increase, oldBandE[i]);
-            }
         } else {
             for (i = 0; i < 2 * nbEBands; i++) {
                 oldLogE[i] = Inlines.MIN16(oldLogE[i], oldBandE[i]);
@@ -749,7 +464,6 @@ class CeltDecoder {
         this.rng = (int) dec.rng;
 
         CeltCommon.deemphasis(out_syn, out_syn_ptrs, pcm, pcm_ptr, N, CC, downsample, mode.preemph, preemph_memD);
-        this.loss_count = 0;
 
         if (dec.tell() > 8 * len) {
             return OpusError.OPUS_INTERNAL_ERROR;

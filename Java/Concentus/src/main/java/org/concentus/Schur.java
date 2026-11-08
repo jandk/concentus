@@ -72,7 +72,7 @@ class Schur {
             /* Check that we won't be getting an unstable rc, otherwise stop here. */
             if (Inlines.silk_abs_int32(C[k + 1][0]) >= C[0][1]) {
                 if (C[k + 1][0] > 0) {
-                    rc_Q15[k] = (short) (0 - ((int) ((.99f) * ((long) 1 << (15)) + 0.5))/*Inlines.SILK_CONST(.99f, 15)*/);
+                    rc_Q15[k] = (short) (-((int) ((.99f) * ((long) 1 << (15)) + 0.5))/*Inlines.SILK_CONST(.99f, 15)*/);
                 } else {
                     rc_Q15[k] = (short) (((int) ((.99f) * ((long) 1 << (15)) + 0.5))/*Inlines.SILK_CONST(.99f, 15)*/);
                 }
@@ -81,7 +81,7 @@ class Schur {
             }
 
             /* Get reflection coefficient */
-            rc_tmp_Q15 = 0 - Inlines.silk_DIV32_16(C[k + 1][0], Inlines.silk_max_32(Inlines.silk_RSHIFT(C[0][1], 15), 1));
+            rc_tmp_Q15 = -Inlines.silk_DIV32_16(C[k + 1][0], Inlines.silk_max_32(Inlines.silk_RSHIFT(C[0][1], 15), 1));
 
             /* Clip (shouldn't happen for properly conditioned inputs) */
             rc_tmp_Q15 = Inlines.silk_SAT16(rc_tmp_Q15);

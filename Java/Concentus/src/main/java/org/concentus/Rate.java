@@ -108,7 +108,7 @@ class Rate {
             psum = 0;
             done = 0;
             for (j = end; j-- > start; ) {
-                int tmp = bits1[j] + (mid * (int) bits2[j] >> ALLOC_STEPS);
+                int tmp = bits1[j] + (mid * bits2[j] >> ALLOC_STEPS);
                 if (tmp >= thresh[j] || done != 0) {
                     done = 1;
                     /* Don't allocate more than we can actually use */
@@ -169,7 +169,7 @@ class Rate {
             left -= (m.eBands[codedBands] - m.eBands[start]) * percoeff;
             rem = Inlines.IMAX(left - (m.eBands[j] - m.eBands[start]), 0);
             band_width = m.eBands[codedBands] - m.eBands[j];
-            band_bits = (int) (bits[j] + percoeff * band_width + rem);
+            band_bits = bits[j] + percoeff * band_width + rem;
             /*Only code a skip decision if we're above the threshold for this band.
               Otherwise it is force-skipped.
               This ensures that we have enough bits to code the skip flag.*/
@@ -240,10 +240,10 @@ class Rate {
         percoeff = Inlines.celt_udiv(left, m.eBands[codedBands] - m.eBands[start]);
         left -= (m.eBands[codedBands] - m.eBands[start]) * percoeff;
         for (j = start; j < codedBands; j++) {
-            bits[j] += ((int) percoeff * (m.eBands[j + 1] - m.eBands[j]));
+            bits[j] += (percoeff * (m.eBands[j + 1] - m.eBands[j]));
         }
         for (j = start; j < codedBands; j++) {
-            int tmp = (int) Inlines.IMIN(left, m.eBands[j + 1] - m.eBands[j]);
+            int tmp = Inlines.IMIN(left, m.eBands[j + 1] - m.eBands[j]);
             bits[j] += tmp;
             left -= tmp;
         }
@@ -259,7 +259,7 @@ class Rate {
             Inlines.OpusAssert(bits[j] >= 0);
             N0 = m.eBands[j + 1] - m.eBands[j];
             N = N0 << LM;
-            bit = (int) bits[j] + balance;
+            bit = bits[j] + balance;
 
             if (N > 1) {
                 excess = Inlines.MAX32(bit - cap[j], 0);

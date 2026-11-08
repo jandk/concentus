@@ -49,7 +49,7 @@ class LPCInversePredGain {
 
         Anew_QA = A_QA[order & 1];
 
-        invGain_Q30 = (int) 1 << 30;
+        invGain_Q30 = 1 << 30;
         for (k = order - 1; k > 0; k--) {
             /* Check for stability */
             if ((Anew_QA[k] > A_LIMIT) || (Anew_QA[k] < -A_LIMIT)) {
@@ -57,10 +57,10 @@ class LPCInversePredGain {
             }
 
             /* Set RC equal to negated AR coef */
-            rc_Q31 = 0 - Inlines.silk_LSHIFT(Anew_QA[k], 31 - QA);
+            rc_Q31 = -Inlines.silk_LSHIFT(Anew_QA[k], 31 - QA);
 
             /* rc_mult1_Q30 range: [ 1 : 2^30 ] */
-            rc_mult1_Q30 = ((int) 1 << 30) - Inlines.silk_SMMUL(rc_Q31, rc_Q31);
+            rc_mult1_Q30 = (1 << 30) - Inlines.silk_SMMUL(rc_Q31, rc_Q31);
             Inlines.OpusAssert(rc_mult1_Q30 > (1 << 15));
             /* reduce A_LIMIT if fails */
             Inlines.OpusAssert(rc_mult1_Q30 <= (1 << 30));
@@ -92,10 +92,10 @@ class LPCInversePredGain {
         }
 
         /* Set RC equal to negated AR coef */
-        rc_Q31 = 0 - Inlines.silk_LSHIFT(Anew_QA[0], 31 - QA);
+        rc_Q31 = -Inlines.silk_LSHIFT(Anew_QA[0], 31 - QA);
 
         /* Range: [ 1 : 2^30 ] */
-        rc_mult1_Q30 = ((int) 1 << 30) - Inlines.silk_SMMUL(rc_Q31, rc_Q31);
+        rc_mult1_Q30 = (1 << 30) - Inlines.silk_SMMUL(rc_Q31, rc_Q31);
 
         /* Update inverse gain */
         /* Range: [ 0 : 2^30 ] */
@@ -120,8 +120,8 @@ class LPCInversePredGain {
 
         /* Increase Q domain of the AR coefficients */
         for (k = 0; k < order; k++) {
-            DC_resp += (int) A_Q12[k];
-            Anew_QA[k] = Inlines.silk_LSHIFT32((int) A_Q12[k], QA - 12);
+            DC_resp += A_Q12[k];
+            Anew_QA[k] = Inlines.silk_LSHIFT32(A_Q12[k], QA - 12);
         }
         /* If the DC is unstable, we don't even need to do the full calculations */
         if (DC_resp >= 4096) {

@@ -180,7 +180,7 @@ class NoiseShapeAnalysis {
         SNR_adj_dB_Q7 = psEnc.SNR_dB_Q7;
 
         /* Input quality is the average of the quality in the lowest two VAD bands */
-        psEncCtrl.input_quality_Q14 = (int) Inlines.silk_RSHIFT((int) psEnc.input_quality_bands_Q15[0]
+        psEncCtrl.input_quality_Q14 = Inlines.silk_RSHIFT(psEnc.input_quality_bands_Q15[0]
                 + psEnc.input_quality_bands_Q15[1], 2);
 
         /* Coding quality level, between 0.0_Q0 and 1.0_Q0, but in Q14 */
@@ -276,7 +276,7 @@ class NoiseShapeAnalysis {
 
         if (psEnc.warping_Q16 > 0) {
             /* Slightly more warping in analysis will move quantization noise up in frequency, where it's better masked */
-            warping_Q16 = Inlines.silk_SMLAWB(psEnc.warping_Q16, (int) psEncCtrl.coding_quality_Q14, ((int) ((0.01f) * ((long) 1 << (18)) + 0.5))/*Inlines.SILK_CONST(0.01f, 18)*/);
+            warping_Q16 = Inlines.silk_SMLAWB(psEnc.warping_Q16, psEncCtrl.coding_quality_Q14, ((int) ((0.01f) * ((long) 1 << (18)) + 0.5))/*Inlines.SILK_CONST(0.01f, 18)*/);
         } else {
             warping_Q16 = 0;
         }
@@ -368,7 +368,7 @@ class NoiseShapeAnalysis {
 
             /*psEncCtrl.GainsPre[ k ] = 1.0f - 0.7f * ( 1.0f - pre_nrg / nrg ) = 0.3f + 0.7f * pre_nrg / nrg;*/
             pre_nrg_Q30 = Inlines.silk_LSHIFT32(Inlines.silk_SMULWB(pre_nrg_Q30, ((int) ((0.7f) * ((long) 1 << (15)) + 0.5))/*Inlines.SILK_CONST(0.7f, 15)*/), 1);
-            psEncCtrl.GainsPre_Q14[k] = (int) ((int) ((0.3f) * ((long) 1 << (14)) + 0.5))/*Inlines.SILK_CONST(0.3f, 14)*/ + Inlines.silk_DIV32_varQ(pre_nrg_Q30, nrg, 14);
+            psEncCtrl.GainsPre_Q14[k] = (int) ((0.3f) * ((long) 1 << (14)) + 0.5)/*Inlines.SILK_CONST(0.3f, 14)*/ + Inlines.silk_DIV32_varQ(pre_nrg_Q30, nrg, 14);
 
             /* Convert to monic warped prediction coefficients and limit absolute values */
             limit_warped_coefs(AR2_Q24, AR1_Q24, warping_Q16, ((int) ((3.999f) * ((long) 1 << (24)) + 0.5))/*Inlines.SILK_CONST(3.999f, 24)*/, psEnc.shapingLPCOrder);
@@ -484,9 +484,9 @@ class NoiseShapeAnalysis {
             psShapeSt.Tilt_smth_Q16
                     = Inlines.silk_SMLAWB(psShapeSt.Tilt_smth_Q16, Tilt_Q16 - psShapeSt.Tilt_smth_Q16, ((int) ((TuningParameters.SUBFR_SMTH_COEF) * ((long) 1 << (16)) + 0.5))/*Inlines.SILK_CONST(TuningParameters.SUBFR_SMTH_COEF, 16)*/);
 
-            psEncCtrl.HarmBoost_Q14[k] = (int) Inlines.silk_RSHIFT_ROUND(psShapeSt.HarmBoost_smth_Q16, 2);
-            psEncCtrl.HarmShapeGain_Q14[k] = (int) Inlines.silk_RSHIFT_ROUND(psShapeSt.HarmShapeGain_smth_Q16, 2);
-            psEncCtrl.Tilt_Q14[k] = (int) Inlines.silk_RSHIFT_ROUND(psShapeSt.Tilt_smth_Q16, 2);
+            psEncCtrl.HarmBoost_Q14[k] = Inlines.silk_RSHIFT_ROUND(psShapeSt.HarmBoost_smth_Q16, 2);
+            psEncCtrl.HarmShapeGain_Q14[k] = Inlines.silk_RSHIFT_ROUND(psShapeSt.HarmShapeGain_smth_Q16, 2);
+            psEncCtrl.Tilt_Q14[k] = Inlines.silk_RSHIFT_ROUND(psShapeSt.Tilt_smth_Q16, 2);
         }
     }
 }

@@ -115,7 +115,7 @@ class EncodeIndices {
             if (psIndices.NLSFIndices[i + 1] >= SilkConstants.NLSF_QUANT_MAX_AMPLITUDE) {
                 psRangeEnc.enc_icdf(2 * SilkConstants.NLSF_QUANT_MAX_AMPLITUDE, psEncC.psNLSF_CB.ec_iCDF, (ec_ix[i]), 8);
                 psRangeEnc.enc_icdf(psIndices.NLSFIndices[i + 1] - SilkConstants.NLSF_QUANT_MAX_AMPLITUDE, SilkTables.silk_NLSF_EXT_iCDF, 8);
-            } else if (psIndices.NLSFIndices[i + 1] <= 0 - SilkConstants.NLSF_QUANT_MAX_AMPLITUDE) {
+            } else if (psIndices.NLSFIndices[i + 1] <= -SilkConstants.NLSF_QUANT_MAX_AMPLITUDE) {
                 psRangeEnc.enc_icdf(0, psEncC.psNLSF_CB.ec_iCDF, ec_ix[i], 8);
                 psRangeEnc.enc_icdf(-psIndices.NLSFIndices[i + 1] - SilkConstants.NLSF_QUANT_MAX_AMPLITUDE, SilkTables.silk_NLSF_EXT_iCDF, 8);
             } else {

@@ -250,7 +250,7 @@ class EntropyCoder {
             sym = (sym << EC_SYM_BITS | rem) >> (EC_SYM_BITS - EC_CODE_EXTRA);
 
             /*And subtract them from val, capped to be less than EC_CODE_TOP.*/
-            this.val = Inlines.CapToUInt32((((long) val << EC_SYM_BITS) + (EC_SYM_MAX & ~sym))
+            this.val = Inlines.CapToUInt32(((val << EC_SYM_BITS) + (EC_SYM_MAX & ~sym))
                     & (EC_CODE_TOP - 1));
         }
     }
@@ -395,7 +395,7 @@ class EntropyCoder {
                 available += EC_SYM_BITS;
             } while (available <= EC_WINDOW_SIZE - EC_SYM_BITS);
         }
-        ret = (int) (0xFFFFFFFF & (window & ((1 << _bits) - 1)));
+        ret = (int) (0xFFFFFFFFL & (window & ((1 << _bits) - 1)));
         window = window >> _bits;
         available = available - _bits;
         this.end_window = Inlines.CapToUInt32(window);
@@ -490,12 +490,12 @@ class EntropyCoder {
     void encode_bin(long _fl, long _fh, int _bits) {
         _fl = Inlines.CapToUInt32(_fl);
         _fh = Inlines.CapToUInt32(_fh);
-        long r = Inlines.CapToUInt32(rng >> (int) _bits);
+        long r = Inlines.CapToUInt32(rng >> _bits);
         if (_fl > 0) {
-            this.val = Inlines.CapToUInt32(val + Inlines.CapToUInt32(rng - (r * ((1 << (int) _bits) - _fl))));
+            this.val = Inlines.CapToUInt32(val + Inlines.CapToUInt32(rng - (r * ((1 << _bits) - _fl))));
             this.rng = Inlines.CapToUInt32(r * (_fh - _fl));
         } else {
-            this.rng = Inlines.CapToUInt32(rng - (r * ((1 << (int) _bits) - _fh)));
+            this.rng = Inlines.CapToUInt32(rng - (r * ((1 << _bits) - _fh)));
         }
 
         enc_normalize();
@@ -595,7 +595,7 @@ class EntropyCoder {
         } else if (rem >= 0) {
             /*The first byte is still awaiting carry propagation.*/
             this.rem = (int) Inlines.CapToUInt32((Inlines.CapToUInt32((rem & ~mask) | _val)) << shift);
-        } else if (rng <= (EC_CODE_TOP >> (int) _nbits)) {
+        } else if (rng <= (EC_CODE_TOP >> _nbits)) {
             /*The renormalization loop has never been run.*/
             this.val = Inlines.CapToUInt32((val & ~(mask << EC_CODE_SHIFT))
                     | Inlines.CapToUInt32(Inlines.CapToUInt32(_val) << (EC_CODE_SHIFT + shift)));
@@ -607,7 +607,7 @@ class EntropyCoder {
 
     void enc_shrink(int _size) {
         Inlines.OpusAssert(offs + end_offs <= _size);
-        Arrays.MemMove(buf, buf_ptr + (int) _size - (int) end_offs, buf_ptr + (int) storage - (int) end_offs, (int) end_offs);
+        Arrays.MemMove(buf, buf_ptr + _size - end_offs, buf_ptr + storage - end_offs, end_offs);
         this.storage = _size;
     }
 
@@ -697,7 +697,7 @@ class EntropyCoder {
 
         /*Clear any excess space and add any remaining extra bits to the last byte.*/
         if (error == 0) {
-            Arrays.MemSetWithOffset(buf, (byte) 0, buf_ptr + (int) offs, (int) storage - (int) offs - (int) end_offs);
+            Arrays.MemSetWithOffset(buf, (byte) 0, buf_ptr + offs, storage - offs - end_offs);
             if (used > 0) {
                 /*If there's no range coder data at all, give up.*/
                 if (end_offs >= storage) {

@@ -116,7 +116,7 @@ class BurgModified {
         CAb[0] = CAf[0] = C0 + Inlines.silk_SMMUL(((int) ((TuningParameters.FIND_LPC_COND_FAC) * ((long) 1 << (32)) + 0.5))/*Inlines.SILK_CONST(TuningParameters.FIND_LPC_COND_FAC, 32)*/, C0) + 1;
         /* Q(-rshifts) */
 
-        invGain_Q30 = (int) 1 << 30;
+        invGain_Q30 = 1 << 30;
         reached_max_gain = 0;
         for (n = 0; n < D; n++) {
             /* Update first row of correlation matrix (without first element) */
@@ -126,13 +126,13 @@ class BurgModified {
             if (rshifts > -2) {
                 for (s = 0; s < nb_subfr; s++) {
                     x_offset = x_ptr + s * subfr_length;
-                    x1 = -Inlines.silk_LSHIFT32((int) x[x_offset + n], 16 - rshifts);
+                    x1 = -Inlines.silk_LSHIFT32(x[x_offset + n], 16 - rshifts);
                     /* Q(16-rshifts) */
-                    x2 = -Inlines.silk_LSHIFT32((int) x[x_offset + subfr_length - n - 1], 16 - rshifts);
+                    x2 = -Inlines.silk_LSHIFT32(x[x_offset + subfr_length - n - 1], 16 - rshifts);
                     /* Q(16-rshifts) */
-                    tmp1 = Inlines.silk_LSHIFT32((int) x[x_offset + n], QA - 16);
+                    tmp1 = Inlines.silk_LSHIFT32(x[x_offset + n], QA - 16);
                     /* Q(QA-16) */
-                    tmp2 = Inlines.silk_LSHIFT32((int) x[x_offset + subfr_length - n - 1], QA - 16);
+                    tmp2 = Inlines.silk_LSHIFT32(x[x_offset + subfr_length - n - 1], QA - 16);
                     /* Q(QA-16) */
                     for (k = 0; k < n; k++) {
                         C_first_row[k] = Inlines.silk_SMLAWB(C_first_row[k], x1, x[x_offset + n - k - 1]);
@@ -159,13 +159,13 @@ class BurgModified {
             } else {
                 for (s = 0; s < nb_subfr; s++) {
                     x_offset = x_ptr + s * subfr_length;
-                    x1 = -Inlines.silk_LSHIFT32((int) x[x_offset + n], -rshifts);
+                    x1 = -Inlines.silk_LSHIFT32(x[x_offset + n], -rshifts);
                     /* Q( -rshifts ) */
-                    x2 = -Inlines.silk_LSHIFT32((int) x[x_offset + subfr_length - n - 1], -rshifts);
+                    x2 = -Inlines.silk_LSHIFT32(x[x_offset + subfr_length - n - 1], -rshifts);
                     /* Q( -rshifts ) */
-                    tmp1 = Inlines.silk_LSHIFT32((int) x[x_offset + n], 17);
+                    tmp1 = Inlines.silk_LSHIFT32(x[x_offset + n], 17);
                     /* Q17 */
-                    tmp2 = Inlines.silk_LSHIFT32((int) x[x_offset + subfr_length - n - 1], 17);
+                    tmp2 = Inlines.silk_LSHIFT32(x[x_offset + subfr_length - n - 1], 17);
                     /* Q17 */
                     for (k = 0; k < n; k++) {
                         C_first_row[k] = Inlines.silk_MLA(C_first_row[k], x1, x[x_offset + n - k - 1]);
@@ -185,10 +185,10 @@ class BurgModified {
                     /* Q17 */
                     for (k = 0; k <= n; k++) {
                         CAf[k] = Inlines.silk_SMLAWW(CAf[k], tmp1,
-                                Inlines.silk_LSHIFT32((int) x[x_offset + n - k], -rshifts - 1));
+                                Inlines.silk_LSHIFT32(x[x_offset + n - k], -rshifts - 1));
                         /* Q( -rshift ) */
                         CAb[k] = Inlines.silk_SMLAWW(CAb[k], tmp2,
-                                Inlines.silk_LSHIFT32((int) x[x_offset + subfr_length - n + k - 1], -rshifts - 1));
+                                Inlines.silk_LSHIFT32(x[x_offset + subfr_length - n + k - 1], -rshifts - 1));
                         /* Q( -rshift ) */
                     }
                 }
@@ -237,11 +237,11 @@ class BurgModified {
             }
 
             /* Update inverse prediction gain */
-            tmp1 = ((int) 1 << 30) - Inlines.silk_SMMUL(rc_Q31, rc_Q31);
+            tmp1 = (1 << 30) - Inlines.silk_SMMUL(rc_Q31, rc_Q31);
             tmp1 = Inlines.silk_LSHIFT(Inlines.silk_SMMUL(invGain_Q30, tmp1), 2);
             if (tmp1 <= minInvGain_Q30) {
                 /* Max prediction gain exceeded; set reflection coefficient such that max prediction gain is exactly hit */
-                tmp2 = ((int) 1 << 30) - Inlines.silk_DIV32_varQ(minInvGain_Q30, invGain_Q30, 30);
+                tmp2 = (1 << 30) - Inlines.silk_DIV32_varQ(minInvGain_Q30, invGain_Q30, 30);
                 /* Q30 */
                 rc_Q31 = Inlines.silk_SQRT_APPROX(tmp2);
                 /* Q15 */
@@ -314,12 +314,12 @@ class BurgModified {
             }
             /* Approximate residual energy */
             res_nrg.Val = Inlines.silk_LSHIFT(Inlines.silk_SMMUL(invGain_Q30, C0), 2);
-            res_nrg_Q.Val = 0 - rshifts;
+            res_nrg_Q.Val = -rshifts;
         } else {
             /* Return residual energy */
             nrg = CAf[0];
             /* Q( -rshifts ) */
-            tmp1 = (int) 1 << 16;
+            tmp1 = 1 << 16;
             /* Q16 */
             for (k = 0; k < D; k++) {
                 Atmp1 = Inlines.silk_RSHIFT_ROUND(Af_QA[k], QA - 16);

@@ -62,17 +62,17 @@ class KissFFT {
         int i;
         {
             short tw;
-            tw = ((short) (0.5 + (0.7071067812f) * (((int) 1) << (15))))/*Inlines.QCONST16(0.7071067812f, 15)*/;
+            tw = ((short) (0.5 + (0.7071067812f) * (1 << (15))))/*Inlines.QCONST16(0.7071067812f, 15)*/;
             /* We know that m==4 here because the radix-2 is just after a radix-4 */
             Inlines.OpusAssert(m == 4);
             for (i = 0; i < N; i++) {
                 int t_r, t_i;
                 Fout2 = fout_ptr + 8;
-                t_r = Fout[Fout2 + 0];
+                t_r = Fout[Fout2];
                 t_i = Fout[Fout2 + 1];
-                Fout[Fout2 + 0] = Fout[fout_ptr + 0] - t_r;
+                Fout[Fout2] = Fout[fout_ptr] - t_r;
                 Fout[Fout2 + 1] = Fout[fout_ptr + 1] - t_i;
-                Fout[fout_ptr + 0] += t_r;
+                Fout[fout_ptr] += t_r;
                 Fout[fout_ptr + 1] += t_i;
 
                 t_r = S_MUL(Fout[Fout2 + 2] + Fout[Fout2 + 3], tw);
@@ -83,14 +83,14 @@ class KissFFT {
                 Fout[fout_ptr + 3] += t_i;
 
                 t_r = Fout[Fout2 + 5];
-                t_i = 0 - Fout[Fout2 + 4];
+                t_i = -Fout[Fout2 + 4];
                 Fout[Fout2 + 4] = Fout[fout_ptr + 4] - t_r;
                 Fout[Fout2 + 5] = Fout[fout_ptr + 5] - t_i;
                 Fout[fout_ptr + 4] += t_r;
                 Fout[fout_ptr + 5] += t_i;
 
                 t_r = S_MUL(Fout[Fout2 + 7] - Fout[Fout2 + 6], tw);
-                t_i = S_MUL(0 - Fout[Fout2 + 7] - Fout[Fout2 + 6], tw);
+                t_i = S_MUL(-Fout[Fout2 + 7] - Fout[Fout2 + 6], tw);
                 Fout[Fout2 + 6] = Fout[fout_ptr + 6] - t_r;
                 Fout[Fout2 + 7] = Fout[fout_ptr + 7] - t_i;
                 Fout[fout_ptr + 6] += t_r;
@@ -115,15 +115,15 @@ class KissFFT {
             /* Degenerate case where all the twiddles are 1. */
             int scratch0, scratch1, scratch2, scratch3;
             for (i = 0; i < N; i++) {
-                scratch0 = Fout[fout_ptr + 0] - Fout[fout_ptr + 4];
+                scratch0 = Fout[fout_ptr] - Fout[fout_ptr + 4];
                 scratch1 = Fout[fout_ptr + 1] - Fout[fout_ptr + 5];
-                Fout[fout_ptr + 0] += Fout[fout_ptr + 4];
+                Fout[fout_ptr] += Fout[fout_ptr + 4];
                 Fout[fout_ptr + 1] += Fout[fout_ptr + 5];
                 scratch2 = Fout[fout_ptr + 2] + Fout[fout_ptr + 6];
                 scratch3 = Fout[fout_ptr + 3] + Fout[fout_ptr + 7];
-                Fout[fout_ptr + 4] = Fout[fout_ptr + 0] - scratch2;
+                Fout[fout_ptr + 4] = Fout[fout_ptr] - scratch2;
                 Fout[fout_ptr + 5] = Fout[fout_ptr + 1] - scratch3;
-                Fout[fout_ptr + 0] += scratch2;
+                Fout[fout_ptr] += scratch2;
                 Fout[fout_ptr + 1] += scratch3;
                 scratch2 = Fout[fout_ptr + 2] - Fout[fout_ptr + 6];
                 scratch3 = Fout[fout_ptr + 3] - Fout[fout_ptr + 7];
@@ -217,13 +217,13 @@ class KissFFT {
                 tw1 += fstride * 2;
                 tw2 += fstride * 4;
 
-                Fout[fout_ptr + m1] = Fout[fout_ptr + 0] - HALF_OF(scratch6);
+                Fout[fout_ptr + m1] = Fout[fout_ptr] - HALF_OF(scratch6);
                 Fout[fout_ptr + m1 + 1] = Fout[fout_ptr + 1] - HALF_OF(scratch7);
 
                 scratch0 = S_MUL(scratch0, -28378);
                 scratch1 = S_MUL(scratch1, -28378);
 
-                Fout[fout_ptr + 0] += scratch6;
+                Fout[fout_ptr] += scratch6;
                 Fout[fout_ptr + 1] += scratch7;
 
                 Fout[fout_ptr + m2] = Fout[fout_ptr + m1] + scratch1;
@@ -273,17 +273,17 @@ class KissFFT {
 
             /* For non-custom modes, m is guaranteed to be a multiple of 4. */
             for (u = 0; u < m; ++u) {
-                scratch0 = Fout[Fout0 + 0];
+                scratch0 = Fout[Fout0];
                 scratch1 = Fout[Fout0 + 1];
 
-                scratch2 = (S_MUL(Fout[Fout1 + 0], st.twiddles[tw1]) - S_MUL(Fout[Fout1 + 1], st.twiddles[tw1 + 1]));
-                scratch3 = (S_MUL(Fout[Fout1 + 0], st.twiddles[tw1 + 1]) + S_MUL(Fout[Fout1 + 1], st.twiddles[tw1]));
-                scratch4 = (S_MUL(Fout[Fout2 + 0], st.twiddles[tw2]) - S_MUL(Fout[Fout2 + 1], st.twiddles[tw2 + 1]));
-                scratch5 = (S_MUL(Fout[Fout2 + 0], st.twiddles[tw2 + 1]) + S_MUL(Fout[Fout2 + 1], st.twiddles[tw2]));
-                scratch6 = (S_MUL(Fout[Fout3 + 0], st.twiddles[tw3]) - S_MUL(Fout[Fout3 + 1], st.twiddles[tw3 + 1]));
-                scratch7 = (S_MUL(Fout[Fout3 + 0], st.twiddles[tw3 + 1]) + S_MUL(Fout[Fout3 + 1], st.twiddles[tw3]));
-                scratch8 = (S_MUL(Fout[Fout4 + 0], st.twiddles[tw4]) - S_MUL(Fout[Fout4 + 1], st.twiddles[tw4 + 1]));
-                scratch9 = (S_MUL(Fout[Fout4 + 0], st.twiddles[tw4 + 1]) + S_MUL(Fout[Fout4 + 1], st.twiddles[tw4]));
+                scratch2 = (S_MUL(Fout[Fout1], st.twiddles[tw1]) - S_MUL(Fout[Fout1 + 1], st.twiddles[tw1 + 1]));
+                scratch3 = (S_MUL(Fout[Fout1], st.twiddles[tw1 + 1]) + S_MUL(Fout[Fout1 + 1], st.twiddles[tw1]));
+                scratch4 = (S_MUL(Fout[Fout2], st.twiddles[tw2]) - S_MUL(Fout[Fout2 + 1], st.twiddles[tw2 + 1]));
+                scratch5 = (S_MUL(Fout[Fout2], st.twiddles[tw2 + 1]) + S_MUL(Fout[Fout2 + 1], st.twiddles[tw2]));
+                scratch6 = (S_MUL(Fout[Fout3], st.twiddles[tw3]) - S_MUL(Fout[Fout3 + 1], st.twiddles[tw3 + 1]));
+                scratch7 = (S_MUL(Fout[Fout3], st.twiddles[tw3 + 1]) + S_MUL(Fout[Fout3 + 1], st.twiddles[tw3]));
+                scratch8 = (S_MUL(Fout[Fout4], st.twiddles[tw4]) - S_MUL(Fout[Fout4 + 1], st.twiddles[tw4 + 1]));
+                scratch9 = (S_MUL(Fout[Fout4], st.twiddles[tw4 + 1]) + S_MUL(Fout[Fout4 + 1], st.twiddles[tw4]));
 
                 tw1 += (2 * fstride);
                 tw2 += (4 * fstride);
@@ -299,28 +299,28 @@ class KissFFT {
                 scratch18 = scratch4 - scratch6;
                 scratch19 = scratch5 - scratch7;
 
-                Fout[Fout0 + 0] += scratch14 + scratch16;
+                Fout[Fout0] += scratch14 + scratch16;
                 Fout[Fout0 + 1] += scratch15 + scratch17;
 
                 scratch10 = scratch0 + S_MUL(scratch14, ya_r) + S_MUL(scratch16, yb_r);
                 scratch11 = scratch1 + S_MUL(scratch15, ya_r) + S_MUL(scratch17, yb_r);
 
                 scratch12 = S_MUL(scratch21, ya_i) + S_MUL(scratch19, yb_i);
-                scratch13 = 0 - S_MUL(scratch20, ya_i) - S_MUL(scratch18, yb_i);
+                scratch13 = -S_MUL(scratch20, ya_i) - S_MUL(scratch18, yb_i);
 
-                Fout[Fout1 + 0] = scratch10 - scratch12;
+                Fout[Fout1] = scratch10 - scratch12;
                 Fout[Fout1 + 1] = scratch11 - scratch13;
-                Fout[Fout4 + 0] = scratch10 + scratch12;
+                Fout[Fout4] = scratch10 + scratch12;
                 Fout[Fout4 + 1] = scratch11 + scratch13;
 
                 scratch22 = scratch0 + S_MUL(scratch14, yb_r) + S_MUL(scratch16, ya_r);
                 scratch23 = scratch1 + S_MUL(scratch15, yb_r) + S_MUL(scratch17, ya_r);
-                scratch24 = 0 - S_MUL(scratch21, yb_i) + S_MUL(scratch19, ya_i);
+                scratch24 = -S_MUL(scratch21, yb_i) + S_MUL(scratch19, ya_i);
                 scratch25 = S_MUL(scratch20, yb_i) - S_MUL(scratch18, ya_i);
 
-                Fout[Fout2 + 0] = scratch22 + scratch24;
+                Fout[Fout2] = scratch22 + scratch24;
                 Fout[Fout2 + 1] = scratch23 + scratch25;
-                Fout[Fout3 + 0] = scratch22 - scratch24;
+                Fout[Fout3] = scratch22 - scratch24;
                 Fout[Fout3 + 1] = scratch23 - scratch25;
 
                 Fout0 += 2;
@@ -341,7 +341,7 @@ class KissFFT {
         int shift;
 
         /* st.shift can be -1 */
-        shift = st.shift > 0 ? st.shift : 0;
+        shift = Math.max(st.shift, 0);
 
         fstride[0] = 1;
         L = 0;

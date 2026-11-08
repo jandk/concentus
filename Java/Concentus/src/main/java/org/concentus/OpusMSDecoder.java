@@ -36,7 +36,7 @@ package org.concentus;
 
 public class OpusMSDecoder {
 
-    ChannelLayout layout = new ChannelLayout();
+    final ChannelLayout layout = new ChannelLayout();
     OpusDecoder[] decoders = null;
 
     private OpusMSDecoder(int nb_streams, int nb_coupled_streams) {

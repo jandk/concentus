@@ -112,10 +112,10 @@ class FindLPC {
                 shift = rshift0.Val - rshift1.Val;
                 if (shift >= 0) {
                     res_nrg1.Val = Inlines.silk_RSHIFT(res_nrg1.Val, shift);
-                    res_nrg_interp_Q = 0 - rshift0.Val;
+                    res_nrg_interp_Q = -rshift0.Val;
                 } else {
-                    res_nrg0.Val = Inlines.silk_RSHIFT(res_nrg0.Val, 0 - shift);
-                    res_nrg_interp_Q = 0 - rshift1.Val;
+                    res_nrg0.Val = Inlines.silk_RSHIFT(res_nrg0.Val, -shift);
+                    res_nrg_interp_Q = -rshift1.Val;
                 }
                 res_nrg_interp = Inlines.silk_ADD32(res_nrg0.Val, res_nrg1.Val);
 
@@ -123,22 +123,22 @@ class FindLPC {
                 shift = res_nrg_interp_Q - res_nrg_Q;
                 if (shift >= 0) {
                     if (Inlines.silk_RSHIFT(res_nrg_interp, shift) < res_nrg) {
-                        isInterpLower = (true ? 1 : 0);
+                        isInterpLower = (1);
                     } else {
-                        isInterpLower = (false ? 1 : 0);
+                        isInterpLower = (0);
                     }
                 } else if (-shift < 32) {
                     if (res_nrg_interp < Inlines.silk_RSHIFT(res_nrg, -shift)) {
-                        isInterpLower = (true ? 1 : 0);
+                        isInterpLower = (1);
                     } else {
-                        isInterpLower = (false ? 1 : 0);
+                        isInterpLower = (0);
                     }
                 } else {
-                    isInterpLower = (false ? 1 : 0);
+                    isInterpLower = (0);
                 }
 
                 /* Determine whether current interpolated NLSFs are best so far */
-                if (isInterpLower == (true ? 1 : 0)) {
+                if (isInterpLower == (1)) {
                     /* Interpolation has lower residual energy */
                     res_nrg = res_nrg_interp;
                     res_nrg_Q = res_nrg_interp_Q;

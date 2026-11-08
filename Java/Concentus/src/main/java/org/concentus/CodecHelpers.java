@@ -475,7 +475,7 @@ public class CodecHelpers {
         mem.XX = Inlines.MAX32(0, mem.XX);
         mem.XY = Inlines.MAX32(0, mem.XY);
         mem.YY = Inlines.MAX32(0, mem.YY);
-        if (Inlines.MAX32(mem.XX, mem.YY) > ((short) (0.5 + (8e-4f) * (((int) 1) << (18))))/*Inlines.QCONST16(8e-4f, 18)*/) {
+        if (Inlines.MAX32(mem.XX, mem.YY) > ((short) (0.5 + (8e-4f) * (1 << (18))))/*Inlines.QCONST16(8e-4f, 18)*/) {
             sqrt_xx = Inlines.celt_sqrt(mem.XX);
             sqrt_yy = Inlines.celt_sqrt(mem.YY);
             qrrt_xx = Inlines.celt_sqrt(sqrt_xx);
@@ -485,11 +485,11 @@ public class CodecHelpers {
             corr = Inlines.SHR32(Inlines.frac_div32(mem.XY, CeltConstants.EPSILON + Inlines.MULT16_16(sqrt_xx, sqrt_yy)), 16);
             /* Approximate loudness difference */
             ldiff = CeltConstants.Q15ONE * Inlines.ABS16(qrrt_xx - qrrt_yy) / (CeltConstants.EPSILON + qrrt_xx + qrrt_yy);
-            width = Inlines.MULT16_16_Q15(Inlines.celt_sqrt(((int) (0.5 + (1.0f) * (((int) 1) << (30))))/*Inlines.QCONST32(1.0f, 30)*/ - Inlines.MULT16_16(corr, corr)), ldiff);
+            width = Inlines.MULT16_16_Q15(Inlines.celt_sqrt(((int) (0.5 + (1.0f) * (1 << (30))))/*Inlines.QCONST32(1.0f, 30)*/ - Inlines.MULT16_16(corr, corr)), ldiff);
             /* Smoothing over one second */
             mem.smoothed_width += (width - mem.smoothed_width) / frame_rate;
             /* Peak follower */
-            mem.max_follower = Inlines.MAX16(mem.max_follower - ((short) (0.5 + (.02f) * (((int) 1) << (15))))/*Inlines.QCONST16(.02f, 15)*/ / frame_rate, mem.smoothed_width);
+            mem.max_follower = Inlines.MAX16(mem.max_follower - ((short) (0.5 + (.02f) * (1 << (15))))/*Inlines.QCONST16(.02f, 15)*/ / frame_rate, mem.smoothed_width);
         } else {
             width = 0;
             corr = CeltConstants.Q15ONE;

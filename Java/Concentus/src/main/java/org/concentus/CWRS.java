@@ -214,7 +214,7 @@ year=1986
                 row = CELT_PVQ_U_ROW[_n];
                 /*Are the pulses in this dimension negative?*/
                 p = CeltTables.CELT_PVQ_U_DATA[row + _k + 1];
-                s = 0 - (_i >= p ? 1 : 0);
+                s = -(_i >= p ? 1 : 0);
                 _i = _i - Inlines.CapToUInt32(p & s);
                 /*Count how many pulses were placed in this dimension.*/
                 k0 = _k;
@@ -246,7 +246,7 @@ year=1986
                     _y[y_ptr++] = 0;
                 } else {
                     /*Are the pulses in this dimension negative?*/
-                    s = 0 - (_i >= q ? 1 : 0);
+                    s = -(_i >= q ? 1 : 0);
                     _i = _i - Inlines.CapToUInt32(q & s);
                     /*Count how many pulses were placed in this dimension.*/
                     k0 = _k;
@@ -265,7 +265,7 @@ year=1986
 
         /*_n==2*/
         p = (2L * _k + 1);
-        s = 0 - (_i >= p ? 1 : 0);
+        s = -(_i >= p ? 1 : 0);
         _i = _i - Inlines.CapToUInt32(p & s);
         k0 = _k;
         _k = (int) ((_i + 1) >> 1);

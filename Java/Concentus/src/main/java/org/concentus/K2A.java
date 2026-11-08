@@ -49,7 +49,7 @@ class K2A {
             for (n = 0; n < k; n++) {
                 A_Q24[n] = Inlines.silk_SMLAWB(A_Q24[n], Inlines.silk_LSHIFT(Atmp[k - n - 1], 1), rc_Q15[k]);
             }
-            A_Q24[k] = 0 - Inlines.silk_LSHIFT((int) rc_Q15[k], 9);
+            A_Q24[k] = -Inlines.silk_LSHIFT(rc_Q15[k], 9);
         }
     }
 
@@ -69,7 +69,7 @@ class K2A {
             for (n = 0; n < k; n++) {
                 A_Q24[n] = Inlines.silk_SMLAWW(A_Q24[n], Atmp[k - n - 1], rc_Q16[k]);
             }
-            A_Q24[k] = 0 - Inlines.silk_LSHIFT(rc_Q16[k], 8);
+            A_Q24[k] = -Inlines.silk_LSHIFT(rc_Q16[k], 8);
         }
     }
 }

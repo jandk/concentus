@@ -387,7 +387,7 @@ public class OpusEncoder {
                 analysis_read_subframe_bak = analysis.read_subframe;
                 Analysis.run_analysis(analysis,
                         celt_mode,
-                        analysis_pcm != null ? analysis_pcm : null,
+                        analysis_pcm,
                         analysis_pcm_ptr,
                         analysis_size,
                         frame_size,
@@ -1063,7 +1063,7 @@ public class OpusEncoder {
                     nb_compr_bytes = len + bytes_target - (silk_mode.bitRate * frame_size) / (8 * Fs);
                 } else {
                     /* check if SILK used up too much */
-                    nb_compr_bytes = len > bytes_target ? len : bytes_target;
+                    nb_compr_bytes = Math.max(len, bytes_target);
                 }
             } else if (use_vbr != 0) {
                 int bonus = 0;

@@ -707,8 +707,6 @@ class CeltTables {
         fft_state48000_960_0.twiddles = fft_twiddles48000_960;
     }
 
-    ;
-
     static final FFTState fft_state48000_960_1 = new FFTState();
 
     static {
@@ -720,8 +718,6 @@ class CeltTables {
         fft_state48000_960_1.bitrev = fft_bitrev240;
         fft_state48000_960_1.twiddles = fft_twiddles48000_960;
     }
-
-    ;
 
     static final FFTState fft_state48000_960_2 = new FFTState();
 
@@ -735,8 +731,6 @@ class CeltTables {
         fft_state48000_960_2.twiddles = fft_twiddles48000_960;
     }
 
-    ;
-
     static final FFTState fft_state48000_960_3 = new FFTState();
 
     static {
@@ -748,8 +742,6 @@ class CeltTables {
         fft_state48000_960_3.bitrev = fft_bitrev60;
         fft_state48000_960_3.twiddles = fft_twiddles48000_960;
     }
-
-    ;
 
     static final short[] mdct_twiddles960 /*1800*/ = {
             32767, 32767, 32767, 32766, 32765,

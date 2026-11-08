@@ -131,10 +131,10 @@ class EncodePulses {
 
         // unrolled loop
         for (i = 0; i < iter * SilkConstants.SHELL_CODEC_FRAME_LENGTH; i += 4) {
-            abs_pulses[i + 0] = (int) Inlines.silk_abs(pulses[i + 0]);
-            abs_pulses[i + 1] = (int) Inlines.silk_abs(pulses[i + 1]);
-            abs_pulses[i + 2] = (int) Inlines.silk_abs(pulses[i + 2]);
-            abs_pulses[i + 3] = (int) Inlines.silk_abs(pulses[i + 3]);
+            abs_pulses[i] = Inlines.silk_abs(pulses[i]);
+            abs_pulses[i + 1] = Inlines.silk_abs(pulses[i + 1]);
+            abs_pulses[i + 2] = Inlines.silk_abs(pulses[i + 2]);
+            abs_pulses[i + 3] = Inlines.silk_abs(pulses[i + 3]);
         }
 
         /* Calc sum pulses per shell code frame */

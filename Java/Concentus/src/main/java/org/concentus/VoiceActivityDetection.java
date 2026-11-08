@@ -242,7 +242,7 @@ class VoiceActivityDetection {
                 /* Q14 */
 
                 /* Tilt measure */
-                if (speech_nrg < ((int) 1 << 20)) {
+                if (speech_nrg < (1 << 20)) {
                     /* Scale down SNR value for small subband speech energies */
                     SNR_Q7 = Inlines.silk_SMULWB(Inlines.silk_LSHIFT(Inlines.silk_SQRT_APPROX(speech_nrg), 6), SNR_Q7);
                 }
@@ -317,7 +317,7 @@ class VoiceActivityDetection {
          * ********************************
          */
         /* Smoothing coefficient */
-        smooth_coef_Q16 = Inlines.silk_SMULWB(SilkConstants.VAD_SNR_SMOOTH_COEF_Q18, Inlines.silk_SMULWB((int) SA_Q15, SA_Q15));
+        smooth_coef_Q16 = Inlines.silk_SMULWB(SilkConstants.VAD_SNR_SMOOTH_COEF_Q18, Inlines.silk_SMULWB(SA_Q15, SA_Q15));
 
         if (psEncC.frame_length == 10 * psEncC.fs_kHz) {
             smooth_coef_Q16 >>= 1;

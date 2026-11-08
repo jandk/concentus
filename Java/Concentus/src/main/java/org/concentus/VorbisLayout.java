@@ -42,9 +42,9 @@ class VorbisLayout {
         mapping = map;
     }
 
-    int nb_streams;
-    int nb_coupled_streams;
-    short[] mapping;
+    final int nb_streams;
+    final int nb_coupled_streams;
+    final short[] mapping;
 
     /* Index is nb_channel-1*/
     static final VorbisLayout[] vorbis_mappings = {

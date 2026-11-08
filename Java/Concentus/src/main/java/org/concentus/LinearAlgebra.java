@@ -140,13 +140,13 @@ class LinearAlgebra {
                 /* Q36 */
                 one_div_diag_Q40 = Inlines.silk_LSHIFT(one_div_diag_Q36, 4);
                 /* Q40 */
-                err = Inlines.silk_SUB32((int) 1 << 24, Inlines.silk_SMULWW(tmp_32, one_div_diag_Q40));
+                err = Inlines.silk_SUB32(1 << 24, Inlines.silk_SMULWW(tmp_32, one_div_diag_Q40));
                 /* Q24 */
                 one_div_diag_Q48 = Inlines.silk_SMULWW(err, one_div_diag_Q40);
                 /* Q48 */
 
                 /* Save 1/Ds */
-                inv_D[(j * 2) + 0] = one_div_diag_Q36;
+                inv_D[(j * 2)] = one_div_diag_Q36;
                 inv_D[(j * 2) + 1] = one_div_diag_Q48;
 
                 Inlines.MatrixSet(L_Q16, j, j, M, 65536);
@@ -187,7 +187,7 @@ class LinearAlgebra {
         int one_div_diag_Q36, one_div_diag_Q48;
 
         for (i = 0; i < M; i++) {
-            one_div_diag_Q36 = inv_D[(i * 2) + 0];
+            one_div_diag_Q36 = inv_D[(i * 2)];
             one_div_diag_Q48 = inv_D[(i * 2) + 1];
 
             tmp_32 = T[i];

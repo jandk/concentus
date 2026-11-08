@@ -103,9 +103,9 @@ class NLSF {
 
         // First value
         tmp1_int = Inlines.silk_max_int(pNLSF_Q15[0], 1);
-        tmp1_int = Inlines.silk_DIV32((int) 1 << (15 + SilkConstants.NLSF_W_Q), tmp1_int);
+        tmp1_int = Inlines.silk_DIV32(1 << (15 + SilkConstants.NLSF_W_Q), tmp1_int);
         tmp2_int = Inlines.silk_max_int(pNLSF_Q15[1] - pNLSF_Q15[0], 1);
-        tmp2_int = Inlines.silk_DIV32((int) 1 << (15 + SilkConstants.NLSF_W_Q), tmp2_int);
+        tmp2_int = Inlines.silk_DIV32(1 << (15 + SilkConstants.NLSF_W_Q), tmp2_int);
         pNLSFW_Q_OUT[0] = (short) Inlines.silk_min_int(tmp1_int + tmp2_int, Short.MAX_VALUE);
 
         Inlines.OpusAssert(pNLSFW_Q_OUT[0] > 0);
@@ -113,19 +113,19 @@ class NLSF {
         // Main loop
         for (k = 1; k < D - 1; k += 2) {
             tmp1_int = Inlines.silk_max_int(pNLSF_Q15[k + 1] - pNLSF_Q15[k], 1);
-            tmp1_int = Inlines.silk_DIV32((int) 1 << (15 + SilkConstants.NLSF_W_Q), tmp1_int);
+            tmp1_int = Inlines.silk_DIV32(1 << (15 + SilkConstants.NLSF_W_Q), tmp1_int);
             pNLSFW_Q_OUT[k] = (short) Inlines.silk_min_int(tmp1_int + tmp2_int, Short.MAX_VALUE);
             Inlines.OpusAssert(pNLSFW_Q_OUT[k] > 0);
 
             tmp2_int = Inlines.silk_max_int(pNLSF_Q15[k + 2] - pNLSF_Q15[k + 1], 1);
-            tmp2_int = Inlines.silk_DIV32((int) 1 << (15 + SilkConstants.NLSF_W_Q), tmp2_int);
+            tmp2_int = Inlines.silk_DIV32(1 << (15 + SilkConstants.NLSF_W_Q), tmp2_int);
             pNLSFW_Q_OUT[k + 1] = (short) Inlines.silk_min_int(tmp1_int + tmp2_int, Short.MAX_VALUE);
             Inlines.OpusAssert(pNLSFW_Q_OUT[k + 1] > 0);
         }
 
         // Last value
         tmp1_int = Inlines.silk_max_int((1 << 15) - pNLSF_Q15[D - 1], 1);
-        tmp1_int = Inlines.silk_DIV32((int) 1 << (15 + SilkConstants.NLSF_W_Q), tmp1_int);
+        tmp1_int = Inlines.silk_DIV32(1 << (15 + SilkConstants.NLSF_W_Q), tmp1_int);
         pNLSFW_Q_OUT[D - 1] = (short) Inlines.silk_min_int(tmp1_int + tmp2_int, Short.MAX_VALUE);
 
         Inlines.OpusAssert(pNLSFW_Q_OUT[D - 1] > 0);
@@ -151,14 +151,14 @@ class NLSF {
 
         out_Q10 = 0;
         for (i = order - 1; i >= 0; i--) {
-            pred_Q10 = Inlines.silk_RSHIFT(Inlines.silk_SMULBB(out_Q10, (short) pred_coef_Q8[i]), 8);
-            out_Q10 = Inlines.silk_LSHIFT16((short) indices[indices_ptr + i], 10);
+            pred_Q10 = Inlines.silk_RSHIFT(Inlines.silk_SMULBB(out_Q10, pred_coef_Q8[i]), 8);
+            out_Q10 = Inlines.silk_LSHIFT16(indices[indices_ptr + i], 10);
             if (out_Q10 > 0) {
                 out_Q10 = Inlines.silk_SUB16(out_Q10, (short) (((int) ((SilkConstants.NLSF_QUANT_LEVEL_ADJ) * ((long) 1 << (10)) + 0.5))/*Inlines.SILK_CONST(SilkConstants.NLSF_QUANT_LEVEL_ADJ, 10)*/));
             } else if (out_Q10 < 0) {
                 out_Q10 = Inlines.silk_ADD16(out_Q10, (short) (((int) ((SilkConstants.NLSF_QUANT_LEVEL_ADJ) * ((long) 1 << (10)) + 0.5))/*Inlines.SILK_CONST(SilkConstants.NLSF_QUANT_LEVEL_ADJ, 10)*/));
             }
-            out_Q10 = (short) (Inlines.silk_SMLAWB(pred_Q10, (int) out_Q10, quant_step_size_Q16));
+            out_Q10 = (short) (Inlines.silk_SMLAWB(pred_Q10, out_Q10, quant_step_size_Q16));
             x_Q10[i] = out_Q10;
         }
     }
@@ -311,7 +311,7 @@ class NLSF {
         int pCB_element = NLSFIndices[0] * psNLSF_CB.order;
 
         for (i = 0; i < psNLSF_CB.order; i++) {
-            pNLSF_Q15[i] = Inlines.silk_LSHIFT16((short) pCB[pCB_element + i], 7);
+            pNLSF_Q15[i] = Inlines.silk_LSHIFT16(pCB[pCB_element + i], 7);
         }
 
         // Unpack entropy table indices and predictor for current CB1 index
@@ -330,8 +330,8 @@ class NLSF {
 
         // Apply inverse square-rooted weights and add to output
         for (i = 0; i < psNLSF_CB.order; i++) {
-            W_tmp_Q9 = Inlines.silk_SQRT_APPROX(Inlines.silk_LSHIFT((int) W_tmp_QW[i], 18 - SilkConstants.NLSF_W_Q));
-            NLSF_Q15_tmp = Inlines.silk_ADD32(pNLSF_Q15[i], Inlines.silk_DIV32_16(Inlines.silk_LSHIFT((int) res_Q10[i], 14), (short) (W_tmp_Q9)));
+            W_tmp_Q9 = Inlines.silk_SQRT_APPROX(Inlines.silk_LSHIFT(W_tmp_QW[i], 18 - SilkConstants.NLSF_W_Q));
+            NLSF_Q15_tmp = Inlines.silk_ADD32(pNLSF_Q15[i], Inlines.silk_DIV32_16(Inlines.silk_LSHIFT(res_Q10[i], 14), (short) (W_tmp_Q9)));
             pNLSF_Q15[i] = (short) (Inlines.silk_LIMIT(NLSF_Q15_tmp, 0, 32767));
         }
 
@@ -383,7 +383,7 @@ class NLSF {
         int[] out0_Q10_table = new int[2 * SilkConstants.NLSF_QUANT_MAX_AMPLITUDE_EXT];
         int[] out1_Q10_table = new int[2 * SilkConstants.NLSF_QUANT_MAX_AMPLITUDE_EXT];
 
-        for (i = 0 - SilkConstants.NLSF_QUANT_MAX_AMPLITUDE_EXT; i <= SilkConstants.NLSF_QUANT_MAX_AMPLITUDE_EXT - 1; i++) {
+        for (i = -SilkConstants.NLSF_QUANT_MAX_AMPLITUDE_EXT; i <= SilkConstants.NLSF_QUANT_MAX_AMPLITUDE_EXT - 1; i++) {
             out0_Q10 = Inlines.silk_LSHIFT(i, 10);
             out1_Q10 = Inlines.silk_ADD16((short) (out0_Q10), (short) 1024);
 
@@ -399,8 +399,8 @@ class NLSF {
                 out1_Q10 = Inlines.silk_ADD16((short) (out1_Q10), (short) (((int) ((SilkConstants.NLSF_QUANT_LEVEL_ADJ) * ((long) 1 << (10)) + 0.5))/*Inlines.SILK_CONST(SilkConstants.NLSF_QUANT_LEVEL_ADJ, 10)*/));
             }
 
-            out0_Q10_table[i + SilkConstants.NLSF_QUANT_MAX_AMPLITUDE_EXT] = Inlines.silk_SMULWB((int) out0_Q10, quant_step_size_Q16);
-            out1_Q10_table[i + SilkConstants.NLSF_QUANT_MAX_AMPLITUDE_EXT] = Inlines.silk_SMULWB((int) out1_Q10, quant_step_size_Q16);
+            out0_Q10_table[i + SilkConstants.NLSF_QUANT_MAX_AMPLITUDE_EXT] = Inlines.silk_SMULWB(out0_Q10, quant_step_size_Q16);
+            out1_Q10_table[i + SilkConstants.NLSF_QUANT_MAX_AMPLITUDE_EXT] = Inlines.silk_SMULWB(out1_Q10, quant_step_size_Q16);
         }
 
         Inlines.OpusAssert((SilkConstants.NLSF_QUANT_DEL_DEC_STATES & (SilkConstants.NLSF_QUANT_DEL_DEC_STATES - 1)) == 0); // must be power of two
@@ -410,14 +410,14 @@ class NLSF {
         prev_out_Q10[0] = 0;
 
         for (i = order - 1; ; i--) {
-            pred_coef_Q16 = Inlines.silk_LSHIFT((int) pred_coef_Q8[i], 8);
+            pred_coef_Q16 = Inlines.silk_LSHIFT(pred_coef_Q8[i], 8);
             in_Q10 = x_Q10[i];
 
             for (j = 0; j < nStates; j++) {
                 pred_Q10 = Inlines.silk_SMULWB(pred_coef_Q16, prev_out_Q10[j]);
                 res_Q10 = Inlines.silk_SUB16((short) (in_Q10), (short) (pred_Q10));
-                ind_tmp = Inlines.silk_SMULWB((int) inv_quant_step_size_Q6, res_Q10);
-                ind_tmp = Inlines.silk_LIMIT(ind_tmp, 0 - SilkConstants.NLSF_QUANT_MAX_AMPLITUDE_EXT, SilkConstants.NLSF_QUANT_MAX_AMPLITUDE_EXT - 1);
+                ind_tmp = Inlines.silk_SMULWB(inv_quant_step_size_Q6, res_Q10);
+                ind_tmp = Inlines.silk_LIMIT(ind_tmp, -SilkConstants.NLSF_QUANT_MAX_AMPLITUDE_EXT, SilkConstants.NLSF_QUANT_MAX_AMPLITUDE_EXT - 1);
                 ind[j][i] = (byte) ind_tmp;
                 rates_Q5 = ec_ix[i] + ind_tmp;
 
@@ -439,8 +439,8 @@ class NLSF {
                         rate0_Q5 = Inlines.silk_SMLABB(280 - (43 * SilkConstants.NLSF_QUANT_MAX_AMPLITUDE), 43, ind_tmp);
                         rate1_Q5 = Inlines.silk_ADD16((short) (rate0_Q5), (short) 43);
                     }
-                } else if (ind_tmp <= 0 - SilkConstants.NLSF_QUANT_MAX_AMPLITUDE) {
-                    if (ind_tmp == 0 - SilkConstants.NLSF_QUANT_MAX_AMPLITUDE) {
+                } else if (ind_tmp <= -SilkConstants.NLSF_QUANT_MAX_AMPLITUDE) {
+                    if (ind_tmp == -SilkConstants.NLSF_QUANT_MAX_AMPLITUDE) {
                         rate0_Q5 = 280;
                         rate1_Q5 = ec_rates_Q5[rates_Q5 + 1 + SilkConstants.NLSF_QUANT_MAX_AMPLITUDE];
                     } else {
@@ -545,7 +545,7 @@ class NLSF {
 
         for (j = 0; j < order; j++) {
             indices[j] = ind[ind_tmp & (SilkConstants.NLSF_QUANT_DEL_DEC_STATES - 1)][j];
-            Inlines.OpusAssert(indices[j] >= 0 - SilkConstants.NLSF_QUANT_MAX_AMPLITUDE_EXT);
+            Inlines.OpusAssert(indices[j] >= -SilkConstants.NLSF_QUANT_MAX_AMPLITUDE_EXT);
             Inlines.OpusAssert(indices[j] <= SilkConstants.NLSF_QUANT_MAX_AMPLITUDE_EXT);
         }
 
@@ -616,7 +616,7 @@ class NLSF {
             // Residual after first stage
             pCB_element = ind1 * psNLSF_CB.order; // opt: potential 1:2 partitioned buffer
             for (i = 0; i < psNLSF_CB.order; i++) {
-                NLSF_tmp_Q15[i] = Inlines.silk_LSHIFT16((short) pCB[pCB_element + i], 7);
+                NLSF_tmp_Q15[i] = Inlines.silk_LSHIFT16(pCB[pCB_element + i], 7);
                 res_Q15[i] = (short) (pNLSF_Q15[i] - NLSF_tmp_Q15[i]);
             }
 
@@ -625,13 +625,13 @@ class NLSF {
 
             // Apply square-rooted weights
             for (i = 0; i < psNLSF_CB.order; i++) {
-                W_tmp_Q9 = Inlines.silk_SQRT_APPROX(Inlines.silk_LSHIFT((int) W_tmp_QW[i], 18 - SilkConstants.NLSF_W_Q));
+                W_tmp_Q9 = Inlines.silk_SQRT_APPROX(Inlines.silk_LSHIFT(W_tmp_QW[i], 18 - SilkConstants.NLSF_W_Q));
                 res_Q10[i] = (short) Inlines.silk_RSHIFT(Inlines.silk_SMULBB(res_Q15[i], W_tmp_Q9), 14);
             }
 
             // Modify input weights accordingly
             for (i = 0; i < psNLSF_CB.order; i++) {
-                W_adj_Q5[i] = (short) (Inlines.silk_DIV32_16(Inlines.silk_LSHIFT((int) pW_QW[i], 5), W_tmp_QW[i]));
+                W_adj_Q5[i] = (short) (Inlines.silk_DIV32_16(Inlines.silk_LSHIFT(pW_QW[i], 5), W_tmp_QW[i]));
             }
 
             // Unpack entropy table indices and predictor for current CB1 index
@@ -690,7 +690,7 @@ class NLSF {
         int k, n, ftmp;
 
         o[0] = Inlines.silk_LSHIFT(1, QA);
-        o[1] = 0 - cLSF[cLSF_ptr];
+        o[1] = -cLSF[cLSF_ptr];
         for (k = 1; k < dd; k++) {
             ftmp = cLSF[cLSF_ptr + (2 * k)];
             /* QA*/
@@ -807,7 +807,7 @@ class NLSF {
             for (k = 0; k < d; k++) {
                 a_Q12[k] = (short) Inlines.silk_SAT16(Inlines.silk_RSHIFT_ROUND(a32_QA1[k], QA + 1 - 12));
                 /* QA+1 . Q12 */
-                a32_QA1[k] = Inlines.silk_LSHIFT((int) a_Q12[k], QA + 1 - 12);
+                a32_QA1[k] = Inlines.silk_LSHIFT(a_Q12[k], QA + 1 - 12);
             }
         } else {
             for (k = 0; k < d; k++) {
@@ -1009,7 +1009,7 @@ class NLSF {
                     /* No risk of dividing by zero because abs(ylo - yhi) >= abs(ylo) >= 65536 */
                     ffrac += Inlines.silk_DIV32(ylo, Inlines.silk_RSHIFT(ylo - yhi, 8 - BIN_DIV_STEPS_A2NLSF));
                 }
-                NLSF[root_ix] = (short) Inlines.silk_min_32(Inlines.silk_LSHIFT((int) k, 8) + ffrac, Short.MAX_VALUE);
+                NLSF[root_ix] = (short) Inlines.silk_min_32(Inlines.silk_LSHIFT(k, 8) + ffrac, Short.MAX_VALUE);
 
                 Inlines.OpusAssert(NLSF[root_ix] >= 0);
 
@@ -1132,7 +1132,7 @@ class NLSF {
             i_sqr_Q15 = Inlines.silk_LSHIFT(Inlines.silk_SMULBB(psEncC.indices.NLSFInterpCoef_Q2, psEncC.indices.NLSFInterpCoef_Q2), 11);
 
             for (i = 0; i < psEncC.predictLPCOrder; i++) {
-                pNLSFW_QW[i] = (short) (Inlines.silk_SMLAWB(Inlines.silk_RSHIFT(pNLSFW_QW[i], 1), (int) pNLSFW0_temp_QW[i], i_sqr_Q15));
+                pNLSFW_QW[i] = (short) (Inlines.silk_SMLAWB(Inlines.silk_RSHIFT(pNLSFW_QW[i], 1), pNLSFW0_temp_QW[i], i_sqr_Q15));
                 Inlines.OpusAssert(pNLSFW_QW[i] >= 1);
             }
         }

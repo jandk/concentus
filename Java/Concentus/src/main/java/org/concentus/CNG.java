@@ -63,7 +63,7 @@ class CNG {
         seed = rand_seed.Val;
         for (i = exc_Q10_ptr; i < exc_Q10_ptr + length; i++) {
             seed = Inlines.silk_RAND(seed);
-            idx = (int) (Inlines.silk_RSHIFT(seed, 24) & exc_mask);
+            idx = Inlines.silk_RSHIFT(seed, 24) & exc_mask;
             Inlines.OpusAssert(idx >= 0);
             Inlines.OpusAssert(idx <= SilkConstants.CNG_BUF_MASK_MAX);
             exc_Q10[i] = (short) Inlines.silk_SAT16(Inlines.silk_SMULWW(exc_buf_Q14[idx], Gain_Q16 >> 4));

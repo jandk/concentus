@@ -54,7 +54,7 @@ class CeltLPC {
                     rr += Inlines.MULT32_32_Q31(lpc[j], ac[i - j]);
                 }
                 rr += Inlines.SHR32(ac[i + 1], 3);
-                r = 0 - Inlines.frac_div32(Inlines.SHL32(rr, 3), error);
+                r = -Inlines.frac_div32(Inlines.SHL32(rr, 3), error);
                 /*  Update LPC coefficients and total error */
                 lpc[i] = Inlines.SHR32(r, 3);
 
@@ -104,7 +104,7 @@ class CeltLPC {
             rden[i] = den[ord - i - 1];
         }
         for (i = 0; i < ord; i++) {
-            y[i] = (0 - mem[ord - i - 1]);
+            y[i] = (-mem[ord - i - 1]);
         }
         for (; i < N + ord; i++) {
             y[i] = 0;
@@ -122,20 +122,20 @@ class CeltLPC {
             sum3 = _sum3.Val;
 
             /* Patch up the result to compensate for the fact that this is an IIR */
-            y[i + ord] = (0 - Inlines.ROUND16((sum0), CeltConstants.SIG_SHIFT));
+            y[i + ord] = (-Inlines.ROUND16((sum0), CeltConstants.SIG_SHIFT));
             _y[_y_ptr + i] = sum0;
             sum1 = Inlines.MAC16_16(sum1, y[i + ord], den[0]);
-            y[i + ord + 1] = (0 - Inlines.ROUND16((sum1), CeltConstants.SIG_SHIFT));
+            y[i + ord + 1] = (-Inlines.ROUND16((sum1), CeltConstants.SIG_SHIFT));
             _y[_y_ptr + i + 1] = sum1;
             sum2 = Inlines.MAC16_16(sum2, y[i + ord + 1], den[0]);
             sum2 = Inlines.MAC16_16(sum2, y[i + ord], den[1]);
-            y[i + ord + 2] = (0 - Inlines.ROUND16((sum2), CeltConstants.SIG_SHIFT));
+            y[i + ord + 2] = (-Inlines.ROUND16((sum2), CeltConstants.SIG_SHIFT));
             _y[_y_ptr + i + 2] = sum2;
 
             sum3 = Inlines.MAC16_16(sum3, y[i + ord + 2], den[0]);
             sum3 = Inlines.MAC16_16(sum3, y[i + ord + 1], den[1]);
             sum3 = Inlines.MAC16_16(sum3, y[i + ord], den[2]);
-            y[i + ord + 3] = (0 - Inlines.ROUND16((sum3), CeltConstants.SIG_SHIFT));
+            y[i + ord + 3] = (-Inlines.ROUND16((sum3), CeltConstants.SIG_SHIFT));
             _y[_y_ptr + i + 3] = sum3;
         }
         for (; i < N; i++) {

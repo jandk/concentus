@@ -72,7 +72,7 @@ class Filters {
             }
             state[order] = tmp1;
             acc_Q11 = Inlines.silk_SMLAWB(acc_Q11, tmp1, coef_Q13[coef_Q13_ptr + order - 1]);
-            res_Q2[n] = Inlines.silk_LSHIFT((int) input[input_ptr + n], 2) - Inlines.silk_RSHIFT_ROUND(acc_Q11, 9);
+            res_Q2[n] = Inlines.silk_LSHIFT(input[input_ptr + n], 2) - Inlines.silk_RSHIFT_ROUND(acc_Q11, 9);
         }
     }
 
@@ -108,10 +108,10 @@ class Filters {
             }
 
             /* Noise shape parameters */
-            HarmShapeGain_Q12 = Inlines.silk_SMULWB((int) psEncCtrl.HarmShapeGain_Q14[k], 16384 - psEncCtrl.HarmBoost_Q14[k]);
+            HarmShapeGain_Q12 = Inlines.silk_SMULWB(psEncCtrl.HarmShapeGain_Q14[k], 16384 - psEncCtrl.HarmBoost_Q14[k]);
             Inlines.OpusAssert(HarmShapeGain_Q12 >= 0);
             HarmShapeFIRPacked_Q12 = Inlines.silk_RSHIFT(HarmShapeGain_Q12, 2);
-            HarmShapeFIRPacked_Q12 |= Inlines.silk_LSHIFT((int) Inlines.silk_RSHIFT(HarmShapeGain_Q12, 1), 16);
+            HarmShapeFIRPacked_Q12 |= Inlines.silk_LSHIFT(Inlines.silk_RSHIFT(HarmShapeGain_Q12, 1), 16);
             Tilt_Q14 = psEncCtrl.Tilt_Q14[k];
             LF_shp_Q14 = psEncCtrl.LF_shp_Q14[k];
             AR1_shp_Q13 = k * SilkConstants.MAX_SHAPE_LPC_ORDER;
@@ -324,7 +324,7 @@ class Filters {
         /* Internal variables and state are in Q10 format */
         for (k = 0; k < N2; k++) {
             /* Convert to Q10 */
-            in32 = Inlines.silk_LSHIFT((int) input[input_ptr + 2 * k], 10);
+            in32 = Inlines.silk_LSHIFT(input[input_ptr + 2 * k], 10);
 
             /* All-pass section for even input sample */
             Y = Inlines.silk_SUB32(in32, S[0]);
@@ -333,7 +333,7 @@ class Filters {
             S[0] = Inlines.silk_ADD32(in32, X);
 
             /* Convert to Q10 */
-            in32 = Inlines.silk_LSHIFT((int) input[input_ptr + 2 * k + 1], 10);
+            in32 = Inlines.silk_LSHIFT(input[input_ptr + 2 * k + 1], 10);
 
             /* All-pass section for odd input sample, and add to output of previous section */
             Y = Inlines.silk_SUB32(in32, S[1]);
@@ -412,7 +412,7 @@ class Filters {
                                 SilkTables.silk_Transition_LP_B_Q28[ind + 1][nb],
                                 SilkTables.silk_Transition_LP_B_Q28[ind + 1][nb]
                                         - SilkTables.silk_Transition_LP_B_Q28[ind][nb],
-                                fac_Q16 - ((int) 1 << 16));
+                                fac_Q16 - (1 << 16));
                     }
 
                     for (na = 0; na < SilkConstants.TRANSITION_NA; na++) {
@@ -420,7 +420,7 @@ class Filters {
                                 SilkTables.silk_Transition_LP_A_Q28[ind + 1][na],
                                 SilkTables.silk_Transition_LP_A_Q28[ind + 1][na]
                                         - SilkTables.silk_Transition_LP_A_Q28[ind][na],
-                                fac_Q16 - ((int) 1 << 16));
+                                fac_Q16 - (1 << 16));
                     }
                 }
             } else {
@@ -465,7 +465,7 @@ class Filters {
 
         Inlines.OpusAssert(d <= SilkConstants.SILK_MAX_ORDER_LPC);
         for (j = 0; j < d; j++) {
-            num[j] = (short) (0 - B[B_ptr + j]);
+            num[j] = (short) (-B[B_ptr + j]);
         }
         for (j = 0; j < d; j++) {
             mem[j] = input[input_ptr + d - j - 1];
@@ -495,7 +495,7 @@ class Filters {
 
         Anew_QA = A_QA[order & 1];
 
-        invGain_Q30 = (int) 1 << 30;
+        invGain_Q30 = 1 << 30;
         for (k = order - 1; k > 0; k--) {
             /* Check for stability */
             if ((Anew_QA[k] > A_LIMIT) || (Anew_QA[k] < -A_LIMIT)) {
@@ -503,10 +503,10 @@ class Filters {
             }
 
             /* Set RC equal to negated AR coef */
-            rc_Q31 = 0 - Inlines.silk_LSHIFT(Anew_QA[k], 31 - QA);
+            rc_Q31 = -Inlines.silk_LSHIFT(Anew_QA[k], 31 - QA);
 
             /* rc_mult1_Q30 range: [ 1 : 2^30 ] */
-            rc_mult1_Q30 = ((int) 1 << 30) - Inlines.silk_SMMUL(rc_Q31, rc_Q31);
+            rc_mult1_Q30 = (1 << 30) - Inlines.silk_SMMUL(rc_Q31, rc_Q31);
             Inlines.OpusAssert(rc_mult1_Q30 > (1 << 15));
             /* reduce A_LIMIT if fails */
             Inlines.OpusAssert(rc_mult1_Q30 <= (1 << 30));
@@ -538,10 +538,10 @@ class Filters {
         }
 
         /* Set RC equal to negated AR coef */
-        rc_Q31 = 0 - Inlines.silk_LSHIFT(Anew_QA[0], 31 - QA);
+        rc_Q31 = -Inlines.silk_LSHIFT(Anew_QA[0], 31 - QA);
 
         /* Range: [ 1 : 2^30 ] */
-        rc_mult1_Q30 = ((int) 1 << 30) - Inlines.silk_SMMUL(rc_Q31, rc_Q31);
+        rc_mult1_Q30 = (1 << 30) - Inlines.silk_SMMUL(rc_Q31, rc_Q31);
 
         /* Update inverse gain */
         /* Range: [ 0 : 2^30 ] */
@@ -570,8 +570,8 @@ class Filters {
 
         /* Increase Q domain of the AR coefficients */
         for (k = 0; k < order; k++) {
-            DC_resp += (int) A_Q12[k];
-            Anew_QA[k] = Inlines.silk_LSHIFT32((int) A_Q12[k], QA - 12);
+            DC_resp += A_Q12[k];
+            Anew_QA[k] = Inlines.silk_LSHIFT32(A_Q12[k], QA - 12);
         }
 
         /* If the DC is unstable, we don't even need to do the full calculations */

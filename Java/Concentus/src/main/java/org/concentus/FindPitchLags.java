@@ -146,7 +146,7 @@ class FindPitchLags {
             BoxedValueInt boxed_LTPcorr = new BoxedValueInt(psEnc.LTPCorr_Q15);
             if (PitchAnalysisCore.silk_pitch_analysis_core(res, psEncCtrl.pitchL, boxed_lagIndex, boxed_contourIndex,
                     boxed_LTPcorr, psEnc.prevLag, psEnc.pitchEstimationThreshold_Q16,
-                    (int) thrhld_Q13, psEnc.fs_kHz, psEnc.pitchEstimationComplexity, psEnc.nb_subfr) == 0) {
+                    thrhld_Q13, psEnc.fs_kHz, psEnc.pitchEstimationComplexity, psEnc.nb_subfr) == 0) {
                 psEnc.indices.signalType = SilkConstants.TYPE_VOICED;
             } else {
                 psEnc.indices.signalType = SilkConstants.TYPE_UNVOICED;

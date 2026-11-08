@@ -310,12 +310,7 @@ class Kernels {
     }
 
     static int celt_inner_prod(short[] x, int x_ptr, short[] y, int y_ptr, int N) {
-        int i;
-        int xy = 0;
-        for (i = 0; i < N; i++) {
-            xy = Inlines.MAC16_16(xy, x[x_ptr + i], y[y_ptr + i]);
-        }
-        return xy;
+        return Inlines.silk_inner_prod(x, x_ptr, y, y_ptr, N);
     }
 
     static int celt_inner_prod(short[] x, short[] y, int y_ptr, int N) {

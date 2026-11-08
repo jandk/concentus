@@ -71,7 +71,7 @@ class ResidualEnergy {
                 nrgs[i * (SilkConstants.MAX_NB_SUBFR >> 1) + j] = energy.Val;
 
                 /* Set Q values for the measured energy */
-                nrgsQ[i * (SilkConstants.MAX_NB_SUBFR >> 1) + j] = 0 - rshift.Val;
+                nrgsQ[i * (SilkConstants.MAX_NB_SUBFR >> 1) + j] = -rshift.Val;
 
                 /* Move to next subframe */
                 LPC_res_ptr += offset;
@@ -127,7 +127,7 @@ class ResidualEnergy {
 
         c_max = 0;
         for (i = c_ptr; i < c_ptr + D; i++) {
-            c_max = Inlines.silk_max_32(c_max, Inlines.silk_abs((int) c[i]));
+            c_max = Inlines.silk_max_32(c_max, Inlines.silk_abs(c[i]));
         }
         Qxtra = Inlines.silk_min_int(Qxtra, Inlines.silk_CLZ32(c_max) - 17);
 
@@ -135,7 +135,7 @@ class ResidualEnergy {
         Qxtra = Inlines.silk_min_int(Qxtra, Inlines.silk_CLZ32(Inlines.silk_MUL(D, Inlines.silk_RSHIFT(Inlines.silk_SMULWB(w_max, c_max), 4))) - 5);
         Qxtra = Inlines.silk_max_int(Qxtra, 0);
         for (i = 0; i < D; i++) {
-            cn[i] = Inlines.silk_LSHIFT((int) c[c_ptr + i], Qxtra);
+            cn[i] = Inlines.silk_LSHIFT(c[c_ptr + i], Qxtra);
             Inlines.OpusAssert(Inlines.silk_abs(cn[i]) <= (Short.MAX_VALUE + 1));
             /* Check that Inlines.silk_SMLAWB can be used */
         }

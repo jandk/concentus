@@ -199,8 +199,6 @@ class OpusTables {
         net.weights = weights;
     }
 
-    ;
-
     static final float[] tansig_table/*[201]*/ = {
             0.000000f, 0.039979f, 0.079830f, 0.119427f, 0.158649f,
             0.197375f, 0.235496f, 0.272905f, 0.309507f, 0.345214f,

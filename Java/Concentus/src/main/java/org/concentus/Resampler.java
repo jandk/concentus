@@ -250,7 +250,7 @@ class Resampler {
         /* Internal variables and state are in Q10 format */
         for (k = 0; k < len2; k++) {
             /* Convert to Q10 */
-            in32 = Inlines.silk_LSHIFT((int) input[2 * k], 10);
+            in32 = Inlines.silk_LSHIFT(input[2 * k], 10);
 
             /* All-pass section for even input sample */
             Y = Inlines.silk_SUB32(in32, S[0]);
@@ -259,7 +259,7 @@ class Resampler {
             S[0] = Inlines.silk_ADD32(in32, X);
 
             /* Convert to Q10 */
-            in32 = Inlines.silk_LSHIFT((int) input[2 * k + 1], 10);
+            in32 = Inlines.silk_LSHIFT(input[2 * k + 1], 10);
 
             /* All-pass section for odd input sample, and add to output of previous section */
             Y = Inlines.silk_SUB32(in32, S[1]);
@@ -362,7 +362,7 @@ class Resampler {
         int k, out32;
 
         for (k = 0; k < len; k++) {
-            out32 = Inlines.silk_ADD_LSHIFT32(S[S_ptr], (int) input[input_ptr + k], 8);
+            out32 = Inlines.silk_ADD_LSHIFT32(S[S_ptr], input[input_ptr + k], 8);
             out_Q8[out_Q8_ptr + k] = out32;
             out32 = Inlines.silk_LSHIFT(out32, 2);
             S[S_ptr] = Inlines.silk_SMLAWB(S[S_ptr + 1], out32, A_Q14[0]);
@@ -396,7 +396,7 @@ class Resampler {
 
                     /* Inner product */
                     interpol_ptr = FIR_Coefs_ptr + (SilkConstants.RESAMPLER_DOWN_ORDER_FIR0 / 2 * interpol_ind);
-                    res_Q6 = Inlines.silk_SMULWB(buf[buf_ptr + 0], FIR_Coefs[interpol_ptr + 0]);
+                    res_Q6 = Inlines.silk_SMULWB(buf[buf_ptr], FIR_Coefs[interpol_ptr]);
                     res_Q6 = Inlines.silk_SMLAWB(res_Q6, buf[buf_ptr + 1], FIR_Coefs[interpol_ptr + 1]);
                     res_Q6 = Inlines.silk_SMLAWB(res_Q6, buf[buf_ptr + 2], FIR_Coefs[interpol_ptr + 2]);
                     res_Q6 = Inlines.silk_SMLAWB(res_Q6, buf[buf_ptr + 3], FIR_Coefs[interpol_ptr + 3]);
@@ -406,7 +406,7 @@ class Resampler {
                     res_Q6 = Inlines.silk_SMLAWB(res_Q6, buf[buf_ptr + 7], FIR_Coefs[interpol_ptr + 7]);
                     res_Q6 = Inlines.silk_SMLAWB(res_Q6, buf[buf_ptr + 8], FIR_Coefs[interpol_ptr + 8]);
                     interpol_ptr = FIR_Coefs_ptr + (SilkConstants.RESAMPLER_DOWN_ORDER_FIR0 / 2 * (FIR_Fracs - 1 - interpol_ind));
-                    res_Q6 = Inlines.silk_SMLAWB(res_Q6, buf[buf_ptr + 17], FIR_Coefs[interpol_ptr + 0]);
+                    res_Q6 = Inlines.silk_SMLAWB(res_Q6, buf[buf_ptr + 17], FIR_Coefs[interpol_ptr]);
                     res_Q6 = Inlines.silk_SMLAWB(res_Q6, buf[buf_ptr + 16], FIR_Coefs[interpol_ptr + 1]);
                     res_Q6 = Inlines.silk_SMLAWB(res_Q6, buf[buf_ptr + 15], FIR_Coefs[interpol_ptr + 2]);
                     res_Q6 = Inlines.silk_SMLAWB(res_Q6, buf[buf_ptr + 14], FIR_Coefs[interpol_ptr + 3]);
@@ -426,7 +426,7 @@ class Resampler {
                     buf_ptr = Inlines.silk_RSHIFT(index_Q16, 16);
 
                     /* Inner product */
-                    res_Q6 = Inlines.silk_SMULWB(Inlines.silk_ADD32(buf[buf_ptr + 0], buf[buf_ptr + 23]), FIR_Coefs[FIR_Coefs_ptr + 0]);
+                    res_Q6 = Inlines.silk_SMULWB(Inlines.silk_ADD32(buf[buf_ptr], buf[buf_ptr + 23]), FIR_Coefs[FIR_Coefs_ptr]);
                     res_Q6 = Inlines.silk_SMLAWB(res_Q6, Inlines.silk_ADD32(buf[buf_ptr + 1], buf[buf_ptr + 22]), FIR_Coefs[FIR_Coefs_ptr + 1]);
                     res_Q6 = Inlines.silk_SMLAWB(res_Q6, Inlines.silk_ADD32(buf[buf_ptr + 2], buf[buf_ptr + 21]), FIR_Coefs[FIR_Coefs_ptr + 2]);
                     res_Q6 = Inlines.silk_SMLAWB(res_Q6, Inlines.silk_ADD32(buf[buf_ptr + 3], buf[buf_ptr + 20]), FIR_Coefs[FIR_Coefs_ptr + 3]);
@@ -449,7 +449,7 @@ class Resampler {
                     buf_ptr = Inlines.silk_RSHIFT(index_Q16, 16);
 
                     /* Inner product */
-                    res_Q6 = Inlines.silk_SMULWB(Inlines.silk_ADD32(buf[buf_ptr + 0], buf[buf_ptr + 35]), FIR_Coefs[FIR_Coefs_ptr + 0]);
+                    res_Q6 = Inlines.silk_SMULWB(Inlines.silk_ADD32(buf[buf_ptr], buf[buf_ptr + 35]), FIR_Coefs[FIR_Coefs_ptr]);
                     res_Q6 = Inlines.silk_SMLAWB(res_Q6, Inlines.silk_ADD32(buf[buf_ptr + 1], buf[buf_ptr + 34]), FIR_Coefs[FIR_Coefs_ptr + 1]);
                     res_Q6 = Inlines.silk_SMLAWB(res_Q6, Inlines.silk_ADD32(buf[buf_ptr + 2], buf[buf_ptr + 33]), FIR_Coefs[FIR_Coefs_ptr + 2]);
                     res_Q6 = Inlines.silk_SMLAWB(res_Q6, Inlines.silk_ADD32(buf[buf_ptr + 3], buf[buf_ptr + 32]), FIR_Coefs[FIR_Coefs_ptr + 3]);
@@ -635,7 +635,7 @@ class Resampler {
         /* Internal variables and state are in Q10 format */
         for (k = 0; k < len; k++) {
             /* Convert to Q10 */
-            in32 = Inlines.silk_LSHIFT((int) input[input_ptr + k], 10);
+            in32 = Inlines.silk_LSHIFT(input[input_ptr + k], 10);
 
             /* First all-pass section for even output sample */
             Y = Inlines.silk_SUB32(in32, S[0]);

@@ -192,7 +192,7 @@ class EncodeAPI {
                 return SilkError.SILK_ENC_INPUT_INVALID_NO_OF_SAMPLES;
             }
             /* Make sure no more than one packet can be produced */
-            if (1000 * (int) nSamplesIn > encControl.payloadSize_ms * encControl.API_sampleRate) {
+            if (1000 * nSamplesIn > encControl.payloadSize_ms * encControl.API_sampleRate) {
                 Inlines.OpusAssert(false);
                 return SilkError.SILK_ENC_INPUT_INVALID_NO_OF_SAMPLES;
             }
@@ -538,10 +538,10 @@ class EncodeAPI {
                     for (n = 0; n < encControl.nChannelsInternal; n++) {
                         for (i = 0; i < psEnc.state_Fxx[n].nFramesPerPacket; i++) {
                             flags = Inlines.silk_LSHIFT(flags, 1);
-                            flags |= (int) psEnc.state_Fxx[n].VAD_flags[i];
+                            flags |= psEnc.state_Fxx[n].VAD_flags[i];
                         }
                         flags = Inlines.silk_LSHIFT(flags, 1);
-                        flags |= (int) psEnc.state_Fxx[n].LBRR_flag;
+                        flags |= psEnc.state_Fxx[n].LBRR_flag;
                     }
 
                     if (prefillFlag == 0) {

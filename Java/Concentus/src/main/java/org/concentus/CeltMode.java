@@ -104,5 +104,4 @@ class CeltMode {
         mode48000_960_120.cache.caps = CeltTables.cache_caps50;
     }
 
-    ;
 }

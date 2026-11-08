@@ -52,19 +52,7 @@ class Arrays {
         return new byte[x][y][z];
     }
 
-    static void MemSet(byte[] array, byte value) {
-        java.util.Arrays.fill(array, value);
-    }
-
     static void MemSet(short[] array, short value) {
-        java.util.Arrays.fill(array, value);
-    }
-
-    static void MemSet(int[] array, int value) {
-        java.util.Arrays.fill(array, value);
-    }
-
-    static void MemSet(float[] array, float value) {
         java.util.Arrays.fill(array, value);
     }
 

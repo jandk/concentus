@@ -63,7 +63,7 @@ class HPVariableCutoff {
             /* limit delta, to reduce impact of outliers in pitch estimation */
             delta_freq_Q7 = Inlines.silk_LIMIT_32(
                     delta_freq_Q7,
-                    0 - ((int) ((TuningParameters.VARIABLE_HP_MAX_DELTA_FREQ) * ((long) 1 << (7)) + 0.5))/*Inlines.SILK_CONST(TuningParameters.VARIABLE_HP_MAX_DELTA_FREQ, 7)*/,
+                    -((int) ((TuningParameters.VARIABLE_HP_MAX_DELTA_FREQ) * ((long) 1 << (7)) + 0.5))/*Inlines.SILK_CONST(TuningParameters.VARIABLE_HP_MAX_DELTA_FREQ, 7)*/,
                     ((int) ((TuningParameters.VARIABLE_HP_MAX_DELTA_FREQ) * ((long) 1 << (7)) + 0.5))/*Inlines.SILK_CONST(TuningParameters.VARIABLE_HP_MAX_DELTA_FREQ, 7)*/);
 
             /* update smoother */

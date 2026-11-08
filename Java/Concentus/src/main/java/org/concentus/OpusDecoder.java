@@ -67,8 +67,8 @@ public class OpusDecoder {
     int prev_redundancy;
     int last_packet_duration;
     int rangeFinal;
-    SilkDecoder SilkDecoder = new SilkDecoder();
-    CeltDecoder Celt_Decoder = new CeltDecoder();
+    final SilkDecoder SilkDecoder = new SilkDecoder();
+    final CeltDecoder Celt_Decoder = new CeltDecoder();
 
     OpusDecoder() {
     } // used internally

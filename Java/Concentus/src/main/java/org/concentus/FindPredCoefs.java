@@ -72,7 +72,7 @@ class FindPredCoefs {
             Wght_Q15[i] = Inlines.silk_RSHIFT(tmp, 1);
 
             /* Invert the inverted and normalized gains */
-            local_gains[i] = Inlines.silk_DIV32(((int) 1 << 16), invGains_Q16[i]);
+            local_gains[i] = Inlines.silk_DIV32((1 << 16), invGains_Q16[i]);
         }
 
         LPC_in_pre = new short[psEnc.nb_subfr * psEnc.predictLPCOrder + psEnc.frame_length];
@@ -140,7 +140,7 @@ class FindPredCoefs {
         if (psEnc.first_frame_after_reset != 0) {
             minInvGain_Q30 = ((int) ((1.0f / SilkConstants.MAX_PREDICTION_POWER_GAIN_AFTER_RESET) * ((long) 1 << (30)) + 0.5))/*Inlines.SILK_CONST(1.0f / SilkConstants.MAX_PREDICTION_POWER_GAIN_AFTER_RESET, 30)*/;
         } else {
-            minInvGain_Q30 = Inlines.silk_log2lin(Inlines.silk_SMLAWB(16 << 7, (int) psEncCtrl.LTPredCodGain_Q7, ((int) ((1.0f / 3f) * ((long) 1 << (16)) + 0.5))/*Inlines.SILK_CONST(1.0f / 3f, 16)*/));
+            minInvGain_Q30 = Inlines.silk_log2lin(Inlines.silk_SMLAWB(16 << 7, psEncCtrl.LTPredCodGain_Q7, ((int) ((1.0f / 3f) * ((long) 1 << (16)) + 0.5))/*Inlines.SILK_CONST(1.0f / 3f, 16)*/));
             /* Q16 */
             minInvGain_Q30 = Inlines.silk_DIV32_varQ(minInvGain_Q30,
                     Inlines.silk_SMULWW(((int) ((SilkConstants.MAX_PREDICTION_POWER_GAIN) * ((long) 1 << (0)) + 0.5))/*Inlines.SILK_CONST(SilkConstants.MAX_PREDICTION_POWER_GAIN, 0)*/,

@@ -46,7 +46,7 @@ class ProcessGains {
         /* Gain reduction when LTP coding gain is high */
         if (psEnc.indices.signalType == SilkConstants.TYPE_VOICED) {
             /*s = -0.5f * silk_sigmoid( 0.25f * ( psEncCtrl.LTPredCodGain - 12.0f ) ); */
-            s_Q16 = 0 - Sigmoid.silk_sigm_Q15(Inlines.silk_RSHIFT_ROUND(psEncCtrl.LTPredCodGain_Q7 - ((int) ((12.0f) * ((long) 1 << (7)) + 0.5))/*Inlines.SILK_CONST(12.0f, 7)*/, 4));
+            s_Q16 = -Sigmoid.silk_sigm_Q15(Inlines.silk_RSHIFT_ROUND(psEncCtrl.LTPredCodGain_Q7 - ((int) ((12.0f) * ((long) 1 << (7)) + 0.5))/*Inlines.SILK_CONST(12.0f, 7)*/, 4));
             for (k = 0; k < psEnc.nb_subfr; k++) {
                 psEncCtrl.Gains_Q16[k] = Inlines.silk_SMLAWB(psEncCtrl.Gains_Q16[k], psEncCtrl.Gains_Q16[k], s_Q16);
             }

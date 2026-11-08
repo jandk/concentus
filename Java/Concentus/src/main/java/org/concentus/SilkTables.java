@@ -375,8 +375,6 @@ class SilkTables {
         silk_NLSF_CB_NB_MB.deltaMin_Q15 = silk_NLSF_DELTA_MIN_NB_MB_Q15;
     }
 
-    ;
-
     static final short[] silk_NLSF_CB1_WB_Q8 = {
             7, 23, 38, 54, 69, 85, 100, 116,
             131, 147, 162, 178, 193, 208, 223, 239,
@@ -542,8 +540,6 @@ class SilkTables {
         silk_NLSF_CB_WB.ec_Rates_Q5 = silk_NLSF_CB2_BITS_WB_Q5;
         silk_NLSF_CB_WB.deltaMin_Q15 = silk_NLSF_DELTA_MIN_WB_Q15;
     }
-
-    ;
 
     /* Piece-wise linear mapping from bitrate in kbps to coding quality in dB SNR */
     static final int[] silk_TargetRate_table_NB = {

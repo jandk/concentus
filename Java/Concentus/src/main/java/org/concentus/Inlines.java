@@ -61,7 +61,7 @@ class Inlines {
     //        /** Multiply a 16-bit signed value by a 16-bit unsigned value. The result is a 32-bit signed value */
     //#define MULT16_16SU(a,b) ((opus_val32)(opus_val16)(a)*(opus_val32)(opus_uint16)(b))
     static int MULT16_16SU(int a, int b) {
-        return ((int) (short) (a) * (int) (b & 0xFFFF));
+        return ((int) (short) (a) * (b & 0xFFFF));
     }
 
     //        /** 16x32 multiplication, followed by a 16-bit shift right. Results fits in 32 bits */
@@ -103,26 +103,26 @@ class Inlines {
 
     // "Compile-time" (not really) conversion of float constant to 16-bit value
     static short QCONST16(float x, int bits) {
-        return ((short) (0.5 + (x) * (((int) 1) << (bits))));
+        return ((short) (0.5 + (x) * (1 << (bits))));
     }
 
     // "Compile-time" (not really) conversion of float constant to 32-bit value
     static int QCONST32(float x, int bits) {
-        return ((int) (0.5 + (x) * (((int) 1) << (bits))));
+        return ((int) (0.5 + (x) * (1 << (bits))));
     }
 
     //        /** Negate a 16-bit value */
     static short NEG16(short x) {
-        return (short) (0 - x);
+        return (short) (-x);
     }
 
     static int NEG16(int x) {
-        return 0 - x;
+        return -x;
     }
 
     //        /** Negate a 32-bit value */
     static int NEG32(int x) {
-        return 0 - x;
+        return -x;
     }
 
     //        /** Change a 32-bit value into a 16-bit value. The value is assumed to fit in 16-bit, otherwise the result is undefined */
@@ -132,7 +132,7 @@ class Inlines {
 
     //        /** Change a 16-bit value into a 32-bit value */
     static int EXTEND32(short x) {
-        return (int) x;
+        return x;
     }
 
     static int EXTEND32(int x) {
@@ -154,7 +154,7 @@ class Inlines {
     }
 
     static int SHL16(int a, int shift) {
-        return (int) (0xFFFFFFFF & ((long) a << shift));
+        return (int) (0xFFFFFFFFL & ((long) a << shift));
     }
 
     //        /** Arithmetic shift-right of a 32-bit value */
@@ -164,7 +164,7 @@ class Inlines {
 
     //        /** Arithmetic shift-left of a 32-bit value */
     static int SHL32(int a, int shift) {
-        return (int) (0xFFFFFFFF & ((long) a << shift));
+        return (int) (0xFFFFFFFFL & ((long) a << shift));
     }
 
     //        /** 32-bit arithmetic shift right with rounding-to-nearest instead of rounding down */
@@ -207,11 +207,11 @@ class Inlines {
     }
 
     static int SATURATE(int x, int a) {
-        return (((x) > (a) ? (a) : (x) < -(a) ? -(a) : (x)));
+        return (((x) > (a) ? (a) : Math.max((x), -(a))));
     }
 
     static short SATURATE16(int x) {
-        return (EXTRACT16((x) > 32767 ? 32767 : (x) < -32768 ? -32768 : (x)));
+        return (EXTRACT16((x) > 32767 ? 32767 : Math.max((x), -32768)));
     }
 
     //        /** Shift by a and round-to-neareast 32-bit value. Result is a 16-bit value */
@@ -243,7 +243,7 @@ class Inlines {
 
     //        /** Add two 16-bit values */
     static short ADD16(short a, short b) {
-        return ((short) ((short) (a) + (short) (b)));
+        return ((short) (a + b));
     }
 
     static int ADD16(int a, int b) {
@@ -252,7 +252,7 @@ class Inlines {
 
     //        /** Subtract two 16-bit values */
     static short SUB16(short a, short b) {
-        return ((short) ((short) (a) - (short) (b)));
+        return ((short) (a - b));
     }
 
     static int SUB16(int a, int b) {
@@ -261,18 +261,18 @@ class Inlines {
 
     //        /** Add two 32-bit values */
     static int ADD32(int a, int b) {
-        return ((int) (a) + (int) (b));
+        return (a + b);
     }
 
     //        /** Subtract two 32-bit values */
     static int SUB32(int a, int b) {
-        return ((int) (a) - (int) (b));
+        return (a - b);
     }
 
     //        /** 16x16 multiplication where the result fits in 16 bits */
     //#define MULT16_16_16(a,b)     ((((opus_val16)(a))*((opus_val16)(b))))
     static short MULT16_16_16(short a, short b) {
-        return (short) (((((short) (a)) * ((short) (b)))));
+        return (short) (((a * b)));
     }
 
     static int MULT16_16_16(int a, int b) {
@@ -402,7 +402,7 @@ class Inlines {
     //        /** Divide a 32-bit value by a 16-bit value. Result fits in 16 bits */
     //#define DIV32_16(a,b) ((opus_val16)(((opus_val32)(a))/((opus_val16)(b))))
     static short DIV32_16(int a, short b) {
-        return (short) (((short) (((int) (a)) / ((short) (b)))));
+        return (short) (((short) (a / b)));
     }
 
     static int DIV32_16(int a, int b) {
@@ -444,55 +444,55 @@ class Inlines {
     }
 
     static int MIN16(int a, int b) {
-        return ((a) < (b) ? (a) : (b));
+        return (Math.min((a), (b)));
     }
 
     static int MAX16(int a, int b) {
-        return ((a) > (b) ? (a) : (b));
+        return (Math.max((a), (b)));
     }
 
     static float MIN16(float a, float b) {
-        return ((a) < (b) ? (a) : (b));
+        return (Math.min((a), (b)));
     }
 
     static float MAX16(float a, float b) {
-        return ((a) > (b) ? (a) : (b));
+        return (Math.max((a), (b)));
     }
 
     static int MIN(int a, int b) {
-        return ((a) < (b) ? (a) : (b));
+        return (Math.min((a), (b)));
     }
 
     static int MAX(int a, int b) {
-        return ((a) > (b) ? (a) : (b));
+        return (Math.max((a), (b)));
     }
 
     static int IMIN(int a, int b) {
-        return ((a) < (b) ? (a) : (b));
+        return (Math.min((a), (b)));
     }
 
     static long IMIN(long a, long b) {
-        return ((a) < (b) ? (a) : (b));
+        return (Math.min((a), (b)));
     }
 
     static int IMAX(int a, int b) {
-        return ((a) > (b) ? (a) : (b));
+        return (Math.max((a), (b)));
     }
 
     static int MIN32(int a, int b) {
-        return ((a) < (b) ? (a) : (b));
+        return (Math.min((a), (b)));
     }
 
     static int MAX32(int a, int b) {
-        return ((a) > (b) ? (a) : (b));
+        return (Math.max((a), (b)));
     }
 
     static float MIN32(float a, float b) {
-        return ((a) < (b) ? (a) : (b));
+        return (Math.min((a), (b)));
     }
 
     static float MAX32(float a, float b) {
-        return ((a) > (b) ? (a) : (b));
+        return (Math.max((a), (b)));
     }
 
     static int ABS16(int x) {
@@ -517,13 +517,12 @@ class Inlines {
     }
 
     static int celt_sudiv(int n, int d) {
-        Inlines.OpusAssert(d > 0);
-        return n / d;
+        return celt_udiv(n, d);
     }
 
     //#define celt_div(a,b) MULT32_32_Q31((opus_val32)(a),celt_rcp(b))
     static int celt_div(int a, int b) {
-        return MULT32_32_Q31((int) (a), celt_rcp(b));
+        return MULT32_32_Q31(a, celt_rcp(b));
     }
 
     /**
@@ -531,7 +530,7 @@ class Inlines {
      */
     static int celt_ilog2(int x) {
         Inlines.OpusAssert(x > 0, "celt_ilog2() only defined for strictly positive numbers");
-        return (EC_ILOG((long) x) - 1);
+        return (EC_ILOG(x) - 1);
     }
 
     /**
@@ -560,7 +559,7 @@ class Inlines {
             maxval = MAX32(maxval, x[i]);
             minval = MIN32(minval, x[i]);
         }
-        return MAX32(maxval, 0 - minval);
+        return MAX32(maxval, -minval);
     }
 
     static short celt_maxabs32(short[] x, int x_ptr, int len) {
@@ -571,7 +570,7 @@ class Inlines {
             maxval = MAX16(maxval, x[i]);
             minval = MIN16(minval, x[i]);
         }
-        return MAX(maxval, (short) (0 - minval));
+        return MAX(maxval, (short) (-minval));
     }
 
     /// <summary>
@@ -581,7 +580,7 @@ class Inlines {
     /// <param name="b"></param>
     /// <returns></returns>
     static int FRAC_MUL16(int a, int b) {
-        return ((16384 + ((int) ((short) a * (short) b))) >> 15);
+        return ((16384 + ((short) a * (short) b)) >> 15);
     }
 
     /// <summary>
@@ -831,7 +830,7 @@ class Inlines {
     /// <param name="rot"></param>
     /// <returns></returns>
     static int silk_ROR32(int a32, int rot) {
-        int m = (0 - rot);
+        int m = (-rot);
         if (rot == 0) {
             return a32;
         } else if (rot < 0) {
@@ -867,7 +866,7 @@ class Inlines {
     }
 
     static long silk_SMLALBB(long a64, short b16, short c16) {
-        return silk_ADD64((a64), (long) ((int) (b16) * (int) (c16)));
+        return silk_ADD64((a64), (int) (b16) * (int) (c16));
     }
 
     static long silk_SMULL(int a32, int b32) {
@@ -908,7 +907,7 @@ class Inlines {
     /// <param name="c32"></param>
     /// <returns></returns>
     static int silk_MLA_ovflw(int a32, int b32, int c32) {
-        return (int) silk_ADD32_ovflw((long) a32, (long) b32 * c32);
+        return silk_ADD32_ovflw(a32, (long) b32 * c32);
     }
 
     static int silk_SMLABB_ovflw(int a32, int b32, int c32) {
@@ -994,13 +993,13 @@ class Inlines {
     /// <param name="b16"></param>
     /// <returns></returns>
     static short silk_ADD_SAT16(short a16, short b16) {
-        short res = (short) silk_SAT16(silk_ADD32((int) (a16), (b16)));
+        short res = (short) silk_SAT16(silk_ADD32(a16, (b16)));
         Inlines.OpusAssert(res == silk_SAT16((int) a16 + (int) b16));
         return res;
     }
 
     static int silk_ADD_SAT32(int a32, int b32) {
-        int res = ((((long) (a32) + (long) (b32)) & 0x80000000) == 0
+        int res = ((((long) (a32) + (long) (b32)) & 0x80000000L) == 0
                 ? ((((a32) & (b32)) & 0x80000000) != 0 ? Integer.MIN_VALUE : (a32) + (b32))
                 : ((((a32) | (b32)) & 0x80000000) == 0 ? Integer.MAX_VALUE : (a32) + (b32)));
         Inlines.OpusAssert(res == silk_SAT32((long) a32 + (long) b32));
@@ -1016,13 +1015,13 @@ class Inlines {
     }
 
     static short silk_SUB_SAT16(short a16, short b16) {
-        short res = (short) silk_SAT16(silk_SUB32((int) (a16), (b16)));
+        short res = (short) silk_SAT16(silk_SUB32(a16, (b16)));
         Inlines.OpusAssert(res == silk_SAT16((int) a16 - (int) b16));
         return res;
     }
 
     static int silk_SUB_SAT32(int a32, int b32) {
-        int res = ((((long) a32 - b32) & 0x80000000) == 0
+        int res = ((((long) a32 - b32) & 0x80000000L) == 0
                 ? (((a32) & ((b32) ^ 0x80000000) & 0x80000000) != 0 ? Integer.MIN_VALUE : (a32) - (b32))
                 : ((((a32) ^ 0x80000000) & (b32) & 0x80000000) != 0 ? Integer.MAX_VALUE : (a32) - (b32)));
         Inlines.OpusAssert(res == silk_SAT32((long) a32 - (long) b32));
@@ -1031,9 +1030,9 @@ class Inlines {
 
     static long silk_SUB_SAT64(long a64, long b64) {
         long res;
-        res = (((long) ((a64) - (b64)) & Long.MIN_VALUE) == 0
-                ? (((long) (a64) & ((long) (b64) ^ Long.MIN_VALUE) & Long.MIN_VALUE) != 0 ? Long.MIN_VALUE : (a64) - (b64))
-                : ((((long) (a64) ^ Long.MIN_VALUE) & (long) (b64) & Long.MIN_VALUE) != 0 ? Long.MAX_VALUE : (a64) - (b64)));
+        res = ((((a64) - (b64)) & Long.MIN_VALUE) == 0
+                ? ((a64 & (b64 ^ Long.MIN_VALUE) & Long.MIN_VALUE) != 0 ? Long.MIN_VALUE : (a64) - (b64))
+                : (((a64 ^ Long.MIN_VALUE) & b64 & Long.MIN_VALUE) != 0 ? Long.MAX_VALUE : (a64) - (b64)));
         return res;
     }
 
@@ -1077,7 +1076,7 @@ class Inlines {
     /// <param name="b"></param>
     /// <returns></returns>
     static long silk_ADD_POS_SAT64(long a, long b) {
-        return ((((long) (a + b) & Long.MIN_VALUE) != 0) ? Long.MAX_VALUE : (a + b));
+        return ((((a + b) & Long.MIN_VALUE) != 0) ? Long.MAX_VALUE : (a + b));
     }
 
     static byte silk_LSHIFT8(byte a, int shift) {
@@ -1200,19 +1199,19 @@ class Inlines {
     }
 
     static int silk_min(int a, int b) {
-        return ((a) < (b)) ? (a) : (b);
+        return Math.min((a), (b));
     }
 
     static int silk_max(int a, int b) {
-        return ((a) > (b)) ? (a) : (b);
+        return Math.max((a), (b));
     }
 
     static float silk_min(float a, float b) {
-        return ((a) < (b)) ? (a) : (b);
+        return Math.min((a), (b));
     }
 
     static float silk_max(float a, float b) {
-        return ((a) > (b)) ? (a) : (b);
+        return Math.max((a), (b));
     }
 
     /// <summary>
@@ -1225,7 +1224,7 @@ class Inlines {
 
     /* silk_min() versions with typecast in the function call */
     static int silk_min_int(int a, int b) {
-        return (((a) < (b)) ? (a) : (b));
+        return (Math.min((a), (b)));
     }
 
     static short silk_min_16(short a, short b) {
@@ -1233,16 +1232,16 @@ class Inlines {
     }
 
     static int silk_min_32(int a, int b) {
-        return (((a) < (b)) ? (a) : (b));
+        return (Math.min((a), (b)));
     }
 
     static long silk_min_64(long a, long b) {
-        return (((a) < (b)) ? (a) : (b));
+        return (Math.min((a), (b)));
     }
 
     /* silk_min() versions with typecast in the function call */
     static int silk_max_int(int a, int b) {
-        return (((a) > (b)) ? (a) : (b));
+        return (Math.max((a), (b)));
     }
 
     static short silk_max_16(short a, short b) {
@@ -1250,15 +1249,15 @@ class Inlines {
     }
 
     static int silk_max_32(int a, int b) {
-        return (((a) > (b)) ? (a) : (b));
+        return (Math.max((a), (b)));
     }
 
     static long silk_max_64(long a, long b) {
-        return (((a) > (b)) ? (a) : (b));
+        return (Math.max((a), (b)));
     }
 
     static float silk_LIMIT(float a, float limit1, float limit2) {
-        return ((limit1) > (limit2) ? ((a) > (limit1) ? (limit1) : ((a) < (limit2) ? (limit2) : (a))) : ((a) > (limit2) ? (limit2) : ((a) < (limit1) ? (limit1) : (a))));
+        return ((limit1) > (limit2) ? ((a) > (limit1) ? (limit1) : (Math.max((a), (limit2)))) : ((a) > (limit2) ? (limit2) : (Math.max((a), (limit1)))));
     }
 
     static int silk_LIMIT(int a, int limit1, int limit2) {
@@ -1274,7 +1273,7 @@ class Inlines {
     }
 
     static int silk_LIMIT_32(int a, int limit1, int limit2) {
-        return ((limit1) > (limit2) ? ((a) > (limit1) ? (limit1) : ((a) < (limit2) ? (limit2) : (a))) : ((a) > (limit2) ? (limit2) : ((a) < (limit1) ? (limit1) : (a))));
+        return ((limit1) > (limit2) ? ((a) > (limit1) ? (limit1) : (Math.max((a), (limit2)))) : ((a) > (limit2) ? (limit2) : (Math.max((a), (limit1)))));
     }
 
     static int silk_abs(int a) {
@@ -1295,7 +1294,7 @@ class Inlines {
     }
 
     static long silk_sign(int a) {
-        return (a) > 0 ? 1 : ((a) < 0 ? -1 : 0);
+        return Integer.compare(a, 0);
     }
 
     /// <summary>
@@ -1402,7 +1401,7 @@ class Inlines {
         /* Q: 61 - b_headrm            */
 
         /* Compute residual by subtracting product of denominator and first approximation from one */
-        err_Q32 = silk_LSHIFT(((int) 1 << 29) - silk_SMULWB(b32_nrm, b32_inv), 3);
+        err_Q32 = silk_LSHIFT((1 << 29) - silk_SMULWB(b32_nrm, b32_inv), 3);
         /* Q32                        */
 
         /* Refinement */
@@ -1772,7 +1771,7 @@ class Inlines {
 
     static int abs(int a) {
         if (a < 0) {
-            return 0 - a;
+            return -a;
         }
         return a;
     }

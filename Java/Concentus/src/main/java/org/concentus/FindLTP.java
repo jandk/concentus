@@ -137,12 +137,12 @@ class FindLTP {
             /* temp = Wght[ k ] / ( nrg[ k ] * Wght[ k ] + 0.01f * subfr_length ); */
             extra_shifts = Inlines.silk_min_int(corr_rshifts[k], LTP_CORRS_HEAD_ROOM);
             denom32 = Inlines.silk_LSHIFT_SAT32(Inlines.silk_SMULWB(nrg[k], Wght_Q15[k]), 1 + extra_shifts)
-                    + /* Q( -corr_rshifts[ k ] + extra_shifts ) */ Inlines.silk_RSHIFT(Inlines.silk_SMULWB((int) subfr_length, 655), corr_rshifts[k] - extra_shifts);
+                    + /* Q( -corr_rshifts[ k ] + extra_shifts ) */ Inlines.silk_RSHIFT(Inlines.silk_SMULWB(subfr_length, 655), corr_rshifts[k] - extra_shifts);
             /* Q( -corr_rshifts[ k ] + extra_shifts ) */
             denom32 = Inlines.silk_max(denom32, 1);
             Inlines.OpusAssert(((long) Wght_Q15[k] << 16) < Integer.MAX_VALUE);
             /* Wght always < 0.5 in Q0 */
-            temp32 = Inlines.silk_DIV32(Inlines.silk_LSHIFT((int) Wght_Q15[k], 16), denom32);
+            temp32 = Inlines.silk_DIV32(Inlines.silk_LSHIFT(Wght_Q15[k], 16), denom32);
             /* Q( 15 + 16 + corr_rshifts[k] - extra_shifts ) */
             temp32 = Inlines.silk_RSHIFT(temp32, 31 + corr_rshifts[k] - extra_shifts - 26);
             /* Q26 */
@@ -156,7 +156,7 @@ class FindLTP {
             /* keep 3 bits free for vq_nearest_neighbor */
             Inlines.OpusAssert(26 - 18 + lshift >= 0);
             if (26 - 18 + lshift < 31) {
-                temp32 = Inlines.silk_min_32(temp32, Inlines.silk_LSHIFT((int) 1, 26 - 18 + lshift));
+                temp32 = Inlines.silk_min_32(temp32, Inlines.silk_LSHIFT(1, 26 - 18 + lshift));
             }
 
             Inlines.silk_scale_vector32_Q26_lshift_18(WLTP, WLTP_ptr, temp32, SilkConstants.LTP_ORDER * SilkConstants.LTP_ORDER);
@@ -192,9 +192,9 @@ class FindLTP {
             /* avoid division by zero */
 
             div_Q16 = Inlines.silk_DIV32_varQ(LPC_res_nrg, LPC_LTP_res_nrg, 16);
-            LTPredCodGain_Q7.Val = (int) Inlines.silk_SMULBB(3, Inlines.silk_lin2log(div_Q16) - (16 << 7));
+            LTPredCodGain_Q7.Val = Inlines.silk_SMULBB(3, Inlines.silk_lin2log(div_Q16) - (16 << 7));
 
-            Inlines.OpusAssert(LTPredCodGain_Q7.Val == (int) Inlines.silk_SAT16(Inlines.silk_MUL(3, Inlines.silk_lin2log(div_Q16) - (16 << 7))));
+            Inlines.OpusAssert(LTPredCodGain_Q7.Val == Inlines.silk_SAT16(Inlines.silk_MUL(3, Inlines.silk_lin2log(div_Q16) - (16 << 7))));
         }
 
         /* smoothing */
@@ -258,7 +258,7 @@ class FindLTP {
                     Inlines.silk_DIV32(
                             ((int) ((TuningParameters.LTP_SMOOTHING) * ((long) 1 << (26)) + 0.5))/*Inlines.SILK_CONST(TuningParameters.LTP_SMOOTHING, 26)*/,
                             Inlines.silk_RSHIFT(((int) ((TuningParameters.LTP_SMOOTHING) * ((long) 1 << (26)) + 0.5))/*Inlines.SILK_CONST(TuningParameters.LTP_SMOOTHING, 26)*/, 10) + temp32), /* Q10 */
-                    Inlines.silk_LSHIFT_SAT32(Inlines.silk_SUB_SAT32((int) m_Q12, Inlines.silk_RSHIFT(d_Q14[k], 2)), 4));
+                    Inlines.silk_LSHIFT_SAT32(Inlines.silk_SUB_SAT32(m_Q12, Inlines.silk_RSHIFT(d_Q14[k], 2)), 4));
             /* Q16 */
 
             temp32 = 0;

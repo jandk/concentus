@@ -151,7 +151,7 @@ class Stereo {
         pred2_Q10 = Inlines.silk_SMULWB(pred_Q13, pred_Q13);
 
         /* Faster update for signals with large prediction parameters */
-        smooth_coef_Q16 = (int) Inlines.silk_max_int(smooth_coef_Q16, Inlines.silk_abs(pred2_Q10));
+        smooth_coef_Q16 = Inlines.silk_max_int(smooth_coef_Q16, Inlines.silk_abs(pred2_Q10));
 
         /* Smoothed mid and residual norms */
         Inlines.OpusAssert(smooth_coef_Q16 < 32768);
@@ -257,7 +257,7 @@ class Stereo {
 
         /* Ratio of the norms of residual and mid signals */
         frac_Q16 = Inlines.silk_SMLABB(HP_ratio_Q14.Val, LP_ratio_Q14.Val, 3);
-        frac_Q16 = Inlines.silk_min(frac_Q16, ((int) ((1) * ((long) 1 << (16)) + 0.5))/*Inlines.SILK_CONST(1, 16)*/);
+        frac_Q16 = Inlines.silk_min(frac_Q16, ((int) (((long) 1 << (16)) + 0.5))/*Inlines.SILK_CONST(1, 16)*/);
 
         /* Determine bitrate distribution between mid and side, and possibly reduce stereo width */
         total_rate_bps -= is10msFrame != 0 ? 1200 : 600;
@@ -276,11 +276,11 @@ class Stereo {
             mid_side_rates_bps[1] = total_rate_bps - mid_side_rates_bps[0];
             /* width = 4 * ( 2 * side_rate - min_rate ) / ( ( 1 + 3 * frac ) * min_rate ) */
             width_Q14 = Inlines.silk_DIV32_varQ(Inlines.silk_LSHIFT(mid_side_rates_bps[1], 1) - min_mid_rate_bps,
-                    Inlines.silk_SMULWB(((int) ((1) * ((long) 1 << (16)) + 0.5))/*Inlines.SILK_CONST(1, 16)*/ + frac_3_Q16, min_mid_rate_bps), 14 + 2);
-            width_Q14 = Inlines.silk_LIMIT(width_Q14, 0, ((int) ((1) * ((long) 1 << (14)) + 0.5))/*Inlines.SILK_CONST(1, 14)*/);
+                    Inlines.silk_SMULWB(((int) (((long) 1 << (16)) + 0.5))/*Inlines.SILK_CONST(1, 16)*/ + frac_3_Q16, min_mid_rate_bps), 14 + 2);
+            width_Q14 = Inlines.silk_LIMIT(width_Q14, 0, ((int) (((long) 1 << (14)) + 0.5))/*Inlines.SILK_CONST(1, 14)*/);
         } else {
             mid_side_rates_bps[1] = total_rate_bps - mid_side_rates_bps[0];
-            width_Q14 = ((int) ((1) * ((long) 1 << (14)) + 0.5))/*Inlines.SILK_CONST(1, 14)*/;
+            width_Q14 = ((int) (((long) 1 << (14)) + 0.5))/*Inlines.SILK_CONST(1, 14)*/;
         }
 
         /* Smoother */
@@ -322,7 +322,7 @@ class Stereo {
         } else if (state.smth_width_Q14 > ((int) ((0.95f) * ((long) 1 << (14)) + 0.5))/*Inlines.SILK_CONST(0.95f, 14)*/) {
             /* Full-width stereo coding */
             silk_stereo_quant_pred(pred_Q13, ix);
-            width_Q14 = ((int) ((1) * ((long) 1 << (14)) + 0.5))/*Inlines.SILK_CONST(1, 14)*/;
+            width_Q14 = ((int) (((long) 1 << (14)) + 0.5))/*Inlines.SILK_CONST(1, 14)*/;
         } else {
             /* Reduced-width stereo coding; scale down and quantize predictors */
             pred_Q13[0] = Inlines.silk_RSHIFT(Inlines.silk_SMULBB(state.smth_width_Q14, pred_Q13[0]), 14);
@@ -353,9 +353,9 @@ class Stereo {
         pred0_Q13 = -state.pred_prev_Q13[0];
         pred1_Q13 = -state.pred_prev_Q13[1];
         w_Q24 = Inlines.silk_LSHIFT(state.width_prev_Q14, 10);
-        denom_Q16 = Inlines.silk_DIV32_16((int) 1 << 16, SilkConstants.STEREO_INTERP_LEN_MS * fs_kHz);
-        delta0_Q13 = 0 - Inlines.silk_RSHIFT_ROUND(Inlines.silk_SMULBB(pred_Q13[0] - state.pred_prev_Q13[0], denom_Q16), 16);
-        delta1_Q13 = 0 - Inlines.silk_RSHIFT_ROUND(Inlines.silk_SMULBB(pred_Q13[1] - state.pred_prev_Q13[1], denom_Q16), 16);
+        denom_Q16 = Inlines.silk_DIV32_16(1 << 16, SilkConstants.STEREO_INTERP_LEN_MS * fs_kHz);
+        delta0_Q13 = -Inlines.silk_RSHIFT_ROUND(Inlines.silk_SMULBB(pred_Q13[0] - state.pred_prev_Q13[0], denom_Q16), 16);
+        delta1_Q13 = -Inlines.silk_RSHIFT_ROUND(Inlines.silk_SMULBB(pred_Q13[1] - state.pred_prev_Q13[1], denom_Q16), 16);
         deltaw_Q24 = Inlines.silk_LSHIFT(Inlines.silk_SMULWB(width_Q14 - state.width_prev_Q14, denom_Q16), 10);
         for (n = 0; n < SilkConstants.STEREO_INTERP_LEN_MS * fs_kHz; n++) {
             pred0_Q13 += delta0_Q13;
@@ -365,20 +365,20 @@ class Stereo {
             /* Q11 */
             sum = Inlines.silk_SMLAWB(Inlines.silk_SMULWB(w_Q24, side[n + 1]), sum, pred0_Q13);
             /* Q8  */
-            sum = Inlines.silk_SMLAWB(sum, Inlines.silk_LSHIFT((int) x1[mid + n + 1], 11), pred1_Q13);
+            sum = Inlines.silk_SMLAWB(sum, Inlines.silk_LSHIFT(x1[mid + n + 1], 11), pred1_Q13);
             /* Q8  */
             x2[x2_ptr + n - 1] = (short) Inlines.silk_SAT16(Inlines.silk_RSHIFT_ROUND(sum, 8));
         }
 
-        pred0_Q13 = 0 - pred_Q13[0];
-        pred1_Q13 = 0 - pred_Q13[1];
+        pred0_Q13 = -pred_Q13[0];
+        pred1_Q13 = -pred_Q13[1];
         w_Q24 = Inlines.silk_LSHIFT(width_Q14, 10);
         for (n = SilkConstants.STEREO_INTERP_LEN_MS * fs_kHz; n < frame_length; n++) {
             sum = Inlines.silk_LSHIFT(Inlines.silk_ADD_LSHIFT(x1[mid + n] + x1[mid + n + 2], x1[mid + n + 1], 1), 9);
             /* Q11 */
             sum = Inlines.silk_SMLAWB(Inlines.silk_SMULWB(w_Q24, side[n + 1]), sum, pred0_Q13);
             /* Q8  */
-            sum = Inlines.silk_SMLAWB(sum, Inlines.silk_LSHIFT((int) x1[mid + n + 1], 11), pred1_Q13);
+            sum = Inlines.silk_SMLAWB(sum, Inlines.silk_LSHIFT(x1[mid + n + 1], 11), pred1_Q13);
             /* Q8  */
             x2[x2_ptr + n - 1] = (short) Inlines.silk_SAT16(Inlines.silk_RSHIFT_ROUND(sum, 8));
         }
@@ -417,7 +417,7 @@ class Stereo {
         /* Interpolate predictors and add prediction to side channel */
         pred0_Q13 = state.pred_prev_Q13[0];
         pred1_Q13 = state.pred_prev_Q13[1];
-        denom_Q16 = Inlines.silk_DIV32_16((int) 1 << 16, SilkConstants.STEREO_INTERP_LEN_MS * fs_kHz);
+        denom_Q16 = Inlines.silk_DIV32_16(1 << 16, SilkConstants.STEREO_INTERP_LEN_MS * fs_kHz);
         delta0_Q13 = Inlines.silk_RSHIFT_ROUND(Inlines.silk_SMULBB(pred_Q13[0] - state.pred_prev_Q13[0], denom_Q16), 16);
         delta1_Q13 = Inlines.silk_RSHIFT_ROUND(Inlines.silk_SMULBB(pred_Q13[1] - state.pred_prev_Q13[1], denom_Q16), 16);
         for (n = 0; n < SilkConstants.STEREO_INTERP_LEN_MS * fs_kHz; n++) {
@@ -425,9 +425,9 @@ class Stereo {
             pred1_Q13 += delta1_Q13;
             sum = Inlines.silk_LSHIFT(Inlines.silk_ADD_LSHIFT(x1[x1_ptr + n] + x1[x1_ptr + n + 2], x1[x1_ptr + n + 1], 1), 9);
             /* Q11 */
-            sum = Inlines.silk_SMLAWB(Inlines.silk_LSHIFT((int) x2[x2_ptr + n + 1], 8), sum, pred0_Q13);
+            sum = Inlines.silk_SMLAWB(Inlines.silk_LSHIFT(x2[x2_ptr + n + 1], 8), sum, pred0_Q13);
             /* Q8  */
-            sum = Inlines.silk_SMLAWB(sum, Inlines.silk_LSHIFT((int) x1[x1_ptr + n + 1], 11), pred1_Q13);
+            sum = Inlines.silk_SMLAWB(sum, Inlines.silk_LSHIFT(x1[x1_ptr + n + 1], 11), pred1_Q13);
             /* Q8  */
             x2[x2_ptr + n + 1] = (short) Inlines.silk_SAT16(Inlines.silk_RSHIFT_ROUND(sum, 8));
         }
@@ -436,9 +436,9 @@ class Stereo {
         for (n = SilkConstants.STEREO_INTERP_LEN_MS * fs_kHz; n < frame_length; n++) {
             sum = Inlines.silk_LSHIFT(Inlines.silk_ADD_LSHIFT(x1[x1_ptr + n] + x1[x1_ptr + n + 2], x1[x1_ptr + n + 1], 1), 9);
             /* Q11 */
-            sum = Inlines.silk_SMLAWB(Inlines.silk_LSHIFT((int) x2[x2_ptr + n + 1], 8), sum, pred0_Q13);
+            sum = Inlines.silk_SMLAWB(Inlines.silk_LSHIFT(x2[x2_ptr + n + 1], 8), sum, pred0_Q13);
             /* Q8  */
-            sum = Inlines.silk_SMLAWB(sum, Inlines.silk_LSHIFT((int) x1[x1_ptr + n + 1], 11), pred1_Q13);
+            sum = Inlines.silk_SMLAWB(sum, Inlines.silk_LSHIFT(x1[x1_ptr + n + 1], 11), pred1_Q13);
             /* Q8  */
             x2[x2_ptr + n + 1] = (short) Inlines.silk_SAT16(Inlines.silk_RSHIFT_ROUND(sum, 8));
         }

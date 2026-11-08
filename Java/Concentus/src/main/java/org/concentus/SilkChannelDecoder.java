@@ -176,8 +176,8 @@ class SilkChannelDecoder {
     /// <param name="this">I/O Decoder state</param>
     private void silk_PLC_Reset() {
         sPLC.pitchL_Q8 = Inlines.silk_LSHIFT(frame_length, 8 - 1);
-        sPLC.prevGain_Q16[0] = ((int) ((1) * ((long) 1 << (16)) + 0.5))/*Inlines.SILK_CONST(1, 16)*/;
-        sPLC.prevGain_Q16[1] = ((int) ((1) * ((long) 1 << (16)) + 0.5))/*Inlines.SILK_CONST(1, 16)*/;
+        sPLC.prevGain_Q16[0] = ((int) (((long) 1 << (16)) + 0.5))/*Inlines.SILK_CONST(1, 16)*/;
+        sPLC.prevGain_Q16[1] = ((int) (((long) 1 << (16)) + 0.5))/*Inlines.SILK_CONST(1, 16)*/;
         sPLC.subfr_length = 20;
         sPLC.nb_subfr = 2;
     }
@@ -280,7 +280,7 @@ class SilkChannelDecoder {
 
         if (lostFlag == DecoderAPIFlag.FLAG_DECODE_NORMAL
                 || (lostFlag == DecoderAPIFlag.FLAG_DECODE_LBRR && LBRR_flags[nFramesDecoded] == 1)) {
-            short[] pulses = new short[(L + SilkConstants.SHELL_CODEC_FRAME_LENGTH - 1) & ~(SilkConstants.SHELL_CODEC_FRAME_LENGTH - 1)];
+            short[] pulses = new short[(L + SilkConstants.SHELL_CODEC_FRAME_LENGTH - 1) & -SilkConstants.SHELL_CODEC_FRAME_LENGTH];
             /**
              * ******************************************
              */

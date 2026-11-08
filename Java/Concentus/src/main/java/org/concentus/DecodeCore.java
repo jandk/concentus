@@ -82,7 +82,7 @@ class DecodeCore {
         rand_seed = psDec.indices.Seed;
         for (i = 0; i < psDec.frame_length; i++) {
             rand_seed = Inlines.silk_RAND(rand_seed);
-            psDec.exc_Q14[i] = Inlines.silk_LSHIFT((int) pulses[i], 14);
+            psDec.exc_Q14[i] = Inlines.silk_LSHIFT(pulses[i], 14);
             if (psDec.exc_Q14[i] > 0) {
                 psDec.exc_Q14[i] -= SilkConstants.QUANT_LEVEL_ADJUST_Q10 << 4;
             } else {
@@ -124,7 +124,7 @@ class DecodeCore {
                     sLPC_Q14[i] = Inlines.silk_SMULWW(gain_adj_Q16, sLPC_Q14[i]);
                 }
             } else {
-                gain_adj_Q16 = (int) 1 << 16;
+                gain_adj_Q16 = 1 << 16;
             }
 
             /* Save inv_gain */
@@ -167,7 +167,7 @@ class DecodeCore {
                     for (i = 0; i < lag + SilkConstants.LTP_ORDER / 2; i++) {
                         sLTP_Q15[sLTP_buf_idx - i - 1] = Inlines.silk_SMULWB(inv_gain_Q31, sLTP[psDec.ltp_mem_length - i - 1]);
                     }
-                } else /* Update LTP state when Gain changes */ if (gain_adj_Q16 != (int) 1 << 16) {
+                } else /* Update LTP state when Gain changes */ if (gain_adj_Q16 != 1 << 16) {
                     for (i = 0; i < lag + SilkConstants.LTP_ORDER / 2; i++) {
                         sLTP_Q15[sLTP_buf_idx - i - 1] = Inlines.silk_SMULWW(gain_adj_Q16, sLTP_Q15[sLTP_buf_idx - i - 1]);
                     }

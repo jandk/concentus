@@ -91,7 +91,7 @@ class Autocorrelation {
         }
         shift = 2 * shift;
         if (shift <= 0) {
-            ac[0] += Inlines.SHL32((int) 1, -shift);
+            ac[0] += Inlines.SHL32(1, -shift);
         }
         if (ac[0] < 268435456) {
             int shift2 = 29 - Inlines.EC_ILOG(ac[0]);
@@ -177,7 +177,7 @@ class Autocorrelation {
 
         shift = 2 * shift;
         if (shift <= 0) {
-            ac[0] += Inlines.SHL32((int) 1, -shift);
+            ac[0] += Inlines.SHL32(1, -shift);
         }
         if (ac[0] < 268435456) {
             int shift2 = 29 - Inlines.EC_ILOG(ac[0]);
@@ -222,7 +222,7 @@ class Autocorrelation {
 
         /* Loop over samples */
         for (n = 0; n < length; n++) {
-            tmp1_QS = Inlines.silk_LSHIFT32((int) input[n], QS);
+            tmp1_QS = Inlines.silk_LSHIFT32(input[n], QS);
             /* Loop over allpass sections */
             for (i = 0; i < order; i += 2) {
                 /* Output of allpass section */

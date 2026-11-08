@@ -49,8 +49,8 @@ class PLC {
             SilkChannelDecoder psDec /* I/O Decoder state        */
     ) {
         psDec.sPLC.pitchL_Q8 = Inlines.silk_LSHIFT(psDec.frame_length, 8 - 1);
-        psDec.sPLC.prevGain_Q16[0] = ((int) ((1) * ((long) 1 << (16)) + 0.5))/*Inlines.SILK_CONST(1, 16)*/;
-        psDec.sPLC.prevGain_Q16[1] = ((int) ((1) * ((long) 1 << (16)) + 0.5))/*Inlines.SILK_CONST(1, 16)*/;
+        psDec.sPLC.prevGain_Q16[0] = ((int) (((long) 1 << (16)) + 0.5))/*Inlines.SILK_CONST(1, 16)*/;
+        psDec.sPLC.prevGain_Q16[1] = ((int) (((long) 1 << (16)) + 0.5))/*Inlines.SILK_CONST(1, 16)*/;
         psDec.sPLC.subfr_length = 20;
         psDec.sPLC.nb_subfr = 2;
     }
@@ -281,8 +281,8 @@ class PLC {
 
                 invGain_Q30 = LPCInversePredGain.silk_LPC_inverse_pred_gain(psPLC.prevLPC_Q12, psDec.LPC_order);
 
-                down_scale_Q30 = Inlines.silk_min_32(Inlines.silk_RSHIFT((int) 1 << 30, SilkConstants.LOG2_INV_LPC_GAIN_HIGH_THRES), invGain_Q30);
-                down_scale_Q30 = Inlines.silk_max_32(Inlines.silk_RSHIFT((int) 1 << 30, SilkConstants.LOG2_INV_LPC_GAIN_LOW_THRES), down_scale_Q30);
+                down_scale_Q30 = Inlines.silk_min_32(Inlines.silk_RSHIFT(1 << 30, SilkConstants.LOG2_INV_LPC_GAIN_HIGH_THRES), invGain_Q30);
+                down_scale_Q30 = Inlines.silk_max_32(Inlines.silk_RSHIFT(1 << 30, SilkConstants.LOG2_INV_LPC_GAIN_LOW_THRES), down_scale_Q30);
                 down_scale_Q30 = Inlines.silk_LSHIFT(down_scale_Q30, SilkConstants.LOG2_INV_LPC_GAIN_HIGH_THRES);
 
                 rand_Gain_Q15 = Inlines.silk_RSHIFT(Inlines.silk_SMULWB(down_scale_Q30, rand_Gain_Q15), 14);
@@ -448,14 +448,14 @@ class PLC {
                     frac_Q24 = Inlines.silk_DIV32(psPLC.conc_energy, Inlines.silk_max(energy.Val, 1));
 
                     gain_Q16 = Inlines.silk_LSHIFT(Inlines.silk_SQRT_APPROX(frac_Q24), 4);
-                    slope_Q16 = Inlines.silk_DIV32_16(((int) 1 << 16) - gain_Q16, length);
+                    slope_Q16 = Inlines.silk_DIV32_16((1 << 16) - gain_Q16, length);
                     /* Make slope 4x steeper to avoid missing onsets after DTX */
                     slope_Q16 = Inlines.silk_LSHIFT(slope_Q16, 2);
 
                     for (i = frame_ptr; i < frame_ptr + length; i++) {
                         frame[i] = (short) (Inlines.silk_SMULWB(gain_Q16, frame[i]));
                         gain_Q16 += slope_Q16;
-                        if (gain_Q16 > (int) 1 << 16) {
+                        if (gain_Q16 > 1 << 16) {
                             break;
                         }
                     }

@@ -68,10 +68,10 @@ class ApplySineWindow {
         /* Frequency */
         k = (length >> 2) - 4;
         Inlines.OpusAssert(k >= 0 && k <= 26);
-        f_Q16 = (int) freq_table_Q16[k];
+        f_Q16 = freq_table_Q16[k];
 
         /* Factor used for cosine approximation */
-        c_Q16 = Inlines.silk_SMULWB((int) f_Q16, -f_Q16);
+        c_Q16 = Inlines.silk_SMULWB(f_Q16, -f_Q16);
         Inlines.OpusAssert(c_Q16 >= -32768);
 
         /* initialize state */
@@ -82,9 +82,9 @@ class ApplySineWindow {
             S1_Q16 = f_Q16 + Inlines.silk_RSHIFT(length, 3);
         } else {
             /* start from 1 */
-            S0_Q16 = ((int) 1 << 16);
+            S0_Q16 = (1 << 16);
             /* approximation of cos(f) */
-            S1_Q16 = ((int) 1 << 16) + Inlines.silk_RSHIFT(c_Q16, 1) + Inlines.silk_RSHIFT(length, 4);
+            S1_Q16 = (1 << 16) + Inlines.silk_RSHIFT(c_Q16, 1) + Inlines.silk_RSHIFT(length, 4);
         }
 
         /* Uses the recursive equation:   sin(n*f) = 2 * cos(f) * sin((n-1)*f) - sin((n-2)*f)    */
@@ -95,12 +95,12 @@ class ApplySineWindow {
             px_win[pxwk] = (short) Inlines.silk_SMULWB(Inlines.silk_RSHIFT(S0_Q16 + S1_Q16, 1), px[pxk]);
             px_win[pxwk + 1] = (short) Inlines.silk_SMULWB(S1_Q16, px[pxk + 1]);
             S0_Q16 = Inlines.silk_SMULWB(S1_Q16, c_Q16) + Inlines.silk_LSHIFT(S1_Q16, 1) - S0_Q16 + 1;
-            S0_Q16 = Inlines.silk_min(S0_Q16, ((int) 1 << 16));
+            S0_Q16 = Inlines.silk_min(S0_Q16, (1 << 16));
 
             px_win[pxwk + 2] = (short) Inlines.silk_SMULWB(Inlines.silk_RSHIFT(S0_Q16 + S1_Q16, 1), px[pxk + 2]);
             px_win[pxwk + 3] = (short) Inlines.silk_SMULWB(S0_Q16, px[pxk + 3]);
             S1_Q16 = Inlines.silk_SMULWB(S0_Q16, c_Q16) + Inlines.silk_LSHIFT(S0_Q16, 1) - S1_Q16;
-            S1_Q16 = Inlines.silk_min(S1_Q16, ((int) 1 << 16));
+            S1_Q16 = Inlines.silk_min(S1_Q16, (1 << 16));
         }
     }
 }

@@ -546,8 +546,7 @@ public class OpusMSEncoder {
             byte[] data,
             int data_ptr,
             int max_data_bytes,
-            int lsb_depth,
-            int float_api
+            int lsb_depth
     ) {
         int Fs;
         int s;
@@ -711,7 +710,7 @@ public class OpusMSEncoder {
                 enc.setBitrate(curr_max * (8 * Fs / frame_size));
             }
             len = enc.opus_encode_native(buf, 0, frame_size, tmp_data, 0, curr_max, lsb_depth,
-                    pcm, pcm_ptr, analysis_frame_size, c1, c2, layout.nb_channels, float_api);
+                    pcm, pcm_ptr, analysis_frame_size, c1, c2, layout.nb_channels);
             if (len < 0) {
                 return len;
             }
@@ -753,7 +752,7 @@ public class OpusMSEncoder {
             int max_data_bytes
     ) {
         // todo: catch error codes here
-        return opus_multistream_encode_native(pcm, pcm_offset, frame_size, outputBuffer, outputBuffer_offset, max_data_bytes, 16, 0);
+        return opus_multistream_encode_native(pcm, pcm_offset, frame_size, outputBuffer, outputBuffer_offset, max_data_bytes, 16);
     }
 
     public int getBitrate() {

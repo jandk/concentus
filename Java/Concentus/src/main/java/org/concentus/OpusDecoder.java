@@ -54,22 +54,15 @@ public class OpusDecoder {
 
     int channels;
     int Fs;
-    /**
-     * Sampling rate (at the API level)
-     */
-    final DecControlState DecControl = new DecControlState();
     int decode_gain;
 
     /* Everything beyond this point gets cleared on a reset */
     int stream_channels;
     OpusBandwidth bandwidth;
-    OpusMode mode;
-    OpusMode prev_mode;
     int frame_size;
-    int prev_redundancy;
+    boolean got_packet;
     int last_packet_duration;
     int rangeFinal;
-    final SilkDecoder SilkDecoder = new SilkDecoder();
     final CeltDecoder Celt_Decoder = new CeltDecoder();
 
     OpusDecoder() {
@@ -78,10 +71,6 @@ public class OpusDecoder {
     void reset() {
         channels = 0;
         Fs = 0;
-        /**
-         * Sampling rate (at the API level)
-         */
-        DecControl.Reset();
         decode_gain = 0;
         partialReset();
     }
@@ -92,19 +81,13 @@ public class OpusDecoder {
     void partialReset() {
         stream_channels = 0;
         bandwidth = OpusBandwidth.OPUS_BANDWIDTH_UNKNOWN;
-        mode = OpusMode.MODE_UNKNOWN;
-        prev_mode = OpusMode.MODE_UNKNOWN;
         frame_size = 0;
-        prev_redundancy = 0;
+        got_packet = false;
         last_packet_duration = 0;
         rangeFinal = 0;
-        // fixme: do these get reset here? I don't think they do because init_celt and init_silk should both call RESET_STATE on their respective states
-        //SilkDecoder.Reset();
-        //CeltDecoder.Reset();
     }
 
     int opus_decoder_init(int Fs, int channels) {
-        SilkDecoder silk_dec;
         CeltDecoder celt_dec;
         int ret;
 
@@ -114,20 +97,10 @@ public class OpusDecoder {
         }
         reset();
 
-        /* Initialize SILK encoder */
-        silk_dec = SilkDecoder;
         celt_dec = Celt_Decoder;
         this.stream_channels = this.channels = channels;
 
         this.Fs = Fs;
-        DecControl.API_sampleRate = this.Fs;
-        DecControl.nChannelsAPI = this.channels;
-
-        /* Reset decoder */
-        ret = DecodeAPI.silk_InitDecoder(silk_dec);
-        if (ret != 0) {
-            return OpusError.OPUS_INTERNAL_ERROR;
-        }
 
         /* Initialize CELT decoder */
         ret = celt_dec.celt_decoder_init(Fs, channels);
@@ -137,7 +110,6 @@ public class OpusDecoder {
 
         celt_dec.SetSignalling(0);
 
-        this.prev_mode = OpusMode.MODE_UNKNOWN;
         this.frame_size = Fs / 400;
         return OpusError.OPUS_OK;
     }
@@ -155,7 +127,6 @@ public class OpusDecoder {
      * @param Fs       Sample rate to decode at (Hz). This must be one of 8000, 12000,
      *                 16000, 24000, or 48000.
      * @param channels Number of channels (1 or 2) to decode.
-     * @throws OpusException
      */
     public OpusDecoder(int Fs, int channels) throws OpusException {
         int ret;
@@ -175,46 +146,21 @@ public class OpusDecoder {
         }
     }
 
-    private static final byte[] SILENCE = new byte[]{-1, -1};
-
     int opus_decode_frame(byte[] data, int data_ptr,
                           int len, short[] pcm, int pcm_ptr, int frame_size, int decode_fec) {
-        SilkDecoder silk_dec;
         CeltDecoder celt_dec;
-        int i, silk_ret = 0, celt_ret = 0;
+        int i, celt_ret = 0;
         EntropyCoder dec = new EntropyCoder(); // porting note: stack var
-        int silk_frame_size;
-        int pcm_silk_size;
-        short[] pcm_silk;
-        int pcm_transition_silk_size;
-        short[] pcm_transition_silk;
-        int pcm_transition_celt_size;
-        short[] pcm_transition_celt;
-        short[] pcm_transition = null;
-        int redundant_audio_size;
-        short[] redundant_audio;
 
         int audiosize;
-        OpusMode mode;
-        int transition = 0;
-        int start_band;
-        int redundancy = 0;
-        int redundancy_bytes = 0;
-        int celt_to_silk = 0;
-        int c;
         int F2_5, F5, F10, F20;
-        int[] window;
-        int redundant_rng = 0;
-        int celt_accum;
 
-        silk_dec = SilkDecoder;
         celt_dec = Celt_Decoder;
         F20 = Fs / 50;
         F10 = F20 >> 1;
         F5 = F10 >> 1;
         F2_5 = F5 >> 1;
         if (frame_size < F2_5) {
-
             return OpusError.OPUS_BUFFER_TOO_SMALL;
         }
         /* Limit frame_size to avoid excessive stack allocations. */
@@ -227,18 +173,13 @@ public class OpusDecoder {
         }
         if (data != null) {
             audiosize = this.frame_size;
-            mode = this.mode;
             dec.dec_init(data, data_ptr, len);
         } else {
             audiosize = frame_size;
-            mode = prev_mode;
 
-            if (mode == OpusMode.MODE_UNKNOWN) {
+            if (!got_packet) {
                 /* If we haven't got any packet yet, all we can do is return zeros */
-                for (i = pcm_ptr; i < pcm_ptr + (audiosize * channels); i++) {
-                    pcm[i] = 0;
-                }
-
+                Arrays.fill(pcm, pcm_ptr, pcm_ptr + (audiosize * channels), (short) 0);
                 return audiosize;
             }
 
@@ -259,140 +200,16 @@ public class OpusDecoder {
             } else if (audiosize < F20) {
                 if (audiosize > F10) {
                     audiosize = F10;
-                } else if (mode != OpusMode.MODE_SILK_ONLY && audiosize > F5 && audiosize < F10) {
+                } else if (audiosize > F5 && audiosize < F10) {
                     audiosize = F5;
                 }
             }
         }
 
-        /* In fixed-point, we can tell CELT to do the accumulation on top of the
-           SILK PCM buffer. This saves some stack space. */
-        celt_accum = ((mode != OpusMode.MODE_CELT_ONLY) && (frame_size >= F10)) ? 1 : 0;
-
-        pcm_transition_silk_size = 0;
-        pcm_transition_celt_size = 0;
-        if (data != null && (prev_mode != OpusMode.MODE_UNKNOWN && prev_mode != OpusMode.MODE_AUTO) && ((mode == OpusMode.MODE_CELT_ONLY && prev_mode != OpusMode.MODE_CELT_ONLY && (prev_redundancy == 0))
-                || (mode != OpusMode.MODE_CELT_ONLY && prev_mode == OpusMode.MODE_CELT_ONLY))) {
-            transition = 1;
-            /* Decide where to allocate the stack memory for pcm_transition */
-            if (mode == OpusMode.MODE_CELT_ONLY) {
-                pcm_transition_celt_size = F5 * channels;
-            } else {
-                pcm_transition_silk_size = F5 * channels;
-            }
-        }
-        pcm_transition_celt = new short[pcm_transition_celt_size];
-        if (transition != 0 && mode == OpusMode.MODE_CELT_ONLY) {
-            pcm_transition = pcm_transition_celt;
-            opus_decode_frame(null, 0, 0, pcm_transition, 0, Inlines.IMIN(F5, audiosize), 0);
-        }
         if (audiosize > frame_size) {
-            /*fprintf(stderr, "PCM buffer too small: %d vs %d (mode = %d)\n", audiosize, frame_size, mode);*/
-
             return OpusError.OPUS_BAD_ARG;
         } else {
             frame_size = audiosize;
-        }
-
-        /* Don't allocate any memory when in CELT-only mode */
-        pcm_silk_size = (mode != OpusMode.MODE_CELT_ONLY && (celt_accum == 0)) ? Inlines.IMAX(F10, frame_size) * channels : 0;
-        pcm_silk = new short[pcm_silk_size];
-
-        /* SILK processing */
-        if (mode != OpusMode.MODE_CELT_ONLY) {
-            int lost_flag, decoded_samples;
-            short[] pcm_ptr2;
-            int pcm_ptr2_ptr = 0;
-
-            if (celt_accum != 0) {
-                pcm_ptr2 = pcm;
-                pcm_ptr2_ptr = pcm_ptr;
-            } else {
-                pcm_ptr2 = pcm_silk;
-                pcm_ptr2_ptr = 0;
-            }
-
-            if (prev_mode == OpusMode.MODE_CELT_ONLY) {
-                DecodeAPI.silk_InitDecoder(silk_dec);
-            }
-
-            /* The SILK PLC cannot produce frames of less than 10 ms */
-            DecControl.payloadSize_ms = Inlines.IMAX(10, 1000 * audiosize / Fs);
-
-            if (data != null) {
-                DecControl.nChannelsInternal = stream_channels;
-                if (mode == OpusMode.MODE_SILK_ONLY) {
-                    if (bandwidth == OpusBandwidth.OPUS_BANDWIDTH_NARROWBAND) {
-                        DecControl.internalSampleRate = 8000;
-                    } else if (bandwidth == OpusBandwidth.OPUS_BANDWIDTH_MEDIUMBAND) {
-                        DecControl.internalSampleRate = 12000;
-                    } else if (bandwidth == OpusBandwidth.OPUS_BANDWIDTH_WIDEBAND) {
-                        DecControl.internalSampleRate = 16000;
-                    } else {
-                        DecControl.internalSampleRate = 16000;
-                        Inlines.OpusAssert(false);
-                    }
-                } else {
-                    /* Hybrid mode */
-                    DecControl.internalSampleRate = 16000;
-                }
-            }
-
-            lost_flag = data == null ? 1 : 2 * decode_fec;
-            decoded_samples = 0;
-            do {
-                /* Call SILK decoder */
-                int first_frame = (decoded_samples == 0) ? 1 : 0;
-                BoxedValueInt boxed_silk_frame_size = new BoxedValueInt(0);
-                silk_ret = DecodeAPI.silk_Decode(silk_dec, DecControl,
-                        lost_flag, first_frame, dec, pcm_ptr2, pcm_ptr2_ptr, boxed_silk_frame_size);
-                silk_frame_size = boxed_silk_frame_size.Val;
-
-                if (silk_ret != 0) {
-                    if (lost_flag != 0) {
-                        /* PLC failure should not be fatal */
-                        silk_frame_size = frame_size;
-                        Arrays.fill(pcm_ptr2, pcm_ptr2_ptr, pcm_ptr2_ptr + frame_size * channels, (short) 0);
-                    } else {
-
-                        return OpusError.OPUS_INTERNAL_ERROR;
-                    }
-                }
-                pcm_ptr2_ptr += (silk_frame_size * channels);
-                decoded_samples += silk_frame_size;
-            } while (decoded_samples < frame_size);
-        }
-
-        start_band = 0;
-        if (decode_fec == 0 && mode != OpusMode.MODE_CELT_ONLY && data != null
-                && dec.tell() + 17 + 20 * (this.mode == OpusMode.MODE_HYBRID ? 1 : 0) <= 8 * len) {
-            /* Check if we have a redundant 0-8 kHz band */
-            if (mode == OpusMode.MODE_HYBRID) {
-                redundancy = dec.dec_bit_logp(12);
-            } else {
-                redundancy = 1;
-            }
-            if (redundancy != 0) {
-                celt_to_silk = dec.dec_bit_logp(1);
-                /* redundancy_bytes will be at least two, in the non-hybrid
-                   case due to the ec_tell() check above */
-                redundancy_bytes = mode == OpusMode.MODE_HYBRID
-                        ? (int) dec.dec_uint(256) + 2
-                        : len - ((dec.tell() + 7) >> 3);
-                len -= redundancy_bytes;
-                /* This is a sanity check. It should never happen for a valid
-                   packet, so the exact behaviour is not normative. */
-                if (len * 8 < dec.tell()) {
-                    len = 0;
-                    redundancy_bytes = 0;
-                    redundancy = 0;
-                }
-                /* Shrink decoder because of raw bits */
-                dec.storage = (dec.storage - redundancy_bytes);
-            }
-        }
-        if (mode != OpusMode.MODE_CELT_ONLY) {
-            start_band = 17;
         }
 
         {
@@ -417,102 +234,11 @@ public class OpusDecoder {
             celt_dec.SetChannels(stream_channels);
         }
 
-        if (redundancy != 0) {
-            transition = 0;
-            pcm_transition_silk_size = 0;
-        }
+        celt_dec.SetStartBand(0);
 
-        pcm_transition_silk = new short[pcm_transition_silk_size];
-
-        if (transition != 0 && mode != OpusMode.MODE_CELT_ONLY) {
-            pcm_transition = pcm_transition_silk;
-            opus_decode_frame(null, 0, 0, pcm_transition, 0, Inlines.IMIN(F5, audiosize), 0);
-        }
-
-        /* Only allocation memory for redundancy if/when needed */
-        redundant_audio_size = redundancy != 0 ? F5 * channels : 0;
-        redundant_audio = new short[redundant_audio_size];
-
-        /* 5 ms redundant frame for CELT->SILK*/
-        if (redundancy != 0 && celt_to_silk != 0) {
-            celt_dec.SetStartBand(0);
-            celt_dec.celt_decode_with_ec(data, (data_ptr + len), redundancy_bytes,
-                    redundant_audio, 0, F5, null, 0);
-            redundant_rng = celt_dec.GetFinalRange();
-        }
-
-        /* MUST be after PLC */
-        celt_dec.SetStartBand(start_band);
-
-        if (mode != OpusMode.MODE_SILK_ONLY) {
-            int celt_frame_size = Inlines.IMIN(F20, frame_size);
-            /* Make sure to discard any previous CELT state */
-            if (mode != prev_mode && (prev_mode != OpusMode.MODE_AUTO && prev_mode != OpusMode.MODE_UNKNOWN) && prev_redundancy == 0) {
-                celt_dec.ResetState();
-            }
-            /* Decode CELT */
-            celt_ret = celt_dec.celt_decode_with_ec(decode_fec != 0 ? null : data, data_ptr,
-                    len, pcm, pcm_ptr, celt_frame_size, dec, celt_accum);
-        } else {
-            if (celt_accum == 0) {
-                for (i = pcm_ptr; i < (frame_size * channels) + pcm_ptr; i++) {
-                    pcm[i] = 0;
-                }
-            }
-            /* For hybrid -> SILK transitions, we let the CELT MDCT
-               do a fade-out by decoding a silence frame */
-            if (prev_mode == OpusMode.MODE_HYBRID && !(redundancy != 0 && celt_to_silk != 0 && prev_redundancy != 0)) {
-                celt_dec.SetStartBand(0);
-                celt_dec.celt_decode_with_ec(SILENCE, 0, 2, pcm, pcm_ptr, F2_5, null, celt_accum);
-            }
-        }
-
-        if (mode != OpusMode.MODE_CELT_ONLY && celt_accum == 0) {
-            for (i = 0; i < frame_size * channels; i++) {
-                pcm[pcm_ptr + i] = Inlines.SAT16(Inlines.ADD32(pcm[pcm_ptr + i], pcm_silk[i]));
-            }
-        }
-
-        window = celt_dec.GetMode().window;
-
-        /* 5 ms redundant frame for SILK->CELT */
-        if (redundancy != 0 && celt_to_silk == 0) {
-            celt_dec.ResetState();
-            celt_dec.SetStartBand(0);
-
-            celt_dec.celt_decode_with_ec(data, data_ptr + len, redundancy_bytes, redundant_audio, 0, F5, null, 0);
-            redundant_rng = celt_dec.GetFinalRange();
-            CodecHelpers.smooth_fade(pcm, pcm_ptr + channels * (frame_size - F2_5), redundant_audio, channels * F2_5,
-                    pcm, (pcm_ptr + channels * (frame_size - F2_5)), F2_5, channels, window, Fs);
-        }
-        if (redundancy != 0 && celt_to_silk != 0) {
-            for (c = 0; c < channels; c++) {
-                for (i = 0; i < F2_5; i++) {
-                    pcm[channels * i + c + pcm_ptr] = redundant_audio[channels * i + c];
-                }
-            }
-            CodecHelpers.smooth_fade(redundant_audio, (channels * F2_5), pcm, (pcm_ptr + (channels * F2_5)),
-                    pcm, (pcm_ptr + (channels * F2_5)), F2_5, channels, window, Fs);
-        }
-        if (transition != 0) {
-            if (audiosize >= F5) {
-                for (i = 0; i < channels * F2_5; i++) {
-                    pcm[i] = pcm_transition[i];
-                }
-                CodecHelpers.smooth_fade(pcm_transition, (channels * F2_5), pcm, (pcm_ptr + (channels * F2_5)),
-                        pcm, (pcm_ptr + (channels * F2_5)), F2_5,
-                        channels, window, Fs);
-            } else {
-                /* Not enough time to do a clean transition, but we do it anyway
-                   This will not preserve amplitude perfectly and may introduce
-                   a bit of temporal aliasing, but it shouldn't be too bad and
-                   that's pretty much the best we can do. In any case, generating this
-                   transition is pretty silly in the first place */
-                CodecHelpers.smooth_fade(pcm_transition, 0, pcm, pcm_ptr,
-                        pcm, pcm_ptr, F2_5,
-                        channels, window, Fs);
-            }
-        }
+        /* Decode CELT */
+        celt_ret = celt_dec.celt_decode_with_ec(decode_fec != 0 ? null : data, data_ptr,
+                len, pcm, pcm_ptr, Inlines.IMIN(F20, frame_size), dec, 0);
 
         if (decode_gain != 0) {
             int gain;
@@ -527,24 +253,24 @@ public class OpusDecoder {
         if (len <= 1) {
             this.rangeFinal = 0;
         } else {
-            this.rangeFinal = ((int) dec.rng) ^ redundant_rng;
+            this.rangeFinal = (int) dec.rng;
         }
 
-        this.prev_mode = mode;
-        this.prev_redundancy = (redundancy != 0 && celt_to_silk == 0) ? 1 : 0;
+        if (data != null) {
+            this.got_packet = true;
+        }
 
         return celt_ret < 0 ? celt_ret : audiosize;
     }
 
     int opus_decode_native(byte[] data, int data_ptr,
                            int len, short[] pcm_out, int pcm_out_ptr, int frame_size, int decode_fec,
-                           int self_delimited, BoxedValueInt packet_offset, int soft_clip) {
+                           int self_delimited, BoxedValueInt packet_offset) {
         int i, nb_samples;
         int count, offset;
         int packet_frame_size, packet_stream_channels;
         packet_offset.Val = 0;
         OpusBandwidth packet_bandwidth;
-        OpusMode packet_mode;
         /* 48 x 2.5 ms = 120 ms */
         // fixme: make sure these values can fit in an int16
         short[] size = new short[48];
@@ -572,7 +298,6 @@ public class OpusDecoder {
             return OpusError.OPUS_BAD_ARG;
         }
 
-        packet_mode = OpusPacketInfo.getEncoderMode(data, data_ptr);
         packet_bandwidth = OpusPacketInfo.getBandwidth(data, data_ptr);
         packet_frame_size = OpusPacketInfo.getNumSamplesPerFrame(data, data_ptr, Fs);
         packet_stream_channels = OpusPacketInfo.getNumEncodedChannels(data, data_ptr);
@@ -590,36 +315,13 @@ public class OpusDecoder {
         data_ptr += offset;
 
         if (decode_fec != 0) {
-            BoxedValueInt dummy = new BoxedValueInt(0);
-            int duration_copy;
-            int ret;
-            /* If no FEC can be present, run the PLC (recursive call) */
-            if (frame_size < packet_frame_size || packet_mode == OpusMode.MODE_CELT_ONLY || mode == OpusMode.MODE_CELT_ONLY) {
-                return opus_decode_native(null, 0, 0, pcm_out, pcm_out_ptr, frame_size, 0, 0, dummy, soft_clip);
-            }
-            /* Otherwise, run the PLC on everything except the size for which we might have FEC */
-            duration_copy = last_packet_duration;
-            if (frame_size - packet_frame_size != 0) {
-                ret = opus_decode_native(null, 0, 0, pcm_out, pcm_out_ptr, frame_size - packet_frame_size, 0, 0, dummy, soft_clip);
-                if (ret < 0) {
-                    this.last_packet_duration = duration_copy;
-                    return ret;
-                }
-                Inlines.OpusAssert(ret == frame_size - packet_frame_size);
-            }
-            /* Complete with FEC */
-            this.mode = packet_mode;
-            this.bandwidth = packet_bandwidth;
-            this.frame_size = packet_frame_size;
-            this.stream_channels = packet_stream_channels;
-            ret = opus_decode_frame(data, data_ptr, size[0], pcm_out, pcm_out_ptr + (channels * (frame_size - packet_frame_size)),
-                    packet_frame_size, 1);
-            if (ret < 0) {
-                return ret;
-            } else {
-                this.last_packet_duration = frame_size;
-                return frame_size;
-            }
+            /* CELT has no FEC, so just run the PLC (recursive call) */
+            return opus_decode_native(null, 0, 0, pcm_out, pcm_out_ptr, frame_size, 0, 0, new BoxedValueInt(0));
+        }
+
+        /* SILK and hybrid packets are not supported */
+        if (OpusPacketInfo.getEncoderMode(data, data_ptr - offset) != OpusMode.MODE_CELT_ONLY) {
+            return OpusError.OPUS_INVALID_PACKET;
         }
 
         if (count * packet_frame_size > frame_size) {
@@ -627,7 +329,6 @@ public class OpusDecoder {
         }
 
         /* Update the state as the last step to avoid updating it on an invalid packet */
-        this.mode = packet_mode;
         this.bandwidth = packet_bandwidth;
         this.frame_size = packet_frame_size;
         this.stream_channels = packet_stream_channels;
@@ -682,7 +383,6 @@ public class OpusDecoder {
      *                       available in this packet, the decoder will simply generate a best-effort recreation of the lost packet. In that case,
      *                       the length of frame_size must be EXACTLY the length of the audio that was lost, or else the decoder will be in an inconsistent state.
      * @return The number of decoded samples (per channel)
-     * @throws OpusException
      */
     public int decode(byte[] in_data, int in_data_offset,
                       int len, short[] out_pcm, int out_pcm_offset, int frame_size, boolean decode_fec) throws OpusException {
@@ -692,7 +392,7 @@ public class OpusDecoder {
 
         try {
             BoxedValueInt dummy = new BoxedValueInt(0);
-            int ret = opus_decode_native(in_data, in_data_offset, len, out_pcm, out_pcm_offset, frame_size, decode_fec ? 1 : 0, 0, dummy, 0);
+            int ret = opus_decode_native(in_data, in_data_offset, len, out_pcm, out_pcm_offset, frame_size, decode_fec ? 1 : 0, 0, dummy);
 
             if (ret < 0) {
                 // An error happened; report it
@@ -728,7 +428,6 @@ public class OpusDecoder {
      *                       available in this packet, the decoder will simply generate a best-effort recreation of the lost packet. In that case, the
      *                       length of frame_size must be EXACTLY the length of the audio that was lost, or else the decoder will be in an inconsistent state.
      * @return The number of decoded samples (per channel)
-     * @throws OpusException
      */
     public int decode(byte[] in_data, int in_data_offset, int len, byte[] out_pcm,
                       int out_pcm_offset, int frame_size, boolean decode_fec) throws OpusException {
@@ -755,11 +454,7 @@ public class OpusDecoder {
     }
 
     public int getPitch() {
-        if (prev_mode == OpusMode.MODE_CELT_ONLY) {
-            return Celt_Decoder.GetPitch();
-        } else {
-            return DecControl.prevPitchLag;
-        }
+        return Celt_Decoder.GetPitch();
     }
 
     public int getGain() {
@@ -781,7 +476,6 @@ public class OpusDecoder {
     public void resetState() {
         partialReset();
         Celt_Decoder.ResetState();
-        DecodeAPI.silk_InitDecoder(SilkDecoder);
         stream_channels = channels;
         frame_size = Fs / 400;
     }

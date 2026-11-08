@@ -162,8 +162,7 @@ public class OpusMSDecoder {
             short[] pcm,
             int pcm_ptr,
             int frame_size,
-            int decode_fec,
-            int soft_clip
+            int decode_fec
     ) {
         int Fs;
         int s, c;
@@ -206,7 +205,7 @@ public class OpusMSDecoder {
             BoxedValueInt packet_offset = new BoxedValueInt(0);
             ret = dec.opus_decode_native(
                     data, data_ptr, len, buf, 0, frame_size, decode_fec,
-                    (s != layout.nb_streams - 1) ? 1 : 0, packet_offset, soft_clip);
+                    (s != layout.nb_streams - 1) ? 1 : 0, packet_offset);
             data_ptr += packet_offset.Val;
             len -= packet_offset.Val;
             if (ret <= 0) {
@@ -283,7 +282,7 @@ public class OpusMSDecoder {
             int decode_fec
     ) {
         return opus_multistream_decode_native(data, data_offset, len,
-                out_pcm, out_pcm_offset, frame_size, decode_fec, 0);
+                out_pcm, out_pcm_offset, frame_size, decode_fec);
     }
 
     public OpusBandwidth getBandwidth() {

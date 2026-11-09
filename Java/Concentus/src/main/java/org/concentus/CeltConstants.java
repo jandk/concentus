@@ -36,26 +36,10 @@ package org.concentus;
 
 class CeltConstants {
 
-    public static final int Q15ONE = 32767;
-
-    public static final int SIG_SHIFT = 12;
-
-    public static final int NORM_SCALING = 16384;
-
-    public static final int DB_SHIFT = 10;
-
-    public static final int EPSILON = 1;
-    public static final int VERY_SMALL = 0;
-    public static final short VERY_LARGE16 = ((short) 32767);
-    public static final short Q15_ONE = ((short) 32767);
-
-    public static final int COMBFILTER_MAXPERIOD = 1024;
     public static final int COMBFILTER_MINPERIOD = 15;
 
     // from opus_decode.c
     public static final int DECODE_BUFFER_SIZE = 2048;
-
-    public static final int MAX_PERIOD = 1024;
 
     public static final int LOG_MAX_PSEUDO = 6;
 

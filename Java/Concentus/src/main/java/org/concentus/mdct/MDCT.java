@@ -25,9 +25,7 @@ public final class MDCT {
         int n4 = n >>> 2;
         float[] twiddle = new float[n2];
         for (int i = 0; i < n4; i++) {
-            double angle = 2 * Math.PI * (i + 0.125) / n;
-            twiddle[i * 2/**/] = (float) +Math.cos(angle);
-            twiddle[i * 2 + 1] = (float) -Math.sin(angle);
+            Complex.expI(-2 * Math.PI * (i + 0.125) / n).store(twiddle, i * 2);
         }
         return twiddle;
     }
@@ -56,12 +54,9 @@ public final class MDCT {
         int n2 = n >>> 1;
 
         for (int p0 = 0, p1 = n2 - 1; p0 < n2; p0 += 2, p1 -= 2) {
-            float xr = src[srcOff + p0];
-            float xi = src[srcOff + p1];
-            float wr = w[p0];
-            float wi = w[p0 + 1];
-            dst[dstOff + p0/**/] = xr * wr - xi * wi;
-            dst[dstOff + p0 + 1] = xr * wi + xi * wr;
+            Complex x0 = Complex.load(src, srcOff + p0, srcOff + p1);
+            Complex w0 = Complex.load(w, p0);
+            x0.mul(w0).store(dst, dstOff + p0);
         }
     }
 
@@ -74,23 +69,14 @@ public final class MDCT {
         int y4 = dstOff + q1 * 3;
 
         for (int p0 = 0, p1 = 2 * q1 - 2; p0 < q1; p0 += 2, p1 -= 2) {
-            float xr, xi, wr, wi;
+            Complex x0 = Complex.load(src, p0).mul(Complex.load(w, p0));
+            Complex x1 = Complex.load(src, p1).mul(Complex.load(w, p1));
 
             // @formatter:off
-            xr = src[p0]; xi = src[p0 + 1];
-            wr =   w[p0]; wi =   w[p0 + 1];
-            float x0r = xr * wr - xi * wi;
-            float x0i = xr * wi + xi * wr;
-
-            xr = src[p1]; xi = src[p1 + 1];
-            wr =   w[p1]; wi =   w[p1 + 1];
-            float x1r = xr * wr - xi * wi;
-            float x1i = xr * wi + xi * wr;
-
-            dst[y1 + p1] = +x1r; dst[y1 + p1 + 1] = -x0i; // 1st quarter
-            dst[y2 + p0] = +x0i; dst[y2 + p0 + 1] = -x1r; // 2nd quarter
-            dst[y2 + p1] = +x1i; dst[y2 + p1 + 1] = -x0r; // 3rd quarter
-            dst[y4 + p0] = -x0r; dst[y4 + p0 + 1] = +x1i; // 4th quarter
+            dst[y1 + p1] = +x1.re(); dst[y1 + p1 + 1] = -x0.im(); // 1st quarter
+            dst[y2 + p0] = +x0.im(); dst[y2 + p0 + 1] = -x1.re(); // 2nd quarter
+            dst[y2 + p1] = +x1.im(); dst[y2 + p1 + 1] = -x0.re(); // 3rd quarter
+            dst[y4 + p0] = -x0.re(); dst[y4 + p0 + 1] = +x1.im(); // 4th quarter
             // @formatter:on
         }
     }

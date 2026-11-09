@@ -80,7 +80,6 @@ class CeltMode {
         mode48000_960_120.allocVectors = CeltTables.band_allocation;
         mode48000_960_120.logN = CeltTables.logN400;
         mode48000_960_120.cache = new PulseCache();
-        mode48000_960_120.cache.size = 392;
         mode48000_960_120.cache.index = CeltTables.cache_index50;
         mode48000_960_120.cache.bits = CeltTables.cache_bits50;
         mode48000_960_120.cache.caps = CeltTables.cache_caps50;

@@ -112,7 +112,7 @@ class Rate {
                 if (tmp >= thresh[j] || done != 0) {
                     done = 1;
                     /* Don't allocate more than we can actually use */
-                    psum += Inlines.IMIN(tmp, cap[j]);
+                    psum += Math.min(tmp, cap[j]);
                 } else if (tmp >= alloc_floor) {
                     psum += alloc_floor;
                 }
@@ -139,7 +139,7 @@ class Rate {
             }
 
             /* Don't allocate more than we can actually use */
-            tmp = Inlines.IMIN(tmp, cap[j]);
+            tmp = Math.min(tmp, cap[j]);
             bits[j] = tmp;
             psum += tmp;
         }
@@ -167,13 +167,13 @@ class Rate {
             left = total - psum;
             percoeff = Inlines.celt_udiv(left, m.eBands[codedBands] - m.eBands[start]);
             left -= (m.eBands[codedBands] - m.eBands[start]) * percoeff;
-            rem = Inlines.IMAX(left - (m.eBands[j] - m.eBands[start]), 0);
+            rem = Math.max(left - (m.eBands[j] - m.eBands[start]), 0);
             band_width = m.eBands[codedBands] - m.eBands[j];
             band_bits = bits[j] + percoeff * band_width + rem;
             /*Only code a skip decision if we're above the threshold for this band.
               Otherwise it is force-skipped.
               This ensures that we have enough bits to code the skip flag.*/
-            if (band_bits >= Inlines.IMAX(thresh[j], alloc_floor + (1 << EntropyCoder.BITRES))) {
+            if (band_bits >= Math.max(thresh[j], alloc_floor + (1 << EntropyCoder.BITRES))) {
                 if (ec.dec_bit_logp(1) != 0) {
                     break;
                 }
@@ -200,7 +200,7 @@ class Rate {
         Inlines.OpusAssert(codedBands > start);
         /* Code the intensity and dual stereo parameters. */
         if (intensity_rsv > 0) {
-            intensity.Val = start + (int) ec.dec_uint(codedBands + 1 - start);
+            intensity.Val = start + ec.dec_uint(codedBands + 1 - start);
         } else {
             intensity.Val = 0;
         }
@@ -223,7 +223,7 @@ class Rate {
             bits[j] += (percoeff * (m.eBands[j + 1] - m.eBands[j]));
         }
         for (j = start; j < codedBands; j++) {
-            int tmp = Inlines.IMIN(left, m.eBands[j + 1] - m.eBands[j]);
+            int tmp = Math.min(left, m.eBands[j + 1] - m.eBands[j]);
             bits[j] += tmp;
             left -= tmp;
         }
@@ -242,7 +242,7 @@ class Rate {
             bit = bits[j] + balance;
 
             if (N > 1) {
-                excess = Inlines.MAX32(bit - cap[j], 0);
+                excess = Math.max(bit - cap[j], 0);
                 bits[j] = bit - excess;
 
                 /* Compensate for the extra DoF in stereo */
@@ -268,7 +268,7 @@ class Rate {
                 }
 
                 /* Divide with rounding */
-                ebits[j] = Inlines.IMAX(0, (bits[j] + offset + (den << (EntropyCoder.BITRES - 1))));
+                ebits[j] = Math.max(0, (bits[j] + offset + (den << (EntropyCoder.BITRES - 1))));
                 ebits[j] = Inlines.celt_udiv(ebits[j], den) >> EntropyCoder.BITRES;
 
                 /* Make sure not to bust */
@@ -277,7 +277,7 @@ class Rate {
                 }
 
                 /* More than that is useless because that's about as far as PVQ can go */
-                ebits[j] = Inlines.IMIN(ebits[j], CeltConstants.MAX_FINE_BITS);
+                ebits[j] = Math.min(ebits[j], CeltConstants.MAX_FINE_BITS);
 
                 /* If we rounded down or capped this band, make it a candidate for the
                     final fine energy pass */
@@ -288,7 +288,7 @@ class Rate {
 
             } else {
                 /* For N=1, all bits go to fine energy except for a single sign bit */
-                excess = Inlines.MAX32(0, bit - (C << EntropyCoder.BITRES));
+                excess = Math.max(0, bit - (C << EntropyCoder.BITRES));
                 bits[j] = bit - excess;
                 ebits[j] = 0;
                 fine_priority[j] = 1;
@@ -300,7 +300,7 @@ class Rate {
             if (excess > 0) {
                 int extra_fine;
                 int extra_bits;
-                extra_fine = Inlines.IMIN(excess >> (stereo + EntropyCoder.BITRES), CeltConstants.MAX_FINE_BITS - ebits[j]);
+                extra_fine = Math.min(excess >> (stereo + EntropyCoder.BITRES), CeltConstants.MAX_FINE_BITS - ebits[j]);
                 ebits[j] += extra_fine;
                 extra_bits = extra_fine * C << EntropyCoder.BITRES;
                 fine_priority[j] = (extra_bits >= excess - balance) ? 1 : 0;
@@ -335,7 +335,7 @@ class Rate {
         int intensity_rsv;
         int dual_stereo_rsv;
 
-        total = Inlines.IMAX(total, 0);
+        total = Math.max(total, 0);
         len = m.nbEBands;
         skip_start = start;
         /* Reserve a bit to signal the end of manually skipped bands. */
@@ -361,7 +361,7 @@ class Rate {
 
         for (j = start; j < end; j++) {
             /* Below this threshold, we're sure not to allocate any PVQ bits */
-            thresh[j] = Inlines.IMAX((C) << EntropyCoder.BITRES, (3 * (m.eBands[j + 1] - m.eBands[j]) << LM << EntropyCoder.BITRES) >> 4);
+            thresh[j] = Math.max((C) << EntropyCoder.BITRES, (3 * (m.eBands[j + 1] - m.eBands[j]) << LM << EntropyCoder.BITRES) >> 4);
             /* Tilt of the allocation curve */
             trim_offset[j] = C * (m.eBands[j + 1] - m.eBands[j]) * (alloc_trim - 5 - LM) * (end - j - 1)
                     * (1 << (LM + EntropyCoder.BITRES)) >> 6;
@@ -383,7 +383,7 @@ class Rate {
                 bitsj = C * N * m.allocVectors[mid * len + j] << LM >> 2;
 
                 if (bitsj > 0) {
-                    bitsj = Inlines.IMAX(0, bitsj + trim_offset[j]);
+                    bitsj = Math.max(0, bitsj + trim_offset[j]);
                 }
 
                 bitsj += offsets[j];
@@ -391,7 +391,7 @@ class Rate {
                 if (bitsj >= thresh[j] || done != 0) {
                     done = 1;
                     /* Don't allocate more than we can actually use */
-                    psum += Inlines.IMIN(bitsj, cap[j]);
+                    psum += Math.min(bitsj, cap[j]);
                 } else if (bitsj >= C << EntropyCoder.BITRES) {
                     psum += C << EntropyCoder.BITRES;
                 }
@@ -414,10 +414,10 @@ class Rate {
             bits2j = hi >= m.nbAllocVectors
                     ? cap[j] : C * N * m.allocVectors[hi * len + j] << LM >> 2;
             if (bits1j > 0) {
-                bits1j = Inlines.IMAX(0, bits1j + trim_offset[j]);
+                bits1j = Math.max(0, bits1j + trim_offset[j]);
             }
             if (bits2j > 0) {
-                bits2j = Inlines.IMAX(0, bits2j + trim_offset[j]);
+                bits2j = Math.max(0, bits2j + trim_offset[j]);
             }
             if (lo > 0) {
                 bits1j += offsets[j];
@@ -426,7 +426,7 @@ class Rate {
             if (offsets[j] > 0) {
                 skip_start = j;
             }
-            bits2j = Inlines.IMAX(0, bits2j - bits1j);
+            bits2j = Math.max(0, bits2j - bits1j);
             bits1[j] = bits1j;
             bits2[j] = bits2j;
         }

@@ -42,7 +42,6 @@ import java.util.Arrays;
 class CeltDecoder {
 
     CeltMode mode = null;
-    int overlap = 0;
     int channels = 0;
     int stream_channels = 0;
 
@@ -51,7 +50,6 @@ class CeltDecoder {
 
     /* Everything beyond this point gets cleared on a reset */
     int rng = 0;
-    int error = 0;
     int postfilter_period = 0;
     int postfilter_period_old = 0;
     float postfilter_gain = 0;
@@ -80,7 +78,6 @@ class CeltDecoder {
 
     private void Reset() {
         mode = null;
-        overlap = 0;
         channels = 0;
         stream_channels = 0;
         downsample = 0;
@@ -90,7 +87,6 @@ class CeltDecoder {
 
     private void PartialReset() {
         rng = 0;
-        error = 0;
         postfilter_period = 0;
         postfilter_period_old = 0;
         postfilter_gain = 0;
@@ -142,7 +138,6 @@ class CeltDecoder {
         Reset();
 
         this.mode = mode;
-        this.overlap = mode.overlap;
         this.imdct = new CeltImdct(mode);
         this.stream_channels = this.channels = channels;
 
@@ -159,11 +154,11 @@ class CeltDecoder {
     }
 
     int celt_decode_with_ec(byte[] data, int data_ptr,
-                            int len, short[] pcm, int pcm_ptr, int frame_size, EntropyCoder dec) {
+                            int len, float[] pcm, int pcm_ptr, int frame_size, EntropyCoder dec) {
         int c, i, N;
         int spread_decision;
         int bits;
-        int[][] X;
+        float[][] X;
         int[] fine_quant;
         int[] pulses;
         int[] cap;
@@ -277,7 +272,7 @@ class CeltDecoder {
         if (tell + 16 <= total_bits) {
             if (dec.dec_bit_logp(1) != 0) {
                 int qg, octave;
-                octave = (int) dec.dec_uint(6);
+                octave = dec.dec_uint(6);
                 postfilter_pitch = (16 << octave) + dec.dec_bits(4 + octave) - 1;
                 qg = dec.dec_bits(3);
                 if (dec.tell() + 2 <= total_bits) {
@@ -332,7 +327,7 @@ class CeltDecoder {
             width = C * (eBands[i + 1] - eBands[i]) << LM;
             /* quanta is 6 bits, but no more than 1 bit/sample
                and no less than 1/8 bit/sample */
-            quanta = Inlines.IMIN(width << EntropyCoder.BITRES, Inlines.IMAX(6 << EntropyCoder.BITRES, width));
+            quanta = Math.min(width << EntropyCoder.BITRES, Math.max(6 << EntropyCoder.BITRES, width));
             dynalloc_loop_logp = dynalloc_logp;
             boost = 0;
             while (tell + (dynalloc_loop_logp << EntropyCoder.BITRES) < total_bits && boost < cap[i]) {
@@ -349,7 +344,7 @@ class CeltDecoder {
             offsets[i] = boost;
             /* Making dynalloc more likely */
             if (boost > 0) {
-                dynalloc_logp = Inlines.IMAX(2, dynalloc_logp - 1);
+                dynalloc_logp = Math.max(2, dynalloc_logp - 1);
             }
         }
 
@@ -385,7 +380,7 @@ class CeltDecoder {
         /* Decode fixed codebook */
         collapse_masks = new short[C * nbEBands];
 
-        X = new int[C][N];
+        X = new float[C][N];
 
         BoxedValueInt boxed_rng = new BoxedValueInt(rng);
         Bands.quant_all_bands(mode, 0, end, X[0], C == 2 ? X[1] : null, collapse_masks,
@@ -402,7 +397,7 @@ class CeltDecoder {
 
         if (anti_collapse_on != 0) {
             Bands.anti_collapse(mode, X, collapse_masks, LM, C,
-                    0, end, toQ10(oldBandE), toQ10(oldLogE), toQ10(oldLogE2), pulses, rng);
+                    0, end, oldBandE, oldLogE, oldLogE2, pulses, rng);
         }
 
         if (silence != 0) {
@@ -416,8 +411,8 @@ class CeltDecoder {
 
         c = 0;
         do {
-            this.postfilter_period = Inlines.IMAX(postfilter_period, CeltConstants.COMBFILTER_MINPERIOD);
-            this.postfilter_period_old = Inlines.IMAX(postfilter_period_old, CeltConstants.COMBFILTER_MINPERIOD);
+            this.postfilter_period = Math.max(postfilter_period, CeltConstants.COMBFILTER_MINPERIOD);
+            this.postfilter_period_old = Math.max(postfilter_period_old, CeltConstants.COMBFILTER_MINPERIOD);
             CeltCommon.comb_filter(out_syn[c], out_syn_ptrs[c], out_syn[c], out_syn_ptrs[c], postfilter_period_old, postfilter_period, mode.shortMdctSize,
                     postfilter_gain_old, this.postfilter_gain, postfilter_tapset_old, this.postfilter_tapset,
                     CeltTablesF.window120, overlap);
@@ -462,15 +457,12 @@ class CeltDecoder {
                 oldLogE[c * nbEBands + i] = oldLogE2[c * nbEBands + i] = -28.f;
             }
         } while (++c < 2);
-        this.rng = (int) dec.rng;
+        this.rng = dec.rng;
 
         CeltCommon.deemphasis(out_syn, out_syn_ptrs, pcm, pcm_ptr, N, CC, downsample, CeltTablesF.preemph, preemph_memD);
 
         if (dec.tell() > 8 * len) {
             return OpusError.OPUS_INTERNAL_ERROR;
-        }
-        if (dec.get_error() != 0) {
-            this.error = 1;
         }
         return frame_size / downsample;
     }
@@ -493,13 +485,4 @@ class CeltDecoder {
         return postfilter_period;
     }
 
-
-    // TODO float: remove once anti_collapse is float
-    private static int[] toQ10(float[] e) {
-        int[] r = new int[e.length];
-        for (int i = 0; i < e.length; i++) {
-            r[i] = Math.round(e[i] * 1024);
-        }
-        return r;
-    }
 }

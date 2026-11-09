@@ -145,7 +145,7 @@ public class OpusDecoder {
     private static final byte[] SILENCE = {(byte) 0xFF, (byte) 0xFF};
 
     int opus_decode_frame(byte[] data, int data_ptr,
-                          int len, short[] pcm, int pcm_ptr, int frame_size) {
+                          int len, float[] pcm, int pcm_ptr, int frame_size) {
         CeltDecoder celt_dec;
         int i, celt_ret = 0;
         EntropyCoder dec = new EntropyCoder(); // porting note: stack var
@@ -196,25 +196,22 @@ public class OpusDecoder {
 
         /* Decode CELT */
         celt_ret = celt_dec.celt_decode_with_ec(data, data_ptr,
-                len, pcm, pcm_ptr, Inlines.IMIN(F20, frame_size), dec);
+                len, pcm, pcm_ptr, Math.min(F20, frame_size), dec);
 
         if (decode_gain != 0) {
-            int gain;
-            gain = Inlines.celt_exp2(Inlines.MULT16_16_P15(Inlines.QCONST16(6.48814081e-4f, 25), decode_gain));
+            float gain = InlinesF.celt_exp2(6.48814081e-4f * decode_gain);
             for (i = pcm_ptr; i < pcm_ptr + (frame_size * channels); i++) {
-                int x;
-                x = Inlines.MULT16_32_P16(pcm[i], gain);
-                pcm[i] = (short) Inlines.SATURATE(x, 32767);
+                pcm[i] *= gain;
             }
         }
 
-        this.rangeFinal = empty_frame ? 0 : (int) dec.rng;
+        this.rangeFinal = empty_frame ? 0 : dec.rng;
 
         return celt_ret < 0 ? celt_ret : frame_size;
     }
 
     int opus_decode_native(byte[] data, int data_ptr,
-                           int len, short[] pcm_out, int pcm_out_ptr, int frame_size,
+                           int len, float[] pcm_out, int pcm_out_ptr, int frame_size,
                            int self_delimited, BoxedValueInt packet_offset) {
         int i, nb_samples;
         int count, offset;
@@ -282,7 +279,8 @@ public class OpusDecoder {
      * @param in_data        The input payload. Must not be null.
      * @param in_data_offset The offset to use when reading the input payload. Usually 0
      * @param len            The number of bytes in the payload (the packet size). Must be greater than 0.
-     * @param out_pcm        A buffer to put the output PCM, in a short array. The output size is (# of samples) * (# of channels).
+     * @param out_pcm        A buffer to put the output PCM, interleaved. The output size is (# of samples) * (# of channels).
+     *                       Samples are nominally in [-1, 1] but are not clipped, so loud streams can slightly exceed that range.
      *                       You can use the OpusPacketInfo helpers to get a hint of the frame size before you decode the packet if you need exact sizing.
      * @param out_pcm_offset The offset to use when writing to the output buffer
      * @param frame_size     The number of samples (per channel) of available space in the output PCM buf.
@@ -291,7 +289,7 @@ public class OpusDecoder {
      * @return The number of decoded samples (per channel)
      */
     public int decode(byte[] in_data, int in_data_offset,
-                      int len, short[] out_pcm, int out_pcm_offset, int frame_size) throws OpusException {
+                      int len, float[] out_pcm, int out_pcm_offset, int frame_size) throws OpusException {
         if (in_data == null) {
             throw new IllegalArgumentException("Packet data must not be null (packet loss concealment is not supported)");
         }
@@ -321,8 +319,30 @@ public class OpusDecoder {
     }
 
     /**
+     * Decodes an Opus packet into 16-bit PCM. See
+     * {@link #decode(byte[], int, int, float[], int, int)} for the details.
+     *
+     * @param in_data        The input payload. Must not be null.
+     * @param in_data_offset The offset to use when reading the input payload. Usually 0
+     * @param len            The number of bytes in the payload (the packet size). Must be greater than 0.
+     * @param out_pcm        A buffer to put the output PCM, interleaved. The output size is (# of samples) * (# of channels).
+     * @param out_pcm_offset The offset to use when writing to the output buffer
+     * @param frame_size     The number of samples (per channel) of available space in the output PCM buf.
+     * @return The number of decoded samples (per channel)
+     */
+    public int decode(byte[] in_data, int in_data_offset, int len, short[] out_pcm,
+                      int out_pcm_offset, int frame_size) throws OpusException {
+        float[] fpcm = new float[Math.min(frame_size, 5760) * channels];
+        int decSamples = decode(in_data, in_data_offset, len, fpcm, 0, frame_size);
+        for (int i = 0; i < decSamples * channels; i++) {
+            out_pcm[out_pcm_offset + i] = InlinesF.FLOAT2INT16(fpcm[i]);
+        }
+        return decSamples;
+    }
+
+    /**
      * Decodes an Opus packet into 16-bit little-endian PCM bytes. See
-     * {@link #decode(byte[], int, int, short[], int, int)} for the details.
+     * {@link #decode(byte[], int, int, float[], int, int)} for the details.
      *
      * @param in_data        The input payload. Must not be null.
      * @param in_data_offset The offset to use when reading the input payload. Usually 0
@@ -334,12 +354,12 @@ public class OpusDecoder {
      */
     public int decode(byte[] in_data, int in_data_offset, int len, byte[] out_pcm,
                       int out_pcm_offset, int frame_size) throws OpusException {
-        short[] spcm = new short[Math.min(frame_size, 5760) * channels];
-        int decSamples = decode(in_data, in_data_offset, len, spcm, 0, frame_size);
-        //Convert short array to byte array
-        for (int c = 0, idx = out_pcm_offset; c < spcm.length; c++) {
-            out_pcm[idx++] = (byte) (spcm[c] & 0xff);
-            out_pcm[idx++] = (byte) ((spcm[c] >> 8) & 0xff);
+        float[] fpcm = new float[Math.min(frame_size, 5760) * channels];
+        int decSamples = decode(in_data, in_data_offset, len, fpcm, 0, frame_size);
+        for (int i = 0, idx = out_pcm_offset; i < decSamples * channels; i++) {
+            short s = InlinesF.FLOAT2INT16(fpcm[i]);
+            out_pcm[idx++] = (byte) (s & 0xff);
+            out_pcm[idx++] = (byte) ((s >> 8) & 0xff);
         }
         return decSamples;
     }

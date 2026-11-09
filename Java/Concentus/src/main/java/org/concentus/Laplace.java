@@ -38,23 +38,21 @@ class Laplace {
 
     /* The minimum probability of an energy delta (out of 32768). */
     private static final int LAPLACE_LOG_MINP = 0;
-    private static final long LAPLACE_MINP = (1 << LAPLACE_LOG_MINP);
+    private static final int LAPLACE_MINP = (1 << LAPLACE_LOG_MINP);
     /* The minimum number of guaranteed representable energy deltas (in one
         direction). */
     private static final int LAPLACE_NMIN = 16;
 
     /* When called, decay is positive and at most 11456. */
-    static long ec_laplace_get_freq1(long fs0, int decay) {
-        long ft = Inlines.CapToUInt32(32768 - LAPLACE_MINP * (2 * LAPLACE_NMIN) - fs0);
-        return (Inlines.CapToUInt32(ft * (16384 - decay)) >> 15);
+    static int ec_laplace_get_freq1(int fs0, int decay) {
+        int ft = 32768 - LAPLACE_MINP * (2 * LAPLACE_NMIN) - fs0;
+        return ft * (16384 - decay) >> 15;
     }
 
-    static int ec_laplace_decode(EntropyCoder dec, long fs, int decay) {
+    static int ec_laplace_decode(EntropyCoder dec, int fs, int decay) {
         int val = 0;
-        long fl;
-        long fm;
-        fm = dec.decode_bin(15);
-        fl = 0;
+        int fl = 0;
+        int fm = dec.decode_bin(15);
 
         if (fm >= fs) {
             val++;
@@ -63,31 +61,30 @@ class Laplace {
             /* Search the decaying part of the PDF.*/
             while (fs > LAPLACE_MINP && fm >= fl + 2 * fs) {
                 fs *= 2;
-                fl = Inlines.CapToUInt32(fl + fs);
-                fs = Inlines.CapToUInt32(((fs - 2 * LAPLACE_MINP) * decay) >> 15);
+                fl += fs;
+                fs = (fs - 2 * LAPLACE_MINP) * decay >> 15;
                 fs += LAPLACE_MINP;
                 val++;
             }
             /* Everything beyond that has probability LAPLACE_MINP. */
             if (fs <= LAPLACE_MINP) {
-                int di;
-                di = (int) (fm - fl) >> (LAPLACE_LOG_MINP + 1);
+                int di = (fm - fl) >> (LAPLACE_LOG_MINP + 1);
                 val += di;
-                fl = Inlines.CapToUInt32(fl + Inlines.CapToUInt32(2 * di * LAPLACE_MINP));
+                fl += 2 * di * LAPLACE_MINP;
             }
             if (fm < fl + fs) {
                 val = -val;
             } else {
-                fl = Inlines.CapToUInt32(fl + fs);
+                fl += fs;
             }
         }
 
         Inlines.OpusAssert(fl < 32768);
         Inlines.OpusAssert(fs > 0);
         Inlines.OpusAssert(fl <= fm);
-        Inlines.OpusAssert(fm < Inlines.IMIN(fl + fs, 32768));
+        Inlines.OpusAssert(fm < Math.min(fl + fs, 32768));
 
-        dec.dec_update(fl, Inlines.IMIN(fl + fs, 32768), 32768);
+        dec.dec_update(fl, Math.min(fl + fs, 32768), 32768);
         return val;
     }
 }

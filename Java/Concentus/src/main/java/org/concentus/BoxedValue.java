@@ -56,3 +56,12 @@ class BoxedValueInt {
         Val = v;
     }
 }
+
+class BoxedValueFloat {
+
+    public float Val;
+
+    public BoxedValueFloat(float v) {
+        Val = v;
+    }
+}

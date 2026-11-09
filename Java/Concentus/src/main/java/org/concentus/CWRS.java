@@ -161,19 +161,28 @@ year=1986
     };
 
     /*U(N,K) = U(K,N) := N>0?K>0?U(N-1,K)+U(N,K-1)+U(N-1,K-1):0:K>0?1:0*/
-    private static long CELT_PVQ_U(int _n, int _k) {
-        return CeltTables.CELT_PVQ_U_DATA[CELT_PVQ_U_ROW[Inlines.IMIN(_n, _k)] + Inlines.IMAX(_n, _k)];
+    private static int CELT_PVQ_U(int _n, int _k) {
+        return CeltTables.CELT_PVQ_U_DATA[CELT_PVQ_U_ROW[Math.min(_n, _k)] + Math.max(_n, _k)];
     }
-
 
     /*V(N,K) := U(N,K)+U(N,K+1) = the number of PVQ codewords for a band of size N
        with K pulses allocated to it.*/
-    private static long CELT_PVQ_V(int _n, int _k) {
-        return (CELT_PVQ_U(_n, _k) + CELT_PVQ_U(_n, (_k) + 1));
+    private static int CELT_PVQ_V(int _n, int _k) {
+        return CELT_PVQ_U(_n, _k) + CELT_PVQ_U(_n, _k + 1);
     }
 
-    static int cwrsi(int _n, int _k, long _i, int[] _y) {
-        long p;
+    /* U(N,K) values, _i, p and q are all unsigned 32-bit (opus_uint32), so every comparison
+       between them is unsigned. Additions and subtractions wrap exactly as in C. */
+    private static boolean ugt(int a, int b) {
+        return Integer.compareUnsigned(a, b) > 0;
+    }
+
+    private static boolean uge(int a, int b) {
+        return Integer.compareUnsigned(a, b) >= 0;
+    }
+
+    static int cwrsi(int _n, int _k, int _i, int[] _y) {
+        int p;
         int s;
         int k0;
         short val;
@@ -183,80 +192,74 @@ year=1986
         Inlines.OpusAssert(_n > 1);
 
         while (_n > 2) {
-            long q;
+            int q;
             /*Lots of pulses case:*/
             if (_k >= _n) {
-                int row;
-                row = CELT_PVQ_U_ROW[_n];
+                int row = CELT_PVQ_U_ROW[_n];
                 /*Are the pulses in this dimension negative?*/
                 p = CeltTables.CELT_PVQ_U_DATA[row + _k + 1];
-                s = -(_i >= p ? 1 : 0);
-                _i = _i - Inlines.CapToUInt32(p & s);
+                s = uge(_i, p) ? -1 : 0;
+                _i -= p & s;
                 /*Count how many pulses were placed in this dimension.*/
                 k0 = _k;
                 q = CeltTables.CELT_PVQ_U_DATA[row + _n];
-
-                if (q > _i) {
-                    Inlines.OpusAssert(p > q);
+                if (ugt(q, _i)) {
+                    Inlines.OpusAssert(ugt(p, q));
                     _k = _n;
-
                     do {
                         p = CeltTables.CELT_PVQ_U_DATA[CELT_PVQ_U_ROW[--_k] + _n];
-                    } while (p > _i);
+                    } while (ugt(p, _i));
                 } else {
-                    for (p = CeltTables.CELT_PVQ_U_DATA[row + _k]; p > _i; p = CeltTables.CELT_PVQ_U_DATA[row + _k]) {
+                    for (p = CeltTables.CELT_PVQ_U_DATA[row + _k]; ugt(p, _i); p = CeltTables.CELT_PVQ_U_DATA[row + _k]) {
                         _k--;
                     }
                 }
-
                 _i -= p;
                 val = (short) ((k0 - _k + s) ^ s);
                 _y[y_ptr++] = val;
-                yy = Inlines.MAC16_16(yy, val, val);
+                yy += val * val;
             } /*Lots of dimensions case:*/ else {
                 /*Are there any pulses in this dimension at all?*/
                 p = CeltTables.CELT_PVQ_U_DATA[CELT_PVQ_U_ROW[_k] + _n];
                 q = CeltTables.CELT_PVQ_U_DATA[CELT_PVQ_U_ROW[_k + 1] + _n];
-                if (p <= _i && _i < q) {
+                if (uge(_i, p) && ugt(q, _i)) {
                     _i -= p;
                     _y[y_ptr++] = 0;
                 } else {
                     /*Are the pulses in this dimension negative?*/
-                    s = -(_i >= q ? 1 : 0);
-                    _i = _i - Inlines.CapToUInt32(q & s);
+                    s = uge(_i, q) ? -1 : 0;
+                    _i -= q & s;
                     /*Count how many pulses were placed in this dimension.*/
                     k0 = _k;
                     do {
                         p = CeltTables.CELT_PVQ_U_DATA[CELT_PVQ_U_ROW[--_k] + _n];
-                    } while (p > _i);
-
+                    } while (ugt(p, _i));
                     _i -= p;
                     val = (short) ((k0 - _k + s) ^ s);
                     _y[y_ptr++] = val;
-                    yy = Inlines.MAC16_16(yy, val, val);
+                    yy += val * val;
                 }
             }
             _n--;
         }
 
         /*_n==2*/
-        p = (2L * _k + 1);
-        s = -(_i >= p ? 1 : 0);
-        _i = _i - Inlines.CapToUInt32(p & s);
+        p = 2 * _k + 1;
+        s = uge(_i, p) ? -1 : 0;
+        _i -= p & s;
         k0 = _k;
-        _k = (int) ((_i + 1) >> 1);
+        _k = (_i + 1) >>> 1;
         if (_k != 0) {
-            _i -= (2L * _k - 1);
+            _i -= 2 * _k - 1;
         }
-
         val = (short) ((k0 - _k + s) ^ s);
         _y[y_ptr++] = val;
-        yy = Inlines.MAC16_16(yy, val, val);
+        yy += val * val;
         /*_n==1*/
-        s = -(int) _i;
+        s = -_i;
         val = (short) ((_k + s) ^ s);
         _y[y_ptr] = val;
-        yy = Inlines.MAC16_16(yy, val, val);
+        yy += val * val;
         return yy;
     }
 

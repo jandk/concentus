@@ -159,19 +159,19 @@ public class OpusMSDecoder {
             byte[] data,
             int data_ptr,
             int len,
-            short[] pcm,
+            float[] pcm,
             int pcm_ptr,
             int frame_size
     ) {
         int Fs;
         int s, c;
         int decoder_ptr;
-        short[] buf;
+        float[] buf;
 
         /* Limit frame_size to avoid excessive stack allocations. */
         Fs = getSampleRate();
-        frame_size = Inlines.IMIN(frame_size, Fs / 25 * 3);
-        buf = new short[2 * frame_size];
+        frame_size = Math.min(frame_size, Fs / 25 * 3);
+        buf = new float[2 * frame_size];
         decoder_ptr = 0;
 
         /* There is no packet loss concealment: every call must have a packet */
@@ -213,14 +213,14 @@ public class OpusMSDecoder {
                 prev = -1;
                 /* Copy "left" audio to the channel(s) where it belongs */
                 while ((chan = OpusMultistream.get_left_channel(layout, s, prev)) != -1) {
-                    opus_copy_channel_out_short(pcm, pcm_ptr, layout.nb_channels, chan,
+                    opus_copy_channel_out_float(pcm, pcm_ptr, layout.nb_channels, chan,
                             buf, 0, 2, frame_size);
                     prev = chan;
                 }
                 prev = -1;
                 /* Copy "right" audio to the channel(s) where it belongs */
                 while ((chan = OpusMultistream.get_right_channel(layout, s, prev)) != -1) {
-                    opus_copy_channel_out_short(pcm, pcm_ptr, layout.nb_channels, chan,
+                    opus_copy_channel_out_float(pcm, pcm_ptr, layout.nb_channels, chan,
                             buf, 1, 2, frame_size);
                     prev = chan;
                 }
@@ -229,7 +229,7 @@ public class OpusMSDecoder {
                 prev = -1;
                 /* Copy audio to the channel(s) where it belongs */
                 while ((chan = OpusMultistream.get_mono_channel(layout, s, prev)) != -1) {
-                    opus_copy_channel_out_short(pcm, pcm_ptr, layout.nb_channels, chan,
+                    opus_copy_channel_out_float(pcm, pcm_ptr, layout.nb_channels, chan,
                             buf, 0, 1, frame_size);
                     prev = chan;
                 }
@@ -238,7 +238,7 @@ public class OpusMSDecoder {
         /* Handle muted channels */
         for (c = 0; c < layout.nb_channels; c++) {
             if (layout.mapping[c] == 255) {
-                opus_copy_channel_out_short(pcm, pcm_ptr, layout.nb_channels, c,
+                opus_copy_channel_out_float(pcm, pcm_ptr, layout.nb_channels, c,
                         null, 0, 0, frame_size);
             }
         }
@@ -246,12 +246,12 @@ public class OpusMSDecoder {
         return frame_size;
     }
 
-    static void opus_copy_channel_out_short(
-            short[] dst,
+    static void opus_copy_channel_out_float(
+            float[] dst,
             int dst_ptr,
             int dst_stride,
             int dst_channel,
-            short[] src,
+            float[] src,
             int src_ptr,
             int src_stride,
             int frame_size
@@ -268,6 +268,28 @@ public class OpusMSDecoder {
         }
     }
 
+    /**
+     * Decodes a multistream packet to interleaved float PCM, nominally in [-1, 1] but not clipped.
+     *
+     * @return The number of decoded samples (per channel), or a negative {@link OpusError} code
+     */
+    public int decodeMultistream(
+            byte[] data,
+            int data_offset,
+            int len,
+            float[] out_pcm,
+            int out_pcm_offset,
+            int frame_size
+    ) {
+        return opus_multistream_decode_native(data, data_offset, len,
+                out_pcm, out_pcm_offset, frame_size);
+    }
+
+    /**
+     * Decodes a multistream packet to interleaved 16-bit PCM.
+     *
+     * @return The number of decoded samples (per channel), or a negative {@link OpusError} code
+     */
     public int decodeMultistream(
             byte[] data,
             int data_offset,
@@ -276,8 +298,13 @@ public class OpusMSDecoder {
             int out_pcm_offset,
             int frame_size
     ) {
-        return opus_multistream_decode_native(data, data_offset, len,
-                out_pcm, out_pcm_offset, frame_size);
+        int channels = layout.nb_channels;
+        float[] fpcm = new float[Math.min(frame_size, getSampleRate() / 25 * 3) * channels];
+        int ret = opus_multistream_decode_native(data, data_offset, len, fpcm, 0, frame_size);
+        for (int i = 0; i < ret * channels; i++) {
+            out_pcm[out_pcm_offset + i] = InlinesF.FLOAT2INT16(fpcm[i]);
+        }
+        return ret;
     }
 
     public OpusBandwidth getBandwidth() {

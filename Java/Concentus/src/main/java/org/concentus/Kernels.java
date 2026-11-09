@@ -35,23 +35,22 @@
 package org.concentus;
 
 class Kernels {
-
-    static int celt_inner_prod(int[] x, int x_ptr, int[] y, int y_ptr, int N) {
+    static float celt_inner_prod(float[] x, int x_ptr, float[] y, int y_ptr, int N) {
         int i;
-        int xy = 0;
+        float xy = 0;
         for (i = 0; i < N; i++) {
-            xy = Inlines.MAC16_16(xy, x[x_ptr + i], y[y_ptr + i]);
+            xy += x[x_ptr + i] * y[y_ptr + i];
         }
         return xy;
     }
 
-    static void dual_inner_prod(int[] x, int x_ptr, int[] y01, int y01_ptr, int[] y02, int y02_ptr, int N, BoxedValueInt xy1, BoxedValueInt xy2) {
+    static void dual_inner_prod(float[] x, int x_ptr, float[] y01, int y01_ptr, float[] y02, int y02_ptr, int N, BoxedValueFloat xy1, BoxedValueFloat xy2) {
         int i;
-        int xy01 = 0;
-        int xy02 = 0;
+        float xy01 = 0;
+        float xy02 = 0;
         for (i = 0; i < N; i++) {
-            xy01 = Inlines.MAC16_16(xy01, x[x_ptr + i], y01[y01_ptr + i]);
-            xy02 = Inlines.MAC16_16(xy02, x[x_ptr + i], y02[y02_ptr + i]);
+            xy01 += x[x_ptr + i] * y01[y01_ptr + i];
+            xy02 += x[x_ptr + i] * y02[y02_ptr + i];
         }
         xy1.Val = xy01;
         xy2.Val = xy02;

@@ -45,11 +45,9 @@ class Bands {
     /* This is a cos() approximation designed to be bit-exact on any platform. Bit exactness
        with this approximation is important because it has an impact on the bit allocation */
     static int bitexact_cos(int x) {
-        int tmp;
-        int x2;
-        tmp = (4096 + (x * (x))) >> 13;
+        int tmp = (4096 + (x * (x))) >> 13;
         Inlines.OpusAssert(tmp <= 32767);
-        x2 = (tmp);
+        int x2 = (tmp);
         x2 = ((32767 - x2) + Inlines.FRAC_MUL16(x2, (-7651 + Inlines.FRAC_MUL16(x2, (8277 + Inlines.FRAC_MUL16(-626, x2))))));
         Inlines.OpusAssert(x2 <= 32766);
         return (1 + x2);
@@ -66,10 +64,9 @@ class Bands {
     }
 
     /* De-normalise the energy to produce the synthesis from the unit-energy bands */
-    static void denormalise_bands(CeltMode m, int[] X,
+    static void denormalise_bands(CeltMode m, float[] X,
                                   float[] freq, int freq_ptr, float[] bandLogE, int bandLogE_ptr, int start,
                                   int end, int M, int downsample, int silence) {
-        int i;
         short[] eBands = m.eBands;
         int N = M * m.shortMdctSize;
         int bound = M * eBands[end];
@@ -83,6 +80,7 @@ class Bands {
         int f = freq_ptr;
         int x = M * eBands[start];
 
+        int i;
         for (i = 0; i < M * eBands[start]; i++) {
             freq[f++] = 0;
         }
@@ -95,8 +93,7 @@ class Bands {
             float g = InlinesF.celt_exp2(Math.min(32.f, lg));
 
             do {
-                // TODO: X is still in Q14
-                freq[f++] = X[x++] / 16384.0f * g;
+                freq[f++] = X[x++] * g;
             } while (++j < band_end);
         }
 
@@ -105,68 +102,43 @@ class Bands {
     }
 
     /* This prevents energy collapse for transients with multiple short MDCTs */
-    static void anti_collapse(CeltMode m, int[][] X_, short[] collapse_masks, int LM, int C,
-                              int start, int end, int[] logE, int[] prev1logE,
-                              int[] prev2logE, int[] pulses, int seed) {
-        int c, i, j, k;
-        for (i = start; i < end; i++) {
-            int N0;
-            int thresh, sqrt_1;
-            int depth;
-            int shift;
-            int thresh32;
-
-            N0 = m.eBands[i + 1] - m.eBands[i];
+    static void anti_collapse(CeltMode m, float[][] X_, short[] collapse_masks, int LM, int C,
+                              int start, int end, float[] logE, float[] prev1logE,
+                              float[] prev2logE, int[] pulses, int seed) {
+        for (int i = start; i < end; i++) {
+            int N0 = m.eBands[i + 1] - m.eBands[i];
             /* depth in 1/8 bits */
             Inlines.OpusAssert(pulses[i] >= 0);
-            depth = Inlines.celt_udiv(1 + pulses[i], (m.eBands[i + 1] - m.eBands[i])) >> LM;
+            int depth = ((pulses[i] + 1) / N0) >> LM;
 
-            thresh32 = Inlines.SHR32(Inlines.celt_exp2((-Inlines.SHL16((depth), 10 - EntropyCoder.BITRES))), 1);
-            thresh = Inlines.MULT16_32_Q15(Inlines.QCONST16(0.5f, 15), Inlines.MIN32(32767, thresh32));
-            {
-                int t;
-                t = N0 << LM;
-                shift = Inlines.celt_ilog2(t) >> 1;
-                t = Inlines.SHL32(t, (7 - shift) << 1);
-                sqrt_1 = Inlines.celt_rsqrt_norm(t);
-            }
+            float thresh = 0.5f * InlinesF.celt_exp2(-0.125f * depth);
+            float sqrt_1 = InlinesF.celt_rsqrt(N0 << LM);
 
-            c = 0;
+            int c = 0;
             do {
-                int X;
-                int prev1;
-                int prev2;
-                int Ediff;
-                int r;
-                int renormalize = 0;
-                prev1 = prev1logE[c * m.nbEBands + i];
-                prev2 = prev2logE[c * m.nbEBands + i];
+                float prev1 = prev1logE[c * m.nbEBands + i];
+                float prev2 = prev2logE[c * m.nbEBands + i];
                 if (C == 1) {
-                    prev1 = Inlines.MAX16(prev1, prev1logE[m.nbEBands + i]);
-                    prev2 = Inlines.MAX16(prev2, prev2logE[m.nbEBands + i]);
+                    prev1 = Math.max(prev1, prev1logE[m.nbEBands + i]);
+                    prev2 = Math.max(prev2, prev2logE[m.nbEBands + i]);
                 }
-                Ediff = Inlines.EXTEND32(logE[c * m.nbEBands + i]) - Inlines.EXTEND32(Inlines.MIN16(prev1, prev2));
-                Ediff = Inlines.MAX32(0, Ediff);
+                float Ediff = logE[c * m.nbEBands + i] - Math.min(prev1, prev2);
+                Ediff = Math.max(0, Ediff);
 
-                if (Ediff < 16384) {
-                    int r32 = Inlines.SHR32(Inlines.celt_exp2((short) (-Inlines.EXTRACT16(Ediff))), 1);
-                    r = (2 * Inlines.MIN16(16383, (r32)));
-                } else {
-                    r = 0;
-                }
+                float r = 2.f * InlinesF.celt_exp2(-Ediff);
                 if (LM == 3) {
-                    r = Inlines.MULT16_16_Q14(23170, Inlines.MIN32(23169, r)); // opus bug: was MIN32
+                    r *= 1.41421356f;
                 }
-                r = Inlines.SHR16(Inlines.MIN16(thresh, r), 1);
-                r = (Inlines.SHR32(Inlines.MULT16_16_Q15(sqrt_1, r), shift));
+                r = Math.min(thresh, r) * sqrt_1;
 
-                X = m.eBands[i] << LM;
-                for (k = 0; k < 1 << LM; k++) {
+                int X = m.eBands[i] << LM;
+                int renormalize = 0;
+                for (int k = 0; k < 1 << LM; k++) {
                     /* Detect collapse */
                     if ((collapse_masks[i * C + c] & 1 << k) == 0) {
                         /* Fill with noise */
                         int Xk = X + k;
-                        for (j = 0; j < N0; j++) {
+                        for (int j = 0; j < N0; j++) {
                             seed = celt_lcg_rand(seed);
                             X_[c][Xk + (j << LM)] = ((seed & 0x8000) != 0 ? r : -r);
                         }
@@ -175,76 +147,53 @@ class Bands {
                 }
                 /* We just added some energy, so we need to renormalise */
                 if (renormalize != 0) {
-                    VQ.renormalise_vector(X_[c], X, N0 << LM, CeltConstants.Q15ONE);
+                    VQ.renormalise_vector(X_[c], X, N0 << LM, 1.0f);
                 }
             } while (++c < C);
         }
     }
 
-    static void stereo_merge(int[] X, int X_ptr, int[] Y, int Y_ptr, int mid, int N) {
-        int j;
-        BoxedValueInt xp = new BoxedValueInt(0);
-        BoxedValueInt side = new BoxedValueInt(0);
-        int El, Er;
-        int mid2;
-        int kl, kr;
-        int t, lgain, rgain;
+    static void stereo_merge(float[] X, int X_ptr, float[] Y, int Y_ptr, float mid, int N) {
+        BoxedValueFloat xp = new BoxedValueFloat(0);
+        BoxedValueFloat side = new BoxedValueFloat(0);
 
         /* Compute the norm of X+Y and X-Y as |X|^2 + |Y|^2 +/- sum(xy) */
         Kernels.dual_inner_prod(Y, Y_ptr, X, X_ptr, Y, Y_ptr, N, xp, side);
+
         /* Compensating for the mid normalization */
-        xp.Val = Inlines.MULT16_32_Q15(mid, xp.Val);
-        /* mid and side are in Q15, not Q14 like X and Y */
-        mid2 = Inlines.SHR16(mid, 1);
-        El = Inlines.MULT16_16(mid2, mid2) + side.Val - (2 * xp.Val);
-        Er = Inlines.MULT16_16(mid2, mid2) + side.Val + (2 * xp.Val);
-        if (Er < Inlines.QCONST32(6e-4f, 28) || El < Inlines.QCONST32(6e-4f, 28)) {
+        xp.Val *= mid;
+        float El = mid * mid + side.Val - 2 * xp.Val;
+        float Er = mid * mid + side.Val + 2 * xp.Val;
+        if (Er < 6e-4f || El < 6e-4f) {
             System.arraycopy(X, X_ptr, Y, Y_ptr, N);
             return;
         }
 
-        kl = Inlines.celt_ilog2(El) >> 1;
-        kr = Inlines.celt_ilog2(Er) >> 1;
-        t = Inlines.VSHR32(El, (kl - 7) << 1);
-        lgain = Inlines.celt_rsqrt_norm(t);
-        t = Inlines.VSHR32(Er, (kr - 7) << 1);
-        rgain = Inlines.celt_rsqrt_norm(t);
-
-        if (kl < 7) {
-            kl = 7;
-        }
-        if (kr < 7) {
-            kr = 7;
-        }
-
-        for (j = 0; j < N; j++) {
-            int r, l;
-            /* Apply mid scaling (side is already scaled) */
-            l = Inlines.MULT16_16_P15(mid, X[X_ptr + j]);
-            r = Y[Y_ptr + j];
-            X[X_ptr + j] = Inlines.EXTRACT16(Inlines.PSHR32(Inlines.MULT16_16(lgain, Inlines.SUB16(l, r)), kl + 1));
-            Y[Y_ptr + j] = Inlines.EXTRACT16(Inlines.PSHR32(Inlines.MULT16_16(rgain, Inlines.ADD16(l, r)), kr + 1));
+        float lgain = InlinesF.celt_rsqrt(El);
+        float rgain = InlinesF.celt_rsqrt(Er);
+        for (int i = 0; i < N; i++) {
+            float l = X[X_ptr + i] * mid;
+            float r = Y[Y_ptr + i];
+            X[X_ptr + i] = lgain * (l - r);
+            Y[Y_ptr + i] = rgain * (l + r);
         }
     }
 
-    static void deinterleave_hadamard(int[] X, int X_ptr, int N0, int stride, int hadamard) {
-        int i, j;
-        int N;
-        N = N0 * stride;
-        int[] tmp = new int[N];
+    static void deinterleave_hadamard(float[] X, int X_ptr, int N0, int stride, int hadamard) {
+        int N = N0 * stride;
 
         Inlines.OpusAssert(stride > 0);
+        float[] tmp = new float[N];
         if (hadamard != 0) {
             int ordery = (stride - 2);
-
-            for (i = 0; i < stride; i++) {
-                for (j = 0; j < N0; j++) {
+            for (int i = 0; i < stride; i++) {
+                for (int j = 0; j < N0; j++) {
                     tmp[CeltTables.ordery_table[ordery + i] * N0 + j] = X[j * stride + i + X_ptr];
                 }
             }
         } else {
-            for (i = 0; i < stride; i++) {
-                for (j = 0; j < N0; j++) {
+            for (int i = 0; i < stride; i++) {
+                for (int j = 0; j < N0; j++) {
                     tmp[i * N0 + j] = X[j * stride + i + X_ptr];
                 }
             }
@@ -253,22 +202,20 @@ class Bands {
         System.arraycopy(tmp, 0, X, X_ptr, N);
     }
 
-    static void interleave_hadamard(int[] X, int X_ptr, int N0, int stride, int hadamard) {
-        int i, j;
-        int N;
-        N = N0 * stride;
-        int[] tmp = new int[N];
+    static void interleave_hadamard(float[] X, int X_ptr, int N0, int stride, int hadamard) {
+        int N = N0 * stride;
+        float[] tmp = new float[N];
 
         if (hadamard != 0) {
             int ordery = (stride - 2);
-            for (i = 0; i < stride; i++) {
-                for (j = 0; j < N0; j++) {
+            for (int i = 0; i < stride; i++) {
+                for (int j = 0; j < N0; j++) {
                     tmp[j * stride + i] = X[CeltTables.ordery_table[ordery + i] * N0 + j + X_ptr];
                 }
             }
         } else {
-            for (i = 0; i < stride; i++) {
-                for (j = 0; j < N0; j++) {
+            for (int i = 0; i < stride; i++) {
+                for (int j = 0; j < N0; j++) {
                     tmp[j * stride + i] = X[i * N0 + j + X_ptr];
                 }
             }
@@ -277,25 +224,20 @@ class Bands {
         System.arraycopy(tmp, 0, X, X_ptr, N);
     }
 
-    static void haar1(int[] X, int X_ptr, int N0, int stride) {
-        int i, j;
+    static void haar1(float[] X, int X_ptr, int N0, int stride) {
         N0 >>= 1;
-        for (i = 0; i < stride; i++) {
-            for (j = 0; j < N0; j++) {
+        for (int i = 0; i < stride; i++) {
+            for (int j = 0; j < N0; j++) {
                 int tmpidx = X_ptr + i + (stride * 2 * j);
-                int tmp1, tmp2;
-                tmp1 = Inlines.MULT16_16(Inlines.QCONST16(.70710678f, 15), X[tmpidx]);
-                tmp2 = Inlines.MULT16_16(Inlines.QCONST16(.70710678f, 15), X[tmpidx + stride]);
-                X[tmpidx] = Inlines.EXTRACT16(Inlines.PSHR32(Inlines.ADD32(tmp1, tmp2), 15));
-                X[tmpidx + stride] = Inlines.EXTRACT16(Inlines.PSHR32(Inlines.SUB32(tmp1, tmp2), 15));
+                float tmp1 = .70710678f * X[tmpidx];
+                float tmp2 = .70710678f * X[tmpidx + stride];
+                X[tmpidx] = tmp1 + tmp2;
+                X[tmpidx + stride] = tmp1 - tmp2;
             }
         }
     }
 
     static int compute_qn(int N, int b, int offset, int pulse_cap, int stereo) {
-        short[] exp2_table8
-                = {16384, 17866, 19483, 21247, 23170, 25267, 27554, 30048};
-        int qn, qb;
         int N2 = 2 * N - 1;
         if (stereo != 0 && N == 2) {
             N2--;
@@ -304,14 +246,16 @@ class Bands {
         /* The upper limit ensures that in a stereo split with itheta==16384, we'll
             always have enough bits left over to code at least one pulse in the
             side; otherwise it would collapse, since it doesn't get folded. */
-        qb = Inlines.celt_sudiv(b + N2 * offset, N2);
-        qb = Inlines.IMIN(b - pulse_cap - (4 << EntropyCoder.BITRES), qb);
+        int qb = Inlines.celt_sudiv(b + N2 * offset, N2);
+        qb = Math.min(b - pulse_cap - (4 << EntropyCoder.BITRES), qb);
 
-        qb = Inlines.IMIN(8 << EntropyCoder.BITRES, qb);
+        qb = Math.min(8 << EntropyCoder.BITRES, qb);
 
+        int qn;
         if (qb < (1 << EntropyCoder.BITRES >> 1)) {
             qn = 1;
         } else {
+            short[] exp2_table8 = {16384, 17866, 19483, 21247, 23170, 25267, 27554, 30048};
             qn = exp2_table8[qb & 0x7] >> (14 - (qb >> EntropyCoder.BITRES));
             qn = (qn + 1) >> 1 << 1;
         }
@@ -328,7 +272,6 @@ class Bands {
         public int tf_change;
         public EntropyCoder ec;
         public int remaining_bits;
-        public int[][] bandE;
         public int seed;
     }
 
@@ -346,35 +289,25 @@ class Bands {
                               int N, BoxedValueInt b, int B, int B0,
                               int LM,
                               int stereo, BoxedValueInt fill) {
-        int qn;
-        int itheta = 0;
-        int delta;
-        int imid, iside;
-        int qalloc;
-        int pulse_cap;
-        int offset;
-        int tell;
-        int inv = 0;
-        CeltMode m;
-        int i;
-        int intensity;
-        EntropyCoder ec; // porting note: pointer
 
-        m = ctx.m;
-        i = ctx.i;
-        intensity = ctx.intensity;
-        ec = ctx.ec;
+        CeltMode m = ctx.m;
+        int i = ctx.i;
+        int intensity = ctx.intensity;
+        // porting note: pointer
+        EntropyCoder ec = ctx.ec;
 
         /* Decide on the resolution to give to the split parameter theta */
-        pulse_cap = m.logN[i] + LM * (1 << EntropyCoder.BITRES);
-        offset = (pulse_cap >> 1) - (stereo != 0 && N == 2 ? CeltConstants.QTHETA_OFFSET_TWOPHASE : CeltConstants.QTHETA_OFFSET);
-        qn = compute_qn(N, b.Val, offset, pulse_cap, stereo);
+        int pulse_cap = m.logN[i] + LM * (1 << EntropyCoder.BITRES);
+        int offset = (pulse_cap >> 1) - (stereo != 0 && N == 2 ? CeltConstants.QTHETA_OFFSET_TWOPHASE : CeltConstants.QTHETA_OFFSET);
+        int qn = compute_qn(N, b.Val, offset, pulse_cap, stereo);
         if (stereo != 0 && i >= intensity) {
             qn = 1;
         }
 
-        tell = ec.tell_frac();
+        int tell = ec.tell_frac();
 
+        int inv = 0;
+        int itheta = 0;
         if (qn != 1) {
 
             /* Entropy coding of the angle. We use a uniform pdf for the
@@ -383,9 +316,9 @@ class Bands {
                 int p0 = 3;
                 int x;
                 int x0 = qn / 2;
-                long ft = Inlines.CapToUInt32(p0 * (x0 + 1) + x0);
+                int ft = p0 * (x0 + 1) + x0;
                 /* Use a probability of p0 up to itheta=8192 and then use 1 after */
-                int fs = (int) ec.decode(ft);
+                int fs = ec.decode(ft);
                 if (fs < (x0 + 1) * p0) {
                     x = fs / p0;
                 } else {
@@ -403,14 +336,13 @@ class Bands {
                 itheta = x;
             } else if (B0 > 1 || stereo != 0) {
                 /* Uniform pdf */
-                itheta = (int) ec.dec_uint(qn + 1);
+                itheta = ec.dec_uint(qn + 1);
             } else {
-                int fs, ft;
-                ft = ((qn >> 1) + 1) * ((qn >> 1) + 1);
+                int fs;
+                int ft = ((qn >> 1) + 1) * ((qn >> 1) + 1);
                 /* Triangular pdf */
                 int fl;
-                int fm;
-                fm = (int) ec.decode(ft);
+                int fm = ec.decode(ft);
 
                 if (fm < ((qn >> 1) * ((qn >> 1) + 1) >> 1)) {
                     itheta = (Inlines.isqrt32(8 * fm + 1) - 1) >> 1;
@@ -434,9 +366,12 @@ class Bands {
             }
             itheta = 0;
         }
-        qalloc = ec.tell_frac() - tell;
+        int qalloc = ec.tell_frac() - tell;
         b.Val -= qalloc;
 
+        int iside;
+        int imid;
+        int delta;
         if (itheta == 0) {
             imid = 32767;
             iside = 0;
@@ -463,74 +398,51 @@ class Bands {
         sctx.qalloc = qalloc;
     }
 
-    static int quant_band_n1(band_ctx ctx, int[] X, int X_ptr, int[] Y, int Y_ptr, int b,
-                             int[] lowband_out, int lowband_out_ptr) {
-        int c;
-        int stereo;
-        int[] x = X;
-        int x_ptr = X_ptr;
-        EntropyCoder ec; // porting note: pointer
-
-        ec = ctx.ec;
-
-        stereo = (Y != null) ? 1 : 0;
-        c = 0;
-        do {
-            int sign = 0;
-            if (ctx.remaining_bits >= 1 << EntropyCoder.BITRES) {
-                sign = ec.dec_bits(1);
-                ctx.remaining_bits -= 1 << EntropyCoder.BITRES;
-                b -= 1 << EntropyCoder.BITRES;
-            }
-            x[x_ptr] = sign != 0 ? -CeltConstants.NORM_SCALING : CeltConstants.NORM_SCALING;
-            x = Y;
-            x_ptr = Y_ptr;
-        } while (++c < 1 + stereo);
-        if (lowband_out != null) {
-            lowband_out[lowband_out_ptr] = Inlines.SHR16(X[X_ptr], 4);
+    static int quant_band_n1(band_ctx ctx, float[] X, int X_ptr, float[] Y, int Y_ptr,
+                             float[] lowband_out, int lowband_out_ptr) {
+        X[X_ptr] = decodeSign(ctx, ctx.ec);
+        if (Y != null) {
+            Y[Y_ptr] = decodeSign(ctx, ctx.ec);
         }
-
+        if (lowband_out != null) {
+            lowband_out[lowband_out_ptr] = X[X_ptr];
+        }
         return 1;
+    }
+
+    private static float decodeSign(band_ctx ctx, EntropyCoder ec) {
+        if (ctx.remaining_bits >= 1 << EntropyCoder.BITRES) {
+            ctx.remaining_bits -= 1 << EntropyCoder.BITRES;
+            return ec.dec_bits(1) != 0 ? -1.0f : 1.0f;
+        }
+        return 1.0f;
     }
 
     /* This function is responsible for encoding and decoding a mono partition.
        It can split the band in two and transmit the energy difference with
        the two half-bands. It can be called recursively so bands can end up being
        split in 8 parts. */
-    static int quant_partition(band_ctx ctx, int[] X, int X_ptr,
-                               int N, int b, int B, int[] lowband, int lowband_ptr,
+    static int quant_partition(band_ctx ctx, float[] X, int X_ptr,
+                               int N, int b, int B, float[] lowband, int lowband_ptr,
                                int LM,
-                               int gain, int fill) {
-        int cache_ptr;
-        int q;
-        int curr_bits;
-        int imid, iside;
+                               float gain, int fill) {
         int B0 = B;
-        int mid, side;
         int cm = 0;
-        int Y;
-        CeltMode m; //porting note: pointer
-        int i;
-        int spread;
-        EntropyCoder ec; //porting note: pointer
 
-        m = ctx.m;
-        i = ctx.i;
-        spread = ctx.spread;
-        ec = ctx.ec;
+        //porting note: pointer
+        CeltMode m = ctx.m;
+        int i = ctx.i;
+        int spread = ctx.spread;
+        //porting note: pointer
+        EntropyCoder ec = ctx.ec;
         short[] cache = m.cache.bits;
         /* If we need 1.5 more bits than we can produce, split the band in two. */
-        cache_ptr = m.cache.index[(LM + 1) * m.nbEBands + i];
+        int cache_ptr = m.cache.index[(LM + 1) * m.nbEBands + i];
         if (LM != -1 && b > cache[cache_ptr + cache[cache_ptr]] + 12 && N > 2) {
-            int mbits, sbits, delta;
-            int itheta;
-            int qalloc;
             split_ctx sctx = new split_ctx();
-            int next_lowband2 = 0;
-            int rebalance;
 
             N >>= 1;
-            Y = X_ptr + N;
+            int Y = X_ptr + N;
             LM -= 1;
             if (B == 1) {
                 fill = (fill & 1) | (fill << 1);
@@ -544,59 +456,60 @@ class Bands {
             b = boxed_b.Val;
             fill = boxed_fill.Val;
 
-            imid = sctx.imid;
-            iside = sctx.iside;
-            delta = sctx.delta;
-            itheta = sctx.itheta;
-            qalloc = sctx.qalloc;
-            mid = (imid);
-            side = (iside);
+            float imid = sctx.imid * (1.0f / 32768.0f);
+            float iside = sctx.iside * (1.0f / 32768.0f);
+            int delta = sctx.delta;
+            int itheta = sctx.itheta;
+            int qalloc = sctx.qalloc;
+            float mid = (imid);
+            float side = (iside);
 
             /* Give more bits to low-energy MDCTs than they would otherwise deserve */
             if (B0 > 1 && ((itheta & 0x3fff) != 0)) {
                 if (itheta > 8192) /* Rough approximation for pre-echo masking */ {
                     delta -= delta >> (4 - LM);
                 } else /* Corresponds to a forward-masking slope of 1.5 dB per 10 ms */ {
-                    delta = Inlines.IMIN(0, delta + (N << EntropyCoder.BITRES >> (5 - LM)));
+                    delta = Math.min(0, delta + (N << EntropyCoder.BITRES >> (5 - LM)));
                 }
             }
-            mbits = Inlines.IMAX(0, Inlines.IMIN(b, (b - delta) / 2));
-            sbits = b - mbits;
+            int mbits = Math.max(0, Math.min(b, (b - delta) / 2));
+            int sbits = b - mbits;
             ctx.remaining_bits -= qalloc;
 
+            int next_lowband2 = 0;
             if (lowband != null) {
                 next_lowband2 = (lowband_ptr + N);
                 /* >32-bit split case */
             }
 
-            rebalance = ctx.remaining_bits;
+            int rebalance = ctx.remaining_bits;
             if (mbits >= sbits) {
                 cm = quant_partition(ctx, X, X_ptr, N, mbits, B,
                         lowband, lowband_ptr, LM,
-                        Inlines.MULT16_16_P15(gain, mid), fill);
+                        gain * mid, fill);
                 rebalance = mbits - (rebalance - ctx.remaining_bits);
                 if (rebalance > 3 << EntropyCoder.BITRES && itheta != 0) {
                     sbits += rebalance - (3 << EntropyCoder.BITRES);
                 }
                 cm |= quant_partition(ctx, X, Y, N, sbits, B,
                         lowband, next_lowband2, LM,
-                        Inlines.MULT16_16_P15(gain, side), fill >> B) << (B0 >> 1);
+                        gain * side, fill >> B) << (B0 >> 1);
             } else {
                 cm = quant_partition(ctx, X, Y, N, sbits, B,
                         lowband, next_lowband2, LM,
-                        Inlines.MULT16_16_P15(gain, side), fill >> B) << (B0 >> 1);
+                        gain * side, fill >> B) << (B0 >> 1);
                 rebalance = sbits - (rebalance - ctx.remaining_bits);
                 if (rebalance > 3 << EntropyCoder.BITRES && itheta != 16384) {
                     mbits += rebalance - (3 << EntropyCoder.BITRES);
                 }
                 cm |= quant_partition(ctx, X, X_ptr, N, mbits, B,
                         lowband, lowband_ptr, LM,
-                        Inlines.MULT16_16_P15(gain, mid), fill);
+                        gain * mid, fill);
             }
         } else {
             /* This is the basic no-split case */
-            q = Rate.bits2pulses(m, i, LM, b);
-            curr_bits = Rate.pulses2bits(m, i, LM, q);
+            int q = Rate.bits2pulses(m, i, LM, b);
+            int curr_bits = Rate.pulses2bits(m, i, LM, q);
             ctx.remaining_bits -= curr_bits;
 
             /* Ensures we can never bust the budget */
@@ -614,33 +527,29 @@ class Bands {
                 cm = VQ.alg_unquant(X, X_ptr, N, K, spread, B, ec, gain);
             } else {
                 /* If there's no pulse, fill the band anyway */
-                int j;
 
-                int cm_mask;
-                    /* B can be as large as 16, so this shift might overflow an int on a
-                       16-bit platform; use a long to get defined behavior.*/
-                cm_mask = (1 << B) - 1;
+                int cm_mask = (1 << B) - 1;
                 fill = fill & cm_mask;
 
                 if (fill == 0) {
                     Arrays.fill(X, X_ptr, X_ptr + N, 0);
                 } else {
+                    int j;
                     if (lowband == null) {
                         /* Noise */
                         for (j = 0; j < N; j++) {
                             ctx.seed = celt_lcg_rand(ctx.seed);
-                            X[X_ptr + j] = (ctx.seed >> 20);
+                            X[X_ptr + j] = (float) (ctx.seed >> 20);
                         }
                         cm = cm_mask;
                     } else {
                         /* Folded spectrum */
                         for (j = 0; j < N; j++) {
-                            int tmp;
                             ctx.seed = celt_lcg_rand(ctx.seed);
                             /* About 48 dB below the "normal" folding level */
-                            tmp = Inlines.QCONST16(1.0f / 256, 10);
-                            tmp = (((ctx.seed) & 0x8000) != 0 ? tmp : -tmp);
-                            X[X_ptr + j] = (lowband[lowband_ptr + j] + tmp);
+                            float tmp = 1.0f / 256;
+                            tmp = (ctx.seed & 0x8000) != 0 ? tmp : -tmp;
+                            X[X_ptr + j] = lowband[lowband_ptr + j] + tmp;
                         }
                         cm = fill;
                     }
@@ -661,32 +570,24 @@ class Bands {
     };
 
     /* This function is responsible for encoding and decoding a band for the mono case. */
-    static int quant_band(band_ctx ctx, int[] X, int X_ptr,
-                          int N, int b, int B, int[] lowband, int lowband_ptr,
-                          int LM, int[] lowband_out, int lowband_out_ptr,
-                          int gain, int[] lowband_scratch, int lowband_scratch_ptr, int fill) {
-        int N0 = N;
+    static int quant_band(band_ctx ctx, float[] X, int X_ptr,
+                          int N, int b, int B, float[] lowband, int lowband_ptr,
+                          int LM, float[] lowband_out, int lowband_out_ptr,
+                          float gain, float[] lowband_scratch, int lowband_scratch_ptr, int fill) {
         int N_B = N;
-        int N_B0;
         int B0 = B;
-        int time_divide = 0;
-        int recombine = 0;
-        int longBlocks;
-        int cm;
-        int k;
-        int tf_change;
+        int tf_change = ctx.tf_change;
 
-        tf_change = ctx.tf_change;
+        int longBlocks = B0 == 1 ? 1 : 0;
 
-        longBlocks = B0 == 1 ? 1 : 0;
-
-        N_B = Inlines.celt_udiv(N_B, B);
+        N_B /= B;
 
         /* Special case for one sample */
         if (N == 1) {
-            return quant_band_n1(ctx, X, X_ptr, null, 0, b, lowband_out, lowband_out_ptr);
+            return quant_band_n1(ctx, X, X_ptr, null, 0, lowband_out, lowband_out_ptr);
         }
 
+        int recombine = 0;
         if (tf_change > 0) {
             recombine = tf_change;
         }
@@ -698,6 +599,7 @@ class Bands {
             lowband_ptr = lowband_scratch_ptr;
         }
 
+        int k;
         for (k = 0; k < recombine; k++) {
             if (lowband != null) {
                 haar1(lowband, lowband_ptr, N >> k, 1 << k);
@@ -708,6 +610,7 @@ class Bands {
         N_B <<= recombine;
 
         /* Increasing the time resolution */
+        int time_divide = 0;
         while ((N_B & 1) == 0 && tf_change < 0) {
             if (lowband != null) {
                 haar1(lowband, lowband_ptr, N_B, B);
@@ -719,7 +622,7 @@ class Bands {
             tf_change++;
         }
         B0 = B;
-        N_B0 = N_B;
+        int N_B0 = N_B;
 
         /* Reorganize the samples in time order instead of frequency order */
         if (B0 > 1) {
@@ -728,7 +631,7 @@ class Bands {
             }
         }
 
-        cm = quant_partition(ctx, X, X_ptr, N, b, B, lowband, lowband_ptr, LM, gain, fill);
+        int cm = quant_partition(ctx, X, X_ptr, N, b, B, lowband, lowband_ptr, LM, gain, fill);
 
         /* This code is used by the decoder and by the resynthesis-enabled encoder */
         /* Undo the sample reorganization going from time order to frequency order */
@@ -746,6 +649,7 @@ class Bands {
             haar1(X, X_ptr, N_B, B);
         }
 
+        int N0 = N;
         for (k = 0; k < recombine; k++) {
             cm = bit_deinterleave_table[cm];
             haar1(X, X_ptr, N0 >> k, 1 << k);
@@ -754,11 +658,9 @@ class Bands {
 
         /* Scale output for later folding */
         if (lowband_out != null) {
-            int j;
-            int n;
-            n = (Inlines.celt_sqrt(Inlines.SHL32(N0, 22)));
-            for (j = 0; j < N0; j++) {
-                lowband_out[lowband_out_ptr + j] = Inlines.MULT16_16_Q15(n, X[X_ptr + j]);
+            float n = InlinesF.celt_sqrt(N0);
+            for (int j = 0; j < N0; j++) {
+                lowband_out[lowband_out_ptr + j] = n * X[X_ptr + j];
             }
         }
 
@@ -767,29 +669,21 @@ class Bands {
     }
 
     /* This function is responsible for encoding and decoding a band for the stereo case. */
-    static int quant_band_stereo(band_ctx ctx, int[] X, int X_ptr, int[] Y, int Y_ptr,
-                                 int N, int b, int B, int[] lowband, int lowband_ptr,
-                                 int LM, int[] lowband_out, int lowband_out_ptr,
-                                 int[] lowband_scratch, int lowband_scratch_ptr, int fill) {
-        int imid, iside;
-        int inv;
-        int mid, side;
-        int cm;
-        int mbits, sbits, delta;
-        int itheta;
-        int qalloc;
+    static int quant_band_stereo(band_ctx ctx, float[] X, int X_ptr, float[] Y, int Y_ptr,
+                                 int N, int b, int B, float[] lowband, int lowband_ptr,
+                                 int LM, float[] lowband_out, int lowband_out_ptr,
+                                 float[] lowband_scratch, int lowband_scratch_ptr, int fill) {
         split_ctx sctx = new split_ctx(); // porting note: stack var
-        int orig_fill;
-        EntropyCoder ec; //porting note: pointer
 
-        ec = ctx.ec;
+        //porting note: pointer
+        EntropyCoder ec = ctx.ec;
 
         /* Special case for one sample */
         if (N == 1) {
-            return quant_band_n1(ctx, X, X_ptr, Y, Y_ptr, b, lowband_out, lowband_out_ptr);
+            return quant_band_n1(ctx, X, X_ptr, Y, Y_ptr, lowband_out, lowband_out_ptr);
         }
 
-        orig_fill = fill;
+        int orig_fill = fill;
 
         BoxedValueInt boxed_b = new BoxedValueInt(b);
         BoxedValueInt boxed_fill = new BoxedValueInt(fill);
@@ -797,23 +691,20 @@ class Bands {
         b = boxed_b.Val;
         fill = boxed_fill.Val;
 
-        inv = sctx.inv;
-        imid = sctx.imid;
-        iside = sctx.iside;
-        delta = sctx.delta;
-        itheta = sctx.itheta;
-        qalloc = sctx.qalloc;
-        mid = (imid);
-        side = (iside);
+        int inv = sctx.inv;
+        int delta = sctx.delta;
+        int itheta = sctx.itheta;
+        int qalloc = sctx.qalloc;
+        float mid = sctx.imid * (1.0f / 32768.0f);
+        float side = sctx.iside * (1.0f / 32768.0f);
 
         /* This is a special case for N=2 that only works for stereo and takes
            advantage of the fact that mid and side are orthogonal to encode
            the side with just one bit. */
+        int sbits;
+        int mbits;
+        int cm;
         if (N == 2) {
-            int c;
-            int sign = 0;
-            int[] x2, y2;
-            int x2_ptr;
             mbits = b;
             sbits = 0;
             /* Only need one bit for the side. */
@@ -821,8 +712,11 @@ class Bands {
                 sbits = 1 << EntropyCoder.BITRES;
             }
             mbits -= sbits;
-            c = itheta > 8192 ? 1 : 0;
+            int c = itheta > 8192 ? 1 : 0;
             ctx.remaining_bits -= qalloc + sbits;
+            int x2_ptr;
+            float[] y2;
+            float[] x2;
             if (c != 0) {
                 x2 = Y;
                 x2_ptr = Y_ptr;
@@ -833,45 +727,44 @@ class Bands {
                 y2 = Y;
             }
 
+            int sign = 0;
             if (sbits != 0) {
                 sign = ec.dec_bits(1);
             }
-            sign = 1 - 2 * sign;
+            sign = sign * 2 - 1;
             /* We use orig_fill here because we want to fold the side, but if
                itheta==16384, we'll have cleared the low bits of fill. */
             cm = quant_band(ctx, x2, x2_ptr, N, mbits, B, lowband, lowband_ptr,
-                    LM, lowband_out, lowband_out_ptr, CeltConstants.Q15ONE, lowband_scratch, lowband_scratch_ptr, orig_fill);
+                    LM, lowband_out, lowband_out_ptr, 1.0f, lowband_scratch, lowband_scratch_ptr, orig_fill);
 
             /* We don't split N=2 bands, so cm is either 1 or 0 (for a fold-collapse),
                and there's no need to worry about mixing with the other channel. */
             y2[Y_ptr] = ((-sign) * x2[x2_ptr + 1]);
             y2[Y_ptr + 1] = (sign * x2[x2_ptr]);
-            int tmp;
-            X[X_ptr] = Inlines.MULT16_16_Q15(mid, X[X_ptr]);
-            X[X_ptr + 1] = Inlines.MULT16_16_Q15(mid, X[X_ptr + 1]);
-            Y[Y_ptr] = Inlines.MULT16_16_Q15(side, Y[Y_ptr]);
-            Y[Y_ptr + 1] = Inlines.MULT16_16_Q15(side, Y[Y_ptr + 1]);
-            tmp = X[X_ptr];
-            X[X_ptr] = Inlines.SUB16(tmp, Y[Y_ptr]);
-            Y[Y_ptr] = Inlines.ADD16(tmp, Y[Y_ptr]);
+            X[X_ptr] = mid * X[X_ptr];
+            X[X_ptr + 1] = mid * X[X_ptr + 1];
+            Y[Y_ptr] = side * Y[Y_ptr];
+            Y[Y_ptr + 1] = side * Y[Y_ptr + 1];
+            float tmp = X[X_ptr];
+            X[X_ptr] = tmp - Y[Y_ptr];
+            Y[Y_ptr] = tmp + Y[Y_ptr];
             tmp = X[X_ptr + 1];
-            X[X_ptr + 1] = Inlines.SUB16(tmp, Y[Y_ptr + 1]);
-            Y[Y_ptr + 1] = Inlines.ADD16(tmp, Y[Y_ptr + 1]);
+            X[X_ptr + 1] = tmp - Y[Y_ptr + 1];
+            Y[Y_ptr + 1] = tmp + Y[Y_ptr + 1];
         } else {
             /* "Normal" split code */
-            int rebalance;
 
-            mbits = Inlines.IMAX(0, Inlines.IMIN(b, (b - delta) / 2));
+            mbits = Math.max(0, Math.min(b, (b - delta) / 2));
             sbits = b - mbits;
             ctx.remaining_bits -= qalloc;
 
-            rebalance = ctx.remaining_bits;
+            int rebalance = ctx.remaining_bits;
             if (mbits >= sbits) {
                 /* In stereo mode, we do not apply a scaling to the mid because we need the normalized
                    mid for folding later. */
                 cm = quant_band(ctx, X, X_ptr, N, mbits, B,
                         lowband, lowband_ptr, LM, lowband_out, lowband_out_ptr,
-                        CeltConstants.Q15ONE, lowband_scratch, lowband_scratch_ptr, fill);
+                        1.0f, lowband_scratch, lowband_scratch_ptr, fill);
                 rebalance = mbits - (rebalance - ctx.remaining_bits);
                 if (rebalance > 3 << EntropyCoder.BITRES && itheta != 0) {
                     sbits += rebalance - (3 << EntropyCoder.BITRES);
@@ -896,7 +789,7 @@ class Bands {
                    mid for folding later. */
                 cm |= quant_band(ctx, X, X_ptr, N, mbits, B,
                         lowband, lowband_ptr, LM, lowband_out, lowband_out_ptr,
-                        CeltConstants.Q15ONE, lowband_scratch, lowband_scratch_ptr, fill);
+                        1.0f, lowband_scratch, lowband_scratch_ptr, fill);
             }
         }
 
@@ -906,9 +799,8 @@ class Bands {
             stereo_merge(X, X_ptr, Y, Y_ptr, mid, N);
         }
         if (inv != 0) {
-            int j;
-            for (j = Y_ptr; j < N + Y_ptr; j++) {
-                Y[j] = (short) (-Y[j]);
+            for (int j = Y_ptr; j < N + Y_ptr; j++) {
+                Y[j] = -Y[j];
             }
         }
 
@@ -916,84 +808,64 @@ class Bands {
     }
 
     static void quant_all_bands(CeltMode m, int start, int end,
-                                int[] X_, int[] Y_, short[] collapse_masks,
-                                int[][] bandE, int[] pulses, int shortBlocks, int spread,
+                                float[] X_, float[] Y_, short[] collapse_masks,
+                                float[][] bandE, int[] pulses, int shortBlocks, int spread,
                                 int dual_stereo, int intensity, int[] tf_res, int total_bits,
                                 int balance, EntropyCoder ec, int LM, int codedBands,
                                 BoxedValueInt seed) {
-        int i;
-        int remaining_bits;
         short[] eBands = m.eBands;
-        int[] norm;
-        int norm2;
-        int[] lowband_scratch;
-        int lowband_scratch_ptr;
-        int B;
-        int M;
-        int lowband_offset;
-        int update_lowband = 1;
         int C = Y_ != null ? 2 : 1;
-        int norm_offset;
         band_ctx ctx = new band_ctx(); // porting note: stack var
 
-        M = 1 << LM;
-        B = (shortBlocks != 0) ? M : 1;
-        norm_offset = M * eBands[start];
+        int M = 1 << LM;
+        int B = (shortBlocks != 0) ? M : 1;
+        int norm_offset = M * eBands[start];
 
         /* No need to allocate norm for the last band because we don't need an
            output in that band. */
-        norm = new int[(C * (M * eBands[m.nbEBands - 1] - norm_offset))];
-        norm2 = M * eBands[m.nbEBands - 1] - norm_offset;
+        float[] norm = new float[(C * (M * eBands[m.nbEBands - 1] - norm_offset))];
+        int norm2 = M * eBands[m.nbEBands - 1] - norm_offset;
 
         /* We can use the last band as scratch space because we don't need that
            scratch space for the last band. */
-        lowband_scratch = X_;
-        lowband_scratch_ptr = M * eBands[m.nbEBands - 1];
+        float[] lowband_scratch = X_;
+        int lowband_scratch_ptr = M * eBands[m.nbEBands - 1];
 
-        lowband_offset = 0;
-        ctx.bandE = bandE;
         ctx.ec = ec;
         ctx.intensity = intensity;
         ctx.m = m;
         ctx.seed = seed.Val;
         ctx.spread = spread;
-        for (i = start; i < end; i++) {
-            int tell;
-            int b;
-            int N;
-            int curr_balance;
-            int effective_lowband = -1;
-            int[] X, Y;
-            int X_ptr, Y_ptr;
-            Y_ptr = 0;
-            int tf_change;
-            long x_cm;
-            long y_cm;
-            int last;
+        int lowband_offset = 0;
+        int update_lowband = 1;
+        for (int i = start; i < end; i++) {
 
             ctx.i = i;
-            last = (i == end - 1) ? 1 : 0;
+            int last = (i == end - 1) ? 1 : 0;
 
-            X = X_;
-            X_ptr = (M * eBands[i]);
+            float[] X = X_;
+            int X_ptr = (M * eBands[i]);
+            int Y_ptr = 0;
+            float[] Y;
             if (Y_ != null) {
                 Y = Y_;
                 Y_ptr = (M * eBands[i]);
             } else {
                 Y = null;
             }
-            N = M * eBands[i + 1] - M * eBands[i];
-            tell = ec.tell_frac();
+            int N = M * eBands[i + 1] - M * eBands[i];
+            int tell = ec.tell_frac();
 
             /* Compute how many bits we want to allocate to this band */
             if (i != start) {
                 balance -= tell;
             }
-            remaining_bits = total_bits - tell - 1;
+            int remaining_bits = total_bits - tell - 1;
             ctx.remaining_bits = remaining_bits;
+            int b;
             if (i <= codedBands - 1) {
-                curr_balance = Inlines.celt_sudiv(balance, Inlines.IMIN(3, codedBands - i));
-                b = Inlines.IMAX(0, Inlines.IMIN(16383, Inlines.IMIN(remaining_bits + 1, pulses[i] + curr_balance)));
+                int curr_balance = Inlines.celt_sudiv(balance, Math.min(3, codedBands - i));
+                b = Math.max(0, Math.min(16383, Math.min(remaining_bits + 1, pulses[i] + curr_balance)));
             } else {
                 b = 0;
             }
@@ -1002,7 +874,7 @@ class Bands {
                 lowband_offset = i;
             }
 
-            tf_change = tf_res[i];
+            int tf_change = tf_res[i];
             ctx.tf_change = tf_change;
             if (i >= m.effEBands) {
                 X = norm;
@@ -1019,20 +891,20 @@ class Bands {
 
             /* Get a conservative estimate of the collapse_mask's for the bands we're
                going to be folding from. */
+            int y_cm;
+            int x_cm;
+            int effective_lowband = -1;
             if (lowband_offset != 0 && (spread != Spread.SPREAD_AGGRESSIVE || B > 1 || tf_change < 0)) {
-                int fold_start;
-                int fold_end;
-                int fold_i;
                 /* This ensures we never repeat spectral content within one band */
-                effective_lowband = Inlines.IMAX(0, M * eBands[lowband_offset] - norm_offset - N);
-                fold_start = lowband_offset;
+                effective_lowband = Math.max(0, M * eBands[lowband_offset] - norm_offset - N);
+                int fold_start = lowband_offset;
                 while (M * eBands[--fold_start] > effective_lowband + norm_offset) {
                 }
-                fold_end = lowband_offset - 1;
+                int fold_end = lowband_offset - 1;
                 while (M * eBands[++fold_end] < effective_lowband + norm_offset + N) {
                 }
                 x_cm = y_cm = 0;
-                fold_i = fold_start;
+                int fold_i = fold_start;
                 do {
                     x_cm |= collapse_masks[fold_i * C];
                     y_cm |= collapse_masks[fold_i * C + C - 1];
@@ -1043,12 +915,11 @@ class Bands {
             }
 
             if (dual_stereo != 0 && i == intensity) {
-                int j;
 
                 /* Switch off dual stereo to do intensity. */
                 dual_stereo = 0;
-                for (j = 0; j < M * eBands[i] - norm_offset; j++) {
-                    norm[j] = (Inlines.HALF32(norm[j] + norm[norm2 + j]));
+                for (int j = 0; j < M * eBands[i] - norm_offset; j++) {
+                    norm[j] = .5f * (norm[j] + norm[norm2 + j]);
                 }
             }
             if (dual_stereo != 0) {
@@ -1063,10 +934,10 @@ class Bands {
                         LM,
                         last != 0 ? null : norm,
                         M * eBands[i] - norm_offset,
-                        CeltConstants.Q15ONE,
+                        1.0f,
                         lowband_scratch,
                         lowband_scratch_ptr,
-                        (int) x_cm);
+                        x_cm);
                 y_cm = quant_band(
                         ctx,
                         Y,
@@ -1079,10 +950,10 @@ class Bands {
                         LM,
                         last != 0 ? null : norm,
                         norm2 + (M * eBands[i] - norm_offset),
-                        CeltConstants.Q15ONE,
+                        1.0f,
                         lowband_scratch,
                         lowband_scratch_ptr,
-                        (int) y_cm);
+                        y_cm);
             } else {
                 if (Y != null) {
                     x_cm = quant_band_stereo(
@@ -1101,7 +972,7 @@ class Bands {
                             M * eBands[i] - norm_offset,
                             lowband_scratch,
                             lowband_scratch_ptr,
-                            (int) (x_cm | y_cm));
+                            x_cm | y_cm);
                 } else {
                     x_cm = quant_band(
                             ctx,
@@ -1115,10 +986,10 @@ class Bands {
                             LM,
                             last != 0 ? null : norm,
                             M * eBands[i] - norm_offset,
-                            CeltConstants.Q15ONE,
+                            1.0f,
                             lowband_scratch,
                             lowband_scratch_ptr,
-                            (int) (x_cm | y_cm)); // opt: lots of pointers are created here too
+                            x_cm | y_cm); // opt: lots of pointers are created here too
                 }
                 y_cm = x_cm;
             }

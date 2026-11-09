@@ -85,73 +85,62 @@ URL="http://www.stanford.edu/class/ee398a/handouts/papers/Moffat98ArithmCoding.p
 }*/
 class EntropyCoder {
 
-    private final int EC_WINDOW_SIZE = 32;
+    private static final int EC_WINDOW_SIZE = 32;
 
     /// *The number of bits to use for the range-coded part of uint integers.*/
-    private final int EC_UINT_BITS = 8;
+    private static final int EC_UINT_BITS = 8;
 
     /// *The resolution of fractional-precision bit usage measurements, i.e.,
     //   3 => 1/8th bits.*/
     static final int BITRES = 3;
 
     /*The number of bits to output at a time.*/
-    private final int EC_SYM_BITS = 8;
+    private static final int EC_SYM_BITS = 8;
 
     /*The total number of bits in each of the state registers.*/
-    private final int EC_CODE_BITS = 32;
+    private static final int EC_CODE_BITS = 32;
 
     /*The maximum symbol value.*/
-    private final long EC_SYM_MAX = 0x000000FF;
+    private static final int EC_SYM_MAX = 0x000000FF;
 
     /*Carry bit of the high-order range symbol.*/
-    private final long EC_CODE_TOP = 0x80000000L;
+    private static final int EC_CODE_TOP = 0x80000000;
 
     /*Low-order bit of the high-order range symbol.*/
-    private final long EC_CODE_BOT = 0x00800000;
+    private static final int EC_CODE_BOT = 0x00800000;
 
     /*The number of bits available for the last, partial symbol in the code field.*/
-    private final int EC_CODE_EXTRA = 0x00000007;
+    private static final int EC_CODE_EXTRA = 0x00000007;
 
     /// ///////////// Coder State ////////////////////
 
-    /*POINTER to Buffered input/output.*/
-    private byte[] buf;
-    private int buf_ptr;
-
+    /*Buffered input/output.*/
+    byte[] buf;
+    int buf_ptr;
     /*The size of the buffer.*/
     int storage;
-
     /*The offset at which the last byte containing raw bits was read/written.*/
     int end_offs;
-
     /*Bits that will be read from/written at the end.*/
-    long end_window;
-
+    int end_window;
     /*Number of valid bits in end_window.*/
     int nend_bits;
-
     /*The total number of whole bits read/written.
       This does not include partial bits currently in the range coder.*/
     int nbits_total;
-
     /*The offset at which the next range coder byte will be read/written.*/
     int offs;
-
     /*The number of values in the current range.*/
-    long rng;
-
+    int rng;
     /*In the decoder: the difference between the top of the current range and
        the input value, minus one.
       In the encoder: the low end of the current range.*/
-    long val;
-
+    int val;
     /*In the decoder: the saved normalization factor from ec_decode().
       In the encoder: the number of oustanding carry propagating symbols.*/
-    long ext;
-
+    int ext;
     /*A buffered input/output symbol, awaiting carry propagation.*/
     int rem;
-
     /*Nonzero if an error occurred.*/
     int error;
 
@@ -188,23 +177,21 @@ class EntropyCoder {
     /// <param name="this"></param>
     void dec_normalize() {
         /*If the range is too small, rescale it and input some bits.*/
-        while (rng <= EC_CODE_BOT) {
-            int sym;
-            this.nbits_total += EC_SYM_BITS;
-            this.rng = Inlines.CapToUInt32(rng << EC_SYM_BITS);
+        while (Integer.compareUnsigned(rng, EC_CODE_BOT) <= 0) {
+            nbits_total += EC_SYM_BITS;
+            rng <<= EC_SYM_BITS;
 
             /*Use up the remaining bits from our last symbol.*/
-            sym = rem;
+            int sym = rem;
 
             /*Read the next value from the input.*/
-            this.rem = read_byte();
+            rem = read_byte();
 
             /*Take the rest of the bits we need from this new symbol.*/
-            sym = (sym << EC_SYM_BITS | rem) >> (EC_SYM_BITS - EC_CODE_EXTRA);
+            sym = (sym << EC_SYM_BITS | rem) >>> (EC_SYM_BITS - EC_CODE_EXTRA);
 
             /*And subtract them from val, capped to be less than EC_CODE_TOP.*/
-            this.val = Inlines.CapToUInt32(((val << EC_SYM_BITS) + (EC_SYM_MAX & ~sym))
-                    & (EC_CODE_TOP - 1));
+            val = ((val << EC_SYM_BITS) + (EC_SYM_MAX & ~sym)) & (EC_CODE_TOP - 1);
         }
     }
 
@@ -223,32 +210,28 @@ class EntropyCoder {
         this.offs = 0;
         this.rng = 1 << EC_CODE_EXTRA;
         this.rem = read_byte();
-        this.val = Inlines.CapToUInt32(rng - 1 - (rem >> (EC_SYM_BITS - EC_CODE_EXTRA)));
+        this.val = rng - 1 - (rem >>> (EC_SYM_BITS - EC_CODE_EXTRA));
         this.error = 0;
         /*Normalize the interval.*/
         dec_normalize();
     }
 
-    long decode(long _ft) {
-        _ft = Inlines.CapToUInt32(_ft);
-        this.ext = Inlines.CapToUInt32(rng / _ft);
-        long s = Inlines.CapToUInt32(val / ext);
-        return Inlines.CapToUInt32(_ft - Inlines.EC_MINI(Inlines.CapToUInt32(s + 1), _ft));
+    int decode(int _ft) {
+        ext = Integer.divideUnsigned(rng, _ft);
+        int s = val / ext;
+        return _ft - Math.min(s + 1, _ft);
     }
 
-    long decode_bin(int _bits) {
-        this.ext = rng >> _bits;
-        long s = Inlines.CapToUInt32(val / ext);
-        return Inlines.CapToUInt32(Inlines.CapToUInt32(1L << _bits) - Inlines.EC_MINI(Inlines.CapToUInt32(s + 1), 1L << _bits));
+    int decode_bin(int _bits) {
+        this.ext = rng >>> _bits;
+        int s = val / ext;
+        return (1 << _bits) - Math.min(s + 1, 1 << _bits);
     }
 
-    void dec_update(long _fl, long _fh, long _ft) {
-        _fl = Inlines.CapToUInt32(_fl);
-        _fh = Inlines.CapToUInt32(_fh);
-        _ft = Inlines.CapToUInt32(_ft);
-        long s = Inlines.CapToUInt32(ext * (_ft - _fh));
+    void dec_update(int _fl, int _fh, int _ft) {
+        int s = ext * (_ft - _fh);
         this.val = val - s;
-        this.rng = _fl > 0 ? Inlines.CapToUInt32(ext * (_fh - _fl)) : rng - s;
+        this.rng = _fl > 0 ? ext * (_fh - _fl) : rng - s;
         dec_normalize();
     }
 
@@ -258,17 +241,13 @@ class EntropyCoder {
     /// <param name="this"></param>
     /// <param name="_logp"></param>
     /// <returns></returns>
-    int dec_bit_logp(long _logp) {
-        long r;
-        long d;
-        long s;
-        int ret;
-        r = rng;
-        d = val;
-        s = r >> (int) _logp;
-        ret = d < s ? 1 : 0;
+    int dec_bit_logp(int _logp) {
+        int r = rng;
+        int d = val;
+        int s = r >>> _logp;
+        int ret = d < s ? 1 : 0;
         if (ret == 0) {
-            this.val = Inlines.CapToUInt32(d - s);
+            this.val = d - s;
         }
         this.rng = ret != 0 ? s : r - s;
         dec_normalize();
@@ -276,66 +255,62 @@ class EntropyCoder {
     }
 
     int dec_icdf(short[] _icdf, int _ftb) {
-        long t;
-        long s = rng;
-        long d = val;
-        long r = s >> _ftb;
+        int t;
+        int s = rng;
+        int d = val;
+        int r = s >>> _ftb;
         int ret = -1;
         do {
             t = s;
-            s = Inlines.CapToUInt32(r * _icdf[++ret]);
+            s = r * _icdf[++ret];
         } while (d < s);
-        this.val = Inlines.CapToUInt32(d - s);
-        this.rng = Inlines.CapToUInt32(t - s);
+        this.val = d - s;
+        this.rng = t - s;
         dec_normalize();
         return ret;
     }
 
-    long dec_uint(long _ft) {
-        _ft = Inlines.CapToUInt32(_ft);
-        long ft;
-        long s;
-        int ftb;
+    /**
+     * Decodes a uniformly distributed integer in [0, _ft). Both {@code _ft} and the result are
+     * unsigned 32-bit values (opus_uint32): PVQ codebook sizes can exceed 2^31.
+     */
+    int dec_uint(int _ft) {
         /*In order to optimize EC_ILOG(), it is undefined for the value 0.*/
-        Inlines.OpusAssert(_ft > 1);
+        Inlines.OpusAssert(Integer.compareUnsigned(_ft, 1) > 0);
         _ft--;
-        ftb = Inlines.EC_ILOG(_ft);
+        int ftb = Inlines.EC_ILOG(_ft);
         if (ftb > EC_UINT_BITS) {
-            long t;
             ftb -= EC_UINT_BITS;
-            ft = Inlines.CapToUInt32((_ft >> ftb) + 1);
-            s = Inlines.CapToUInt32(decode(ft));
-            dec_update(s, (s + 1), ft);
-            t = Inlines.CapToUInt32((s << ftb | dec_bits(ftb)));
-            if (t <= _ft) {
+            int ft = (_ft >>> ftb) + 1;
+            int s = decode(ft);
+            dec_update(s, s + 1, ft);
+            int t = s << ftb | dec_bits(ftb);
+            if (Integer.compareUnsigned(t, _ft) <= 0) {
                 return t;
             }
             this.error = 1;
             return _ft;
         } else {
             _ft++;
-            s = Inlines.CapToUInt32(decode(_ft));
+            int s = decode(_ft);
             dec_update(s, s + 1, _ft);
             return s;
         }
     }
 
     int dec_bits(int _bits) {
-        long window;
-        int available;
-        int ret;
-        window = end_window;
-        available = nend_bits;
+        int window = end_window;
+        int available = nend_bits;
         if (available < _bits) {
             do {
-                window = Inlines.CapToUInt32(window | (read_byte_from_end() << available));
+                window |= read_byte_from_end() << available;
                 available += EC_SYM_BITS;
             } while (available <= EC_WINDOW_SIZE - EC_SYM_BITS);
         }
-        ret = (int) (0xFFFFFFFFL & (window & ((1 << _bits) - 1)));
-        window = window >> _bits;
-        available = available - _bits;
-        this.end_window = Inlines.CapToUInt32(window);
+        int ret = window & ((1 << _bits) - 1);
+        window >>>= _bits;
+        available -= _bits;
+        this.end_window = window;
         this.nend_bits = available;
         this.nbits_total = nbits_total + _bits;
         return ret;
@@ -355,8 +330,7 @@ class EntropyCoder {
     /// <param name="this"></param>
     /// <returns>The number of bits.</returns>
     int tell() {
-        int returnVal = nbits_total - Inlines.EC_ILOG(rng);
-        return returnVal;
+        return nbits_total - Inlines.EC_ILOG(rng);
     }
 
     private static final int[] correction = {35733, 38967, 42495, 46340, 50535, 55109, 60097, 65535};
@@ -369,17 +343,12 @@ class EntropyCoder {
     /// <param name="this"></param>
     /// <returns></returns>
     int tell_frac() {
-        int nbits;
-        int r;
-        int l;
-        long b;
-        nbits = nbits_total << BITRES;
-        l = Inlines.EC_ILOG(rng);
-        r = (int) (rng >> (l - 16));
-        b = Inlines.CapToUInt32((r >> 12) - 8);
-        b = Inlines.CapToUInt32(b + (r > correction[(int) b] ? 1 : 0));
-        l = (int) ((l << 3) + b);
+        int nbits = nbits_total << BITRES;
+        int l = Inlines.EC_ILOG(rng);
+        int r = rng >>> (l - 16);
+        int b = (r >>> 12) - 8;
+        b += r > correction[b] ? 1 : 0;
+        l = (l << 3) + b;
         return nbits - l;
     }
-
 }

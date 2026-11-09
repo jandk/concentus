@@ -36,7 +36,7 @@ package org.concentus;
 
 class CeltCommon {
 
-    static void deemphasis(float[][] input, int[] input_ptrs, short[] pcm, int pcm_ptr, int N, int C, int downsample,
+    static void deemphasis(float[][] input, int[] input_ptrs, float[] pcm, int pcm_ptr, int N, int C, int downsample,
                            float[] coef, float[] mem) {
         float coef0 = coef[0];
         int Nd = N / downsample;
@@ -57,20 +57,20 @@ class CeltCommon {
                 }
                 /* Perform down-sampling */
                 for (j = 0; j < Nd; j++) {
-                    pcm[y + (j * C)] = InlinesF.FLOAT2INT16(InlinesF.SIG2RES(scratch[j * downsample]));
+                    pcm[y + (j * C)] = InlinesF.SIG2RES(scratch[j * downsample]);
                 }
             } else {
                 for (j = 0; j < N; j++) {
                     float tmp = x[x_ptr + j] + InlinesF.VERY_SMALL + m;
                     m = coef0 * tmp;
-                    pcm[y + (j * C)] = InlinesF.FLOAT2INT16(InlinesF.SIG2RES(tmp));
+                    pcm[y + (j * C)] = InlinesF.SIG2RES(tmp);
                 }
             }
             mem[c] = m;
         } while (++c < C);
     }
 
-    static void celt_synthesis(CeltMode mode, CeltImdct imdct, int[][] X, float[][] out_syn, int[] out_syn_ptrs,
+    static void celt_synthesis(CeltMode mode, CeltImdct imdct, float[][] X, float[][] out_syn, int[] out_syn_ptrs,
                                float[] oldBandE, int start, int effEnd, int C, int CC,
                                int isTransient, int LM, int downsample,
                                int silence) {
@@ -258,9 +258,9 @@ class CeltCommon {
             x0 = x[x_ptr + i - T1 + 2];
             float f = window[i] * window[i];
             y[y_ptr + i] = x[x_ptr + i]
-                    + (InlinesF.Q15ONE - f) * g00 * x[x_ptr + i - T0]
-                    + (InlinesF.Q15ONE - f) * g01 * (x[x_ptr + i - T0 + 1] + x[x_ptr + i - T0 - 1])
-                    + (InlinesF.Q15ONE - f) * g02 * (x[x_ptr + i - T0 + 2] + x[x_ptr + i - T0 - 2])
+                    + (1.0f - f) * g00 * x[x_ptr + i - T0]
+                    + (1.0f - f) * g01 * (x[x_ptr + i - T0 + 1] + x[x_ptr + i - T0 - 1])
+                    + (1.0f - f) * g02 * (x[x_ptr + i - T0 + 2] + x[x_ptr + i - T0 - 2])
                     + f * g10 * x2
                     + f * g11 * (x1 + x3)
                     + f * g12 * (x0 + x4);

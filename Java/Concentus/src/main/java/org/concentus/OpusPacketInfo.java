@@ -37,7 +37,7 @@ package org.concentus;
 import java.util.ArrayList;
 import java.util.List;
 
-public class OpusPacketInfo {
+public final class OpusPacketInfo {
 
     /**
      * The Table of Contents byte for this packet. Contains info about modes, frame length, etc.

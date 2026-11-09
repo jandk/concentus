@@ -34,7 +34,7 @@
  */
 package org.concentus;
 
-class Rate {
+final class Rate {
 
     private static final byte[] LOG2_FRAC_TABLE = {
             0,

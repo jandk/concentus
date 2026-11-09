@@ -18,7 +18,7 @@ import java.nio.file.Files;
  * The sample rate defaults to 48000 and must be one of 8000, 12000, 16000, 24000 or 48000.
  * Pre-skip and end trimming from the Ogg granule positions are applied, as is the header's output gain.
  */
-public class Program {
+public final class Program {
 
     /* Opus granule positions are always in 48 kHz samples */
     private static final int GRANULE_RATE = 48000;

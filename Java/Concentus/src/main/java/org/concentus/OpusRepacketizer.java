@@ -36,7 +36,7 @@ package org.concentus;
 
 import java.util.Arrays;
 
-public class OpusRepacketizer {
+public final class OpusRepacketizer {
 
     byte toc = 0;
     int nb_frames = 0;

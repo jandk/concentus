@@ -34,7 +34,7 @@
  */
 package org.concentus;
 
-class CeltConstants {
+final class CeltConstants {
 
     public static final int COMBFILTER_MINPERIOD = 15;
 

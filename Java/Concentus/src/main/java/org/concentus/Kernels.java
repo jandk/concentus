@@ -34,7 +34,7 @@
  */
 package org.concentus;
 
-class Kernels {
+final class Kernels {
     static float celt_inner_prod(float[] x, int x_ptr, float[] y, int y_ptr, int N) {
         int i;
         float xy = 0;

@@ -34,7 +34,7 @@
  */
 package org.concentus;
 
-class Laplace {
+final class Laplace {
 
     /* The minimum probability of an energy delta (out of 32768). */
     private static final int LAPLACE_LOG_MINP = 0;

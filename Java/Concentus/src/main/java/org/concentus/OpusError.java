@@ -38,7 +38,7 @@ package org.concentus;
 /// Note that since most API-level errors are detected and thrown as
 /// OpusExceptions, direct use of this class is not usually needed
 /// </summary>
-public class OpusError {
+public final class OpusError {
 
     /**
      * No error

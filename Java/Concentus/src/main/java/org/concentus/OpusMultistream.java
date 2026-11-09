@@ -34,7 +34,7 @@
  */
 package org.concentus;
 
-class OpusMultistream {
+final class OpusMultistream {
 
     static int validate_layout(ChannelLayout layout) {
         int i, max_channel;

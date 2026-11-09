@@ -34,7 +34,7 @@
  */
 package org.concentus;
 
-class QuantizeBands {
+final class QuantizeBands {
 
     /* prediction coefficients: 0.9, 0.8, 0.65, 0.5 */
     private static final float[] pred_coef = {29440 / 32768.0f, 26112 / 32768.0f, 21248 / 32768.0f, 16384 / 32768.0f};

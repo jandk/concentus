@@ -39,7 +39,7 @@ import java.util.Arrays;
 /// <summary>
 /// Decoder state
 /// </summary>
-class CeltDecoder {
+final class CeltDecoder {
 
     CeltMode mode = null;
     int channels = 0;

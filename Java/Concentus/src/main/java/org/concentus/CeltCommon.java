@@ -34,7 +34,7 @@
  */
 package org.concentus;
 
-class CeltCommon {
+final class CeltCommon {
 
     static void deemphasis(float[][] input, int[] input_ptrs, float[] pcm, int pcm_ptr, int N, int C, int downsample,
                            float[] coef, float[] mem) {

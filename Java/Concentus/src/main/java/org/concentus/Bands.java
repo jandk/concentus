@@ -36,7 +36,7 @@ package org.concentus;
 
 import java.util.Arrays;
 
-class Bands {
+final class Bands {
 
     static int celt_lcg_rand(int seed) {
         return (1664525 * seed + 1013904223);
@@ -263,7 +263,7 @@ class Bands {
         return qn;
     }
 
-    public static class band_ctx {
+    public static final class band_ctx {
 
         public CeltMode m;
         public int i;
@@ -275,7 +275,7 @@ class Bands {
         public int seed;
     }
 
-    public static class split_ctx {
+    public static final class split_ctx {
 
         public int inv;
         public int imid;

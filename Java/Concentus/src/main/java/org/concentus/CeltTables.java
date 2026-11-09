@@ -34,7 +34,7 @@
  */
 package org.concentus;
 
-class CeltTables {
+final class CeltTables {
 
     /* Indexing table for converting from natural Hadamard to ordery Hadamard
        This is essentially a bit-reversed Gray, on top of which we've added

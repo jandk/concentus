@@ -34,7 +34,7 @@
  */
 package org.concentus;
 
-class PulseCache {
+final class PulseCache {
     short[] index = null;
     short[] bits = null;
     short[] caps = null;

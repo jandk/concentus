@@ -34,7 +34,7 @@
  */
 package org.concentus;
 
-public class OpusMSDecoder {
+public final class OpusMSDecoder {
 
     final ChannelLayout layout = new ChannelLayout();
     OpusDecoder[] decoders = null;

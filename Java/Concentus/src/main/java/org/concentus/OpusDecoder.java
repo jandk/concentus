@@ -47,7 +47,7 @@ package org.concentus;
  * streams must be decoded with separate decoder states and can be decoded
  * in parallel.
  */
-public class OpusDecoder {
+public final class OpusDecoder {
 
     int channels;
     int Fs;

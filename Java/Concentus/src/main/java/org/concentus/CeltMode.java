@@ -34,7 +34,7 @@
  */
 package org.concentus;
 
-class CeltMode {
+final class CeltMode {
 
     int Fs = 0;
     int overlap = 0;

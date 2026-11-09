@@ -30,7 +30,7 @@
  */
 package org.concentus;
 
-class BoxedValueByte {
+final class BoxedValueByte {
 
     public byte Val;
 
@@ -39,7 +39,7 @@ class BoxedValueByte {
     }
 }
 
-class BoxedValueShort {
+final class BoxedValueShort {
 
     public short Val;
 
@@ -48,7 +48,7 @@ class BoxedValueShort {
     }
 }
 
-class BoxedValueInt {
+final class BoxedValueInt {
 
     public int Val;
 
@@ -57,7 +57,7 @@ class BoxedValueInt {
     }
 }
 
-class BoxedValueFloat {
+final class BoxedValueFloat {
 
     public float Val;
 

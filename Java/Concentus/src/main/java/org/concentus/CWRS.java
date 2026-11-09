@@ -34,7 +34,7 @@
  */
 package org.concentus;
 
-class CWRS {
+final class CWRS {
 
     /*Although derived separately, the pulse vector coding scheme is equivalent to
 a Pyramid Vector Quantizer \cite{Fis86}.

@@ -45,7 +45,7 @@ public enum OpusBandwidth {
 }
 
 // Helpers to port over uses of OpusBandwidth as an integer
-class OpusBandwidthHelpers {
+final class OpusBandwidthHelpers {
 
     static int GetOrdinal(OpusBandwidth bw) {
         switch (bw) {

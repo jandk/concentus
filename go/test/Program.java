@@ -15,7 +15,7 @@ import org.concentus.*;
  *
  * @author lostromb
  */
-public class Program {
+public final class Program {
 
     /**
      * @param args the command line arguments

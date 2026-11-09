@@ -30,7 +30,7 @@
  */
 package org.concentus;
 
-public class OpusException extends Exception {
+public final class OpusException extends Exception {
 
     private final String _message;
     private final int _opus_error_code;

@@ -34,7 +34,7 @@
  */
 package org.concentus;
 
-class Spread {
+final class Spread {
 
     public static final int SPREAD_NONE = 0;
     public static final int SPREAD_LIGHT = 1;

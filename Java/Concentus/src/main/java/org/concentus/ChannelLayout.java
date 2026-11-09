@@ -34,7 +34,7 @@
  */
 package org.concentus;
 
-class ChannelLayout {
+final class ChannelLayout {
 
     int nb_channels;
     int nb_streams;

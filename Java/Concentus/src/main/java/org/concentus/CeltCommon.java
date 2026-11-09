@@ -71,7 +71,7 @@ class CeltCommon {
     }
 
     static void celt_synthesis(CeltMode mode, CeltImdct imdct, int[][] X, float[][] out_syn, int[] out_syn_ptrs,
-                               int[] oldBandE, int start, int effEnd, int C, int CC,
+                               float[] oldBandE, int start, int effEnd, int C, int CC,
                                int isTransient, int LM, int downsample,
                                int silence) {
         int c, i;

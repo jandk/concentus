@@ -196,13 +196,6 @@ final class Inlines {
         return SHR(ADD32(16384, MULT16_16(a, b)), 15);
     }
 
-    static short SIG2WORD16(int x) {
-        x = PSHR32(x, 12);
-        x = MAX32(x, -32768);
-        x = MIN32(x, 32767);
-        return EXTRACT16(x);
-    }
-
     static int MIN16(int a, int b) {
         return Math.min(a, b);
     }

@@ -74,9 +74,9 @@ class CeltDecoder {
     float[][] decode_mem = null;
 
     CeltImdct imdct = null;
-    int[] oldEBands = null;
-    int[] oldLogE = null;
-    int[] oldLogE2 = null;
+    float[] oldEBands = null;
+    float[] oldLogE = null;
+    float[] oldLogE2 = null;
 
     private void Reset() {
         mode = null;
@@ -111,12 +111,12 @@ class CeltDecoder {
 
         // We have to reconstitute the dynamic buffers here.
         this.decode_mem = new float[channels][CeltConstants.DECODE_BUFFER_SIZE + mode.overlap];
-        this.oldEBands = new int[2 * mode.nbEBands];
-        this.oldLogE = new int[2 * mode.nbEBands];
-        this.oldLogE2 = new int[2 * mode.nbEBands];
+        this.oldEBands = new float[2 * mode.nbEBands];
+        this.oldLogE = new float[2 * mode.nbEBands];
+        this.oldLogE2 = new float[2 * mode.nbEBands];
 
         for (i = 0; i < 2 * mode.nbEBands; i++) {
-            oldLogE[i] = oldLogE2[i] = -Inlines.QCONST16(28.0f, CeltConstants.DB_SHIFT);
+            oldLogE[i] = oldLogE2[i] = -28.f;
         }
     }
 
@@ -173,7 +173,7 @@ class CeltDecoder {
         short[] collapse_masks;
         float[][] out_syn = new float[2][];
         int[] out_syn_ptrs = new int[2];
-        int[] oldBandE, oldLogE, oldLogE2;
+        float[] oldBandE, oldLogE, oldLogE2;
 
         int shortBlocks;
         int isTransient;
@@ -250,7 +250,7 @@ class CeltDecoder {
 
         if (C == 1) {
             for (i = 0; i < nbEBands; i++) {
-                oldBandE[i] = Inlines.MAX16(oldBandE[i], oldBandE[nbEBands + i]);
+                oldBandE[i] = Math.max(oldBandE[i], oldBandE[nbEBands + i]);
             }
         }
 
@@ -402,12 +402,12 @@ class CeltDecoder {
 
         if (anti_collapse_on != 0) {
             Bands.anti_collapse(mode, X, collapse_masks, LM, C,
-                    0, end, oldBandE, oldLogE, oldLogE2, pulses, rng);
+                    0, end, toQ10(oldBandE), toQ10(oldLogE), toQ10(oldLogE2), pulses, rng);
         }
 
         if (silence != 0) {
             for (i = 0; i < C * nbEBands; i++) {
-                oldBandE[i] = -Inlines.QCONST16(28.0f, CeltConstants.DB_SHIFT);
+                oldBandE[i] = -28.f;
             }
         }
 
@@ -452,14 +452,14 @@ class CeltDecoder {
             System.arraycopy(oldBandE, 0, oldLogE, 0, 2 * nbEBands);
         } else {
             for (i = 0; i < 2 * nbEBands; i++) {
-                oldLogE[i] = Inlines.MIN16(oldLogE[i], oldBandE[i]);
+                oldLogE[i] = Math.min(oldLogE[i], oldBandE[i]);
             }
         }
         c = 0;
         do {
             for (i = end; i < nbEBands; i++) {
                 oldBandE[c * nbEBands + i] = 0;
-                oldLogE[c * nbEBands + i] = oldLogE2[c * nbEBands + i] = -Inlines.QCONST16(28.0f, CeltConstants.DB_SHIFT);
+                oldLogE[c * nbEBands + i] = oldLogE2[c * nbEBands + i] = -28.f;
             }
         } while (++c < 2);
         this.rng = (int) dec.rng;
@@ -493,4 +493,13 @@ class CeltDecoder {
         return postfilter_period;
     }
 
+
+    // TODO float: remove once anti_collapse is float
+    private static int[] toQ10(float[] e) {
+        int[] r = new int[e.length];
+        for (int i = 0; i < e.length; i++) {
+            r[i] = Math.round(e[i] * 1024);
+        }
+        return r;
+    }
 }

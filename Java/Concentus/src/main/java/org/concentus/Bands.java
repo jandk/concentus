@@ -67,7 +67,7 @@ class Bands {
 
     /* De-normalise the energy to produce the synthesis from the unit-energy bands */
     static void denormalise_bands(CeltMode m, int[] X,
-                                  float[] freq, int freq_ptr, int[] bandLogE, int bandLogE_ptr, int start,
+                                  float[] freq, int freq_ptr, float[] bandLogE, int bandLogE_ptr, int start,
                                   int end, int M, int downsample, int silence) {
         int i;
         short[] eBands = m.eBands;
@@ -91,8 +91,7 @@ class Bands {
 
             int j = M * eBands[i];
             int band_end = M * eBands[i + 1];
-            // TODO: bandLogE is still in Q10
-            float lg = bandLogE[bandLogE_ptr + i] / 1024.0f + CeltTablesF.eMeans[i];
+            float lg = bandLogE[bandLogE_ptr + i] + CeltTablesF.eMeans[i];
             float g = InlinesF.celt_exp2(Math.min(32.f, lg));
 
             do {
